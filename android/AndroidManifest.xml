@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- No versionCode/versionName here on purpose: build.sh injects them per build through
+     aapt2 version flags, so every APK gets a fresh, rising version. aapt2 only fills a
+     version the manifest omits; leaving them here would let the manifest win and freeze
+     every build at the same version. Bump the marketing base in build.sh. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.frl.driver">
+
+  <uses-permission android:name="android.permission.INTERNET"/>
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+  <!-- The reason this app exists. A web page cannot draw over the game; this permission
+       is what buys a window whose size we own outright, and the user grants it by hand in
+       Settings the first time. -->
+  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+
+  <!-- The flag has to keep arriving while the driver is inside FR Legends, which means the
+       polling cannot live in an activity that Android is free to stop. -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+  <uses-permission android:name="android.permission.VIBRATE"/>
+
+  <!-- The race server is a laptop on the same wifi speaking plain http. There is no
+       certificate to be had and no internet involved, so cleartext is the only thing that
+       can work here; Android blocks it by default from API 28 on. -->
+  <application
+      android:usesCleartextTraffic="true"
+      android:label="FRL Driver"
+      android:icon="@android:drawable/ic_menu_compass"
+      android:theme="@android:style/Theme.Material.NoActionBar"
+      android:supportsRtl="true"
+      android:allowBackup="false"
+      >
+
+    <activity
+        android:name=".MainActivity"
+        android:exported="true"
+        android:launchMode="singleTask"
+        android:configChanges="orientation|screenSize|keyboardHidden">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN"/>
+        <category android:name="android.intent.category.LAUNCHER"/>
+      </intent-filter>
+    </activity>
+
+    <service
+        android:name=".OverlayService"
+        android:exported="false"
+        android:foregroundServiceType="dataSync"/>
+  </application>
+</manifest>

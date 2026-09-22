@@ -1,0 +1,229 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live timing</title>
+<style>
+  /*
+   * The public live-timing page. Unlike the OBS overlays it is opaque, reflows to a phone,
+   * and needs no login: it reads the same hosted event the overlays do (?event=CODE) and
+   * re-renders on every push. A viewer follows the race here without the stream.
+   */
+  :root {
+    --bg: #0b0d11; --panel: #12151b; --line: rgba(255,255,255,.08);
+    --ink: #f2f4f8; --ink-2: rgba(242,244,248,.72); --ink-3: rgba(242,244,248,.45);
+    --accent: #00e0a4; --warn: #ffd60a; --bad: #ff453a; --purple: #bf5af2;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 400 15px/1.5 Inter, -apple-system, "Segoe UI", system-ui, sans-serif; }
+  .shell { max-width: 820px; margin: 0 auto; padding: 22px 16px 70px; }
+
+  header.top { display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 18px; }
+  .kicker { font-family: var(--mono); font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+  h1 { font-size: 1.5rem; line-height: 1.15; margin: 4px 0 2px; letter-spacing: -.01em; }
+  .where { color: var(--ink-2); font-size: .9rem; }
+  .langbtns { margin-left: auto; display: flex; gap: 4px; }
+  .langbtns button { font: inherit; font-size: .8rem; padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink-2); cursor: pointer; }
+  .langbtns button.on { border-color: var(--accent); color: var(--accent); }
+
+  .flagpill { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 6px 12px; border-radius: 20px; font-size: .82rem; font-weight: 600; letter-spacing: .04em; background: rgba(48,209,88,.14); color: #30d158; }
+  .flagpill.yellow, .flagpill.safety, .flagpill.vsc, .flagpill.formation { background: rgba(255,214,10,.14); color: var(--warn); }
+  .flagpill.red { background: rgba(255,69,58,.16); color: var(--bad); }
+  .flagpill i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  .meta { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; }
+  .meta .m .lbl { font-family: var(--mono); font-size: .6rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  .meta .m .val { font-size: 1.05rem; font-weight: 600; margin-top: 2px; }
+
+  h2.sec { font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin: 26px 0 8px; font-weight: 700; }
+  .wrap-x { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-family: var(--mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); padding: 6px 8px; border-bottom: 1px solid var(--line); font-weight: 500; }
+  th.r, td.r { text-align: right; }
+  td { padding: 9px 8px; border-bottom: 1px solid rgba(255,255,255,.05); }
+  tbody tr:first-child td { font-weight: 600; }
+  .cbar { display: inline-block; width: 4px; height: 15px; border-radius: 2px; vertical-align: middle; margin-right: 8px; }
+  .pos { font-family: var(--mono); color: var(--ink-2); width: 30px; }
+  .nm { font-weight: 600; }
+  .team { color: var(--ink-3); font-size: .78rem; margin-left: 6px; }
+  .mono { font-family: var(--mono); }
+  .best { color: var(--purple); }
+  .dnf { color: var(--ink-3); }
+  .pollq { font-size: 1.05rem; font-weight: 600; margin-bottom: 10px; }
+  #pollopts { display: grid; gap: 8px; }
+  .pollopt { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; overflow: hidden; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); font: inherit; cursor: pointer; }
+  .pollopt .po-bar { position: absolute; left: 0; top: 0; bottom: 0; opacity: .28; transition: width .4s ease; }
+  .pollopt .po-l { position: relative; font-weight: 600; }
+  .pollopt .po-p { position: relative; margin-left: auto; font-family: var(--mono); color: var(--ink-2); }
+  .pollopt.mine { border-color: var(--accent); }
+  .pollopt.mine .po-l::after { content: ' ✓'; color: var(--accent); }
+  .pollfoot { margin-top: 8px; color: var(--ink-3); font-size: .8rem; }
+  .foot { margin-top: 30px; color: var(--ink-3); font-size: .78rem; }
+  #loading { color: var(--ink-3); padding: 40px 0; text-align: center; }
+  [hidden] { display: none !important; }
+</style>
+
+<div class="shell">
+  <div id="loading">Loading…</div>
+  <div id="app" hidden>
+    <header class="top">
+      <div>
+        <div class="kicker" id="round">—</div>
+        <h1 id="evname">—</h1>
+        <div class="where" id="where">—</div>
+      </div>
+      <div class="langbtns">
+        <button data-lang="id">ID</button>
+        <button data-lang="en" class="on">EN</button>
+      </div>
+    </header>
+
+    <div class="flagpill" id="flag"><i></i><span id="flagtext">—</span></div>
+
+    <div class="meta">
+      <div class="m"><div class="lbl" data-t="session">Session</div><div class="val" id="session">—</div></div>
+      <div class="m"><div class="lbl" data-t="lap">Lap</div><div class="val" id="lap">—</div></div>
+      <div class="m"><div class="lbl" data-t="fastest">Fastest lap</div><div class="val mono" id="fastest">—</div></div>
+    </div>
+
+    <div id="pollBox" hidden>
+      <h2 class="sec" data-t="poll">Poll</h2>
+      <div class="pollq" id="pollq"></div>
+      <div id="pollopts"></div>
+      <div class="pollfoot"><b id="polltotal">0</b> <span data-t="votes2">votes</span> · <span data-t="tap">tap to vote</span></div>
+    </div>
+
+    <h2 class="sec" data-t="classification">Classification</h2>
+    <div class="wrap-x"><table id="cls"></table></div>
+
+    <div id="standingsWrap" hidden>
+      <h2 class="sec" data-t="standings">Championship</h2>
+      <div class="wrap-x"><table id="std"></table></div>
+    </div>
+
+    <p class="foot"><span data-t="foot">Live — updates automatically.</span> <span id="code" class="mono"></span></p>
+  </div>
+</div>
+
+<script src="/supabase-config.js"></script>
+<script type="module">
+  import { Bus, fmtGap, fmtTime, classification, leaderLap, fastestLap, FLAG_LABEL } from './js/shared.js';
+  import { CloudBus, cloudOptions } from './js/cloudbus.js';
+
+  const $ = (s) => document.querySelector(s);
+  const params = new URLSearchParams(location.search);
+  const code = params.get('event') || '';
+
+  // Bilingual, the way the project asks every public page to be. Only the fixed labels are
+  // translated; names, times and places are the same in any language.
+  const STR = {
+    id: { session: 'Sesi', lap: 'Lap', fastest: 'Lap tercepat', classification: 'Klasemen',
+          standings: 'Klasemen juara', foot: 'Langsung — diperbarui otomatis.', poll: 'Voting',
+          votes2: 'suara', tap: 'ketuk untuk memilih',
+          POS: 'POS', DRIVER: 'PEMBALAP', GAP: 'GAP', BEST: 'TERBAIK', LAPS: 'LAP', PTS: 'POIN' },
+    en: { session: 'Session', lap: 'Lap', fastest: 'Fastest lap', classification: 'Classification',
+          standings: 'Championship', foot: 'Live — updates automatically.', poll: 'Poll',
+          votes2: 'votes', tap: 'tap to vote',
+          POS: 'POS', DRIVER: 'DRIVER', GAP: 'GAP', BEST: 'BEST', LAPS: 'LAPS', PTS: 'PTS' }
+  };
+  let lang = (localStorage.getItem('frl.lang') === 'id') ? 'id' : 'en';
+
+  const cloud = cloudOptions();
+  const bus = cloud ? new CloudBus('overlay', cloud) : new Bus('overlay');
+  let last = null;
+
+  function applyLang() {
+    document.querySelectorAll('[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
+    document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = STR[lang][el.dataset.t] || el.textContent; });
+    if (last) render(last);
+  }
+  document.querySelectorAll('[data-lang]').forEach((b) => {
+    b.onclick = () => { lang = b.dataset.lang; try { localStorage.setItem('frl.lang', lang); } catch (e) {} applyLang(); };
+  });
+
+  function render(s) {
+    last = s;
+    const T = STR[lang];
+    $('#app').hidden = false;
+    $('#loading').hidden = true;
+    $('#round').textContent = s.event.round || '';
+    $('#evname').textContent = s.event.name || 'Live timing';
+    $('#where').textContent = s.event.track || '';
+    $('#code').textContent = code ? '#' + code : '';
+
+    const flag = s.race.status || 'idle';
+    const fp = $('#flag');
+    fp.className = 'flagpill ' + flag;
+    $('#flagtext').textContent = FLAG_LABEL[flag] || flag.toUpperCase();
+
+    $('#session').textContent = s.event.sessionName || (s.event.sessionType || 'race').toUpperCase();
+    const total = s.race.totalLaps || 0;
+    $('#lap').textContent = total ? `${Math.min(leaderLap(s) + 1, total)} / ${total}` : (leaderLap(s) || '—');
+    const fl = fastestLap(s);
+    $('#fastest').textContent = fl && fl.bestLap != null ? `${fmtTime(fl.bestLap)} · ${fl.name}` : '—';
+
+    const rows = classification(s);
+    let html = `<thead><tr><th>${T.POS}</th><th>${T.DRIVER}</th><th class="r">${T.GAP}</th><th class="r">${T.BEST}</th><th class="r">${T.LAPS}</th></tr></thead><tbody>`;
+    for (const d of rows) {
+      html += `<tr class="${d.dnf ? 'dnf' : ''}">` +
+        `<td class="pos">${d.dnf ? 'DNF' : d.position}</td>` +
+        `<td><span class="cbar" style="background:${d.color || '#666'}"></span><span class="nm">${esc(d.name)}</span>${d.team ? `<span class="team">${esc(d.team)}</span>` : ''}</td>` +
+        `<td class="r mono">${d.position === 1 ? '—' : (d.predicted ? '~' : '') + (d.gap || '')}</td>` +
+        `<td class="r mono ${fl && fl.id === d.id ? 'best' : ''}">${d.bestLap != null ? fmtTime(d.bestLap) : '—'}</td>` +
+        `<td class="r mono">${d.lapsDone || 0}</td></tr>`;
+    }
+    html += '</tbody>';
+    $('#cls').innerHTML = html;
+
+    // audience poll
+    const poll = (s.overlay && s.overlay.poll) || {};
+    $('#pollBox').hidden = !poll.open;
+    if (poll.open) {
+      $('#pollq').textContent = poll.question || '';
+      const counts = (s.votes && s.votes.counts) || {};
+      const total = (s.votes && s.votes.total) || 0;
+      $('#polltotal').textContent = total;
+      const mine = myVote();
+      $('#pollopts').innerHTML = (poll.options || []).map((o) => {
+        const n = counts[o.id] || 0;
+        const pct = total ? Math.round((n / total) * 100) : 0;
+        return `<button class="pollopt ${mine === o.id ? 'mine' : ''}" data-vote="${o.id}">` +
+          `<span class="po-bar" style="width:${pct}%;background:${o.color || '#666'}"></span>` +
+          `<span class="po-l">${esc(o.label)}</span><span class="po-p">${pct}%</span></button>`;
+      }).join('');
+      $('#pollopts').querySelectorAll('[data-vote]').forEach((b) => {
+        b.onclick = async () => { try { await bus.vote(b.dataset.vote); setMyVote(b.dataset.vote); } catch (e) {} };
+      });
+    }
+
+    const st = s.standings || [];
+    $('#standingsWrap').hidden = st.length === 0;
+    if (st.length) {
+      const lead = st[0] ? st[0].points : 0;
+      let sh = `<thead><tr><th>${T.POS}</th><th>${T.DRIVER}</th><th class="r">${T.GAP}</th><th class="r">${T.PTS}</th></tr></thead><tbody>`;
+      for (const r of st) {
+        sh += `<tr><td class="pos">${r.rank}</td>` +
+          `<td><span class="cbar" style="background:${r.color || '#666'}"></span><span class="nm">${esc(r.name)}</span></td>` +
+          `<td class="r mono">${r.rank === 1 ? '—' : '-' + (lead - r.points)}</td>` +
+          `<td class="r mono">${r.points}</td></tr>`;
+      }
+      sh += '</tbody>';
+      $('#std').innerHTML = sh;
+    }
+  }
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  function myVote() { try { return localStorage.getItem('frl.voted.' + code) || ''; } catch (e) { return ''; } }
+  function setMyVote(id) { try { localStorage.setItem('frl.voted.' + code, id); } catch (e) {} if (last) render(last); }
+
+  if (!cloud) { $('#loading').textContent = 'This page needs a hosted event link (?event=CODE).'; }
+  else if (!code) { $('#loading').textContent = 'Add ?event=CODE to the address to follow an event.'; }
+  else {
+    bus.on('state', render);
+    bus.on('close', () => {});
+    setTimeout(() => { if (!last) $('#loading').textContent = 'No event found for ' + code + '.'; }, 6000);
+  }
+  applyLang();
+</script>

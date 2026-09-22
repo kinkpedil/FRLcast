@@ -1,0 +1,336 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Race recap card</title>
+<style>
+  /*
+   * A share card, not a page. It reads the same hosted event the overlays do (?event=CODE)
+   * and paints the result onto a canvas the operator can save and drop straight into an
+   * Instagram post or story. Everything visible is drawn on the canvas so the downloaded PNG
+   * is exactly what is on screen, credit line included.
+   */
+  :root {
+    --bg: #0b0d11; --panel: #12151b; --line: rgba(255,255,255,.08);
+    --ink: #f2f4f8; --ink-2: rgba(242,244,248,.72); --ink-3: rgba(242,244,248,.45);
+    --accent: #00e0a4; --warn: #ffd60a; --bad: #ff453a; --purple: #bf5af2;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 400 15px/1.5 Inter, -apple-system, "Segoe UI", system-ui, sans-serif; }
+  .shell { max-width: 720px; margin: 0 auto; padding: 22px 16px 70px; }
+
+  header.top { display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 18px; }
+  .kicker { font-family: var(--mono); font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+  h1 { font-size: 1.4rem; line-height: 1.15; margin: 4px 0 2px; letter-spacing: -.01em; }
+  .where { color: var(--ink-2); font-size: .9rem; }
+  .langbtns { margin-left: auto; display: flex; gap: 4px; }
+  .langbtns button { font: inherit; font-size: .8rem; padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink-2); cursor: pointer; }
+  .langbtns button.on { border-color: var(--accent); color: var(--accent); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { font: inherit; font-size: .85rem; padding: 8px 14px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; }
+  .seg button.on { background: var(--accent); color: #05221b; font-weight: 600; }
+  .btn { font: inherit; font-size: .9rem; font-weight: 600; padding: 9px 16px; border-radius: 8px; border: 0; background: var(--accent); color: #05221b; cursor: pointer; }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); font-weight: 500; }
+  .field { display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; color: var(--ink-2); }
+  .field select { font: inherit; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+
+  .preview { border: 1px solid var(--line); border-radius: 12px; background: #000; padding: 14px; display: flex; justify-content: center; }
+  canvas { max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  .note { color: var(--ink-3); font-size: .8rem; margin-top: 14px; }
+  #loading { color: var(--ink-2); padding: 40px 0; text-align: center; }
+</style>
+
+<div class="shell">
+  <header class="top">
+    <div>
+      <div class="kicker" data-t="kicker">Share card</div>
+      <h1 id="evname">Race recap</h1>
+      <div class="where" id="where"></div>
+    </div>
+    <div class="langbtns">
+      <button data-lang="en" class="on">EN</button>
+      <button data-lang="id">ID</button>
+    </div>
+  </header>
+
+  <div id="loading" data-t="loading">Loading event…</div>
+
+  <div id="app" hidden>
+    <div class="controls">
+      <div class="seg" id="fmt">
+        <button data-fmt="post" class="on" data-t="post">Post 1:1</button>
+        <button data-fmt="story" data-t="story">Story 9:16</button>
+        <button data-fmt="wide" data-t="wide">Wide 16:9</button>
+      </div>
+      <label class="field"><span data-t="rows">Rows</span>
+        <select id="rows">
+          <option value="3">Top 3</option>
+          <option value="5" selected>Top 5</option>
+          <option value="8">Top 8</option>
+          <option value="10">Top 10</option>
+        </select>
+      </label>
+      <button class="btn" id="download" data-t="download">Download PNG</button>
+    </div>
+
+    <div class="preview"><canvas id="card"></canvas></div>
+    <p class="note" data-t="note">Reads the live event. Generate the card after the race is finished for the final result.</p>
+  </div>
+</div>
+
+<script src="/supabase-config.js?v=20260922152040"></script>
+<script type="module">
+  import { fmtTime, classification, fastestLap, leaderLap, FLAG_LABEL } from './js/shared.js';
+  import { CloudBus, cloudOptions } from './js/cloudbus.js';
+
+  const $ = (s) => document.querySelector(s);
+  const params = new URLSearchParams(location.search);
+  const code = params.get('event') || '';
+
+  const STR = {
+    en: { kicker: 'Share card', loading: 'Loading event…', post: 'Post 1:1', story: 'Story 9:16',
+          wide: 'Wide 16:9', rows: 'Rows', download: 'Download PNG',
+          note: 'Reads the live event. Generate the card after the race is finished for the final result.',
+          RESULT: 'RESULT', FASTEST: 'FASTEST LAP', POS: 'POS', DRIVER: 'DRIVER', BEST: 'BEST', LAPS: 'LAPS',
+          NODATA: 'No drivers yet for this event.' },
+    id: { kicker: 'Kartu bagikan', loading: 'Memuat event…', post: 'Post 1:1', story: 'Story 9:16',
+          wide: 'Lebar 16:9', rows: 'Baris', download: 'Unduh PNG',
+          note: 'Membaca event langsung. Buat kartu setelah balapan selesai untuk hasil final.',
+          RESULT: 'HASIL', FASTEST: 'LAP TERCEPAT', POS: 'POS', DRIVER: 'PEMBALAP', BEST: 'TERBAIK', LAPS: 'LAP',
+          NODATA: 'Belum ada pembalap untuk event ini.' }
+  };
+  let lang = (localStorage.getItem('frl.lang') === 'id') ? 'id' : 'en';
+  let last = null;
+  let fmt = 'post';
+
+  const SIZES = { post: [1080, 1080], story: [1080, 1920], wide: [1920, 1080] };
+
+  function applyLang() {
+    document.querySelectorAll('[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
+    document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = STR[lang][el.dataset.t] || el.textContent; });
+    if (last) draw();
+  }
+  document.querySelectorAll('[data-lang]').forEach((b) => {
+    b.onclick = () => { lang = b.dataset.lang; try { localStorage.setItem('frl.lang', lang); } catch (e) {} applyLang(); };
+  });
+  $('#fmt').querySelectorAll('[data-fmt]').forEach((b) => {
+    b.onclick = () => { fmt = b.dataset.fmt; $('#fmt').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); draw(); };
+  });
+  $('#rows').onchange = draw;
+
+  function esc(s) { return String(s == null ? '' : s); }
+  function rounded(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function draw() {
+    if (!last) return;
+    const s = last, T = STR[lang];
+    const [W, H] = SIZES[fmt];
+    const c = $('#card');
+    c.width = W; c.height = H;
+    const ctx = c.getContext('2d');
+
+    // background
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, '#0d1117'); g.addColorStop(1, '#05070a');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // accent glow strip
+    ctx.fillStyle = '#00e0a4'; ctx.fillRect(0, 0, W, 10);
+
+    const pad = Math.round(W * 0.075);
+    let y = pad + Math.round(H * 0.02);
+
+    // kicker
+    ctx.fillStyle = 'rgba(242,244,248,.5)';
+    ctx.font = `600 ${Math.round(W * 0.026)}px ui-monospace, Menlo, Consolas, monospace`;
+    ctx.textBaseline = 'alphabetic';
+    const kick = `${T.RESULT}${s.event.round ? '  ·  ' + s.event.round.toUpperCase() : ''}`;
+    ctx.fillText(spaced(kick), pad, y);
+    y += Math.round(W * 0.06);
+
+    // event name (wrap to 2 lines)
+    ctx.fillStyle = '#f2f4f8';
+    const nameSize = fmt === 'wide' ? W * 0.05 : W * 0.066;
+    ctx.font = `700 ${Math.round(nameSize)}px Inter, "Segoe UI", system-ui, sans-serif`;
+    const nameLines = wrap(ctx, s.event.name || 'Race recap', W - pad * 2, 2);
+    for (const ln of nameLines) { y += Math.round(nameSize); ctx.fillText(ln, pad, y); }
+
+    // track
+    if (s.event.track) {
+      y += Math.round(W * 0.05);
+      ctx.fillStyle = 'rgba(242,244,248,.62)';
+      ctx.font = `400 ${Math.round(W * 0.032)}px Inter, system-ui, sans-serif`;
+      ctx.fillText(s.event.track, pad, y);
+    }
+
+    y += Math.round(H * 0.04);
+
+    const rows = classification(s).slice(0, Number($('#rows').value) || 5);
+    const fl = fastestLap(s);
+
+    if (!rows.length) {
+      ctx.fillStyle = 'rgba(242,244,248,.5)';
+      ctx.font = `500 ${Math.round(W * 0.036)}px Inter, system-ui, sans-serif`;
+      ctx.fillText(T.NODATA, pad, y + 60);
+      finishCredit(ctx, W, H, pad);
+      return;
+    }
+
+    // rows area
+    const bottomReserve = Math.round(H * (fmt === 'story' ? 0.20 : 0.16));
+    const avail = H - y - bottomReserve;
+    const rh = Math.min(Math.round(avail / rows.length), Math.round(H * 0.11));
+    const gap = Math.round(rh * 0.14);
+    const rowH = rh - gap;
+
+    rows.forEach((d, i) => {
+      const ry = y + i * rh;
+      // card
+      const podium = i < 3;
+      ctx.fillStyle = podium ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.035)';
+      rounded(ctx, pad, ry, W - pad * 2, rowH, Math.round(rowH * 0.18));
+      ctx.fill();
+      // color bar
+      ctx.fillStyle = d.color || '#8e8e93';
+      rounded(ctx, pad, ry, Math.round(W * 0.014), rowH, 4);
+      ctx.fill();
+
+      const cx = pad + Math.round(W * 0.045);
+      const mid = ry + rowH / 2;
+      // position
+      const posColors = ['#ffd60a', '#c7ccd4', '#cd7f32'];
+      ctx.fillStyle = podium ? posColors[i] : 'rgba(242,244,248,.6)';
+      ctx.font = `700 ${Math.round(rowH * 0.5)}px Inter, system-ui, sans-serif`;
+      ctx.textBaseline = 'middle';
+      const posTxt = d.dnf ? 'DNF' : String(d.position);
+      ctx.fillText(posTxt, cx, mid);
+
+      // name + team
+      const nx = cx + Math.round(W * 0.11);
+      ctx.fillStyle = '#f2f4f8';
+      ctx.font = `600 ${Math.round(rowH * 0.34)}px Inter, system-ui, sans-serif`;
+      const nm = (d.num ? d.num + '  ' : '') + (d.name || '');
+      ctx.fillText(clip(ctx, nm, W * 0.5), nx, mid - (d.team ? rowH * 0.12 : 0));
+      if (d.team) {
+        ctx.fillStyle = 'rgba(242,244,248,.5)';
+        ctx.font = `400 ${Math.round(rowH * 0.24)}px Inter, system-ui, sans-serif`;
+        ctx.fillText(clip(ctx, d.team, W * 0.5), nx, mid + rowH * 0.22);
+      }
+
+      // best lap (right)
+      const rx = W - pad - Math.round(W * 0.02);
+      ctx.textAlign = 'right';
+      const isFast = fl && fl.id === d.id;
+      ctx.fillStyle = isFast ? '#bf5af2' : 'rgba(242,244,248,.85)';
+      ctx.font = `600 ${Math.round(rowH * 0.3)}px ui-monospace, Menlo, Consolas, monospace`;
+      ctx.fillText(d.bestLap != null ? fmtTime(d.bestLap) : '—', rx, mid - (d.lapsDone ? rowH * 0.12 : 0));
+      ctx.fillStyle = 'rgba(242,244,248,.4)';
+      ctx.font = `400 ${Math.round(rowH * 0.2)}px ui-monospace, Menlo, Consolas, monospace`;
+      ctx.fillText(`${d.lapsDone || 0} ${T.LAPS}`, rx, mid + rowH * 0.2);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    });
+
+    // fastest lap badge
+    if (fl && fl.bestLap != null) {
+      const by = y + rows.length * rh + Math.round(H * 0.015);
+      const bh = Math.round(H * (fmt === 'story' ? 0.05 : 0.055));
+      ctx.fillStyle = 'rgba(191,90,242,.14)';
+      rounded(ctx, pad, by, W - pad * 2, bh, Math.round(bh * 0.28));
+      ctx.fill();
+      ctx.fillStyle = '#bf5af2';
+      ctx.textBaseline = 'middle';
+      ctx.font = `700 ${Math.round(bh * 0.32)}px ui-monospace, Menlo, Consolas, monospace`;
+      ctx.fillText(spaced(T.FASTEST), pad + Math.round(W * 0.03), by + bh / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#f2f4f8';
+      ctx.font = `600 ${Math.round(bh * 0.4)}px Inter, system-ui, sans-serif`;
+      ctx.fillText(`${fl.name}   ${fmtTime(fl.bestLap)}`, W - pad - Math.round(W * 0.03), by + bh / 2);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    finishCredit(ctx, W, H, pad);
+  }
+
+  function finishCredit(ctx, W, H, pad) {
+    const y = H - Math.round(H * 0.045);
+    ctx.fillStyle = 'rgba(255,255,255,.06)';
+    ctx.fillRect(pad, y - Math.round(H * 0.02), W - pad * 2, 2);
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(242,244,248,.85)';
+    ctx.font = `600 ${Math.round(W * 0.03)}px Inter, system-ui, sans-serif`;
+    ctx.fillText('FRLcast', pad, y + Math.round(H * 0.006));
+    const w1 = ctx.measureText('FRLcast').width;
+    ctx.fillStyle = 'rgba(242,244,248,.45)';
+    ctx.font = `400 ${Math.round(W * 0.024)}px Inter, system-ui, sans-serif`;
+    ctx.fillText('  by kinkpedil12', pad + w1, y + Math.round(H * 0.006));
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(0,224,164,.9)';
+    ctx.font = `600 ${Math.round(W * 0.026)}px ui-monospace, Menlo, Consolas, monospace`;
+    ctx.fillText('frlcast.my.id', W - pad, y + Math.round(H * 0.006));
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  // helpers -------------------------------------------------------------
+  function spaced(t) { return t.split('').join(' '); }
+  function wrap(ctx, text, maxW, maxLines) {
+    const words = String(text).split(/\s+/);
+    const lines = []; let line = '';
+    for (const w of words) {
+      const t = line ? line + ' ' + w : w;
+      if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; if (lines.length === maxLines - 1) break; }
+      else line = t;
+    }
+    if (line) lines.push(line);
+    if (lines.length > maxLines) lines.length = maxLines;
+    // ellipsis if truncated
+    return lines;
+  }
+  function clip(ctx, text, maxW) {
+    if (ctx.measureText(text).width <= maxW) return text;
+    let t = text;
+    while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t + '…';
+  }
+
+  $('#download').onclick = () => {
+    if (!last) return;
+    const url = $('#card').toDataURL('image/png');
+    const a = document.createElement('a');
+    const rd = (last.event.round || '').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    a.download = `recap-${code || 'event'}${rd ? '-' + rd : ''}-${fmt}.png`;
+    a.href = url; a.click();
+  };
+
+  function onState(s) {
+    last = s;
+    $('#loading').hidden = true;
+    $('#app').hidden = false;
+    $('#evname').textContent = s.event.name || 'Race recap';
+    $('#where').textContent = [s.event.round, s.event.track].filter(Boolean).join(' · ');
+    draw();
+  }
+
+  const cloud = cloudOptions();
+  if (!code) { $('#loading').textContent = 'Add ?event=CODE to the address to build a recap.'; }
+  else if (!cloud) { $('#loading').textContent = 'This page needs Supabase configured.'; }
+  else {
+    const bus = new CloudBus('recap', cloud);
+    bus.on('state', onState);
+    setTimeout(() => { if (!last) $('#loading').textContent = 'No event found for ' + code + '.'; }, 6000);
+  }
+  applyLang();
+</script>

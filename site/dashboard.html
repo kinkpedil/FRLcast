@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>document.documentElement.classList.add('js')</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your events</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b0d11">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  .wrap { padding: 40px 0 96px; }
+  .head { display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+  .who { font-family: var(--mono); font-size: .8125rem; color: var(--ink-3); }
+
+  .panel {
+    border: 1px solid var(--line); border-radius: var(--r-lg);
+    background: var(--panel); padding: 24px 22px; margin-top: 20px;
+  }
+  .panel h2 { font-size: 1.25rem; margin-bottom: 4px; }
+  .panel .body { font-size: .9375rem; margin-bottom: 18px; }
+
+  .row { display: grid; gap: 14px; grid-template-columns: minmax(0,1fr); }
+  @media (min-width: 720px) { .row.two { grid-template-columns: repeat(2, minmax(0,1fr)); }
+                              .row.three { grid-template-columns: 1fr 1fr 1fr; } }
+
+  label.f { display: block; }
+  label.f > span {
+    display: block; margin-bottom: 6px;
+    font-family: var(--mono); font-size: .6875rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  label.f input, label.f select {
+    width: 100%; height: 44px; padding: 0 13px;
+    font: 400 .9375rem var(--sans); color: var(--ink);
+    background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--r-md);
+  }
+  label.f input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .msg { margin: 14px 0 0; padding: 11px 13px; border-radius: var(--r-md); font-size: .875rem; line-height: 1.5; }
+  .msg.bad { background: rgba(255,69,58,.12); color: #ff9a80; }
+  .msg.ok  { background: rgba(0,224,164,.1); color: var(--accent); }
+
+  .event { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--panel); padding: 22px; margin-top: 16px; }
+  .event header { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between; }
+  .event h3 { font-size: 1.125rem; }
+  .code {
+    font-family: var(--mono); font-size: 1.25rem; font-weight: 500;
+    letter-spacing: .1em; color: var(--accent);
+  }
+  .meta { font-size: .875rem; color: var(--ink-2); margin-top: 4px; }
+
+  .urls { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .row-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .url { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .url .tag {
+    flex: 0 0 52px;
+    font-family: var(--mono); font-size: .625rem; letter-spacing: .1em;
+    color: var(--ink-3);
+  }
+  .url code {
+    flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap;
+    font-family: var(--mono); font-size: .75rem; color: var(--ink-2);
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: var(--r-sm); padding: 8px 10px;
+  }
+
+  .queue { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .queue h4 { margin: 0 0 10px; font-size: .8125rem; font-family: var(--mono);
+              letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+  .sig { display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+         padding: 9px 0; border-bottom: 1px solid var(--line); font-size: .9375rem; }
+  .sig:last-child { border-bottom: 0; }
+  .sig b { font-weight: 600; }
+  .sig .num { font-family: var(--mono); color: var(--ink-3); }
+  .sig .team {
+    font-size: .75rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px;
+  }
+  .sig .spacer { flex: 1; }
+  .sig .state { font-family: var(--mono); font-size: .75rem; color: var(--ink-3); }
+  .empty { font-size: .875rem; color: var(--ink-3); }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="shell">
+    <a class="brand" href="/"><span class="live" aria-hidden="true"></span>FRL BROADCAST</a>
+    <nav class="nav">
+      <span class="who" id="who"></span>
+      <button class="btn btn-ghost btn-sm" id="out" type="button">Sign out</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="shell">
+
+    <div id="loading" class="empty">Loading your events…</div>
+
+    <div id="app" hidden>
+      <div class="head">
+        <h1>Your events</h1>
+      </div>
+      <p class="lede">One event is one room. Two leagues racing the same night never see each
+        other's timing.</p>
+
+      <div class="panel">
+        <h2>New event</h2>
+        <p class="body">The code is what drivers type into the app and what the overlays take
+          in their URL. Keep it unambiguous: no letter O next to a zero.</p>
+        <form id="make">
+          <div class="row two">
+            <label class="f"><span>Event name</span>
+              <input id="fName" maxlength="60" placeholder="NUSANTARA DRIFT LEAGUE" required>
+            </label>
+            <label class="f"><span>Code</span>
+              <input id="fCode" maxlength="12" placeholder="NDL3" required
+                     pattern="[A-Za-z0-9]{4,12}" title="4 to 12 letters and digits">
+            </label>
+          </div>
+          <div class="row three" style="margin-top:14px">
+            <label class="f"><span>Round</span>
+              <input id="fRound" maxlength="30" placeholder="ROUND 1">
+            </label>
+            <label class="f"><span>Track</span>
+              <input id="fTrack" maxlength="40" placeholder="EBISU MINAMI">
+            </label>
+            <label class="f"><span>Total laps</span>
+              <input id="fLaps" type="number" min="0" max="999" value="24">
+            </label>
+          </div>
+          <p class="msg bad" id="err" hidden></p>
+          <button class="btn btn-primary" id="go" type="submit" style="margin-top:16px">Create event</button>
+        </form>
+      </div>
+
+      <div id="events"></div>
+    </div>
+
+  </div>
+</main>
+
+<script src="/supabase-config.js?v=20260922152040"></script>
+<script type="module">
+/*
+ * The operator's side of a hosted event.
+ *
+ * Creating an event and letting drivers in are the two things that had to be done by hand
+ * in the Supabase table editor, which is not a thing to ask of somebody twenty minutes
+ * before a race. Everything else an operator does still happens in the console.
+ */
+const cfg = window.FRL_SUPABASE || {};
+const $ = (s) => document.querySelector(s);
+/*
+ * A word at a time, for the lines that are assembled rather than written.
+ *
+ * "ROUND 1 · EBISU MINAMI · 12 laps · flag: idle" is one string with a number in the middle
+ * of it, so it can never match a dictionary keyed by sentences. The fix is to translate the
+ * words and let the interpolation put them back together — not to add every possible
+ * combination of lap count and flag to the dictionary.
+ */
+const t = (en) => (window.FRL_I18N ? window.FRL_I18N.t(en) : en);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+if (!cfg.url || !cfg.anonKey) {
+  $('#loading').textContent = 'This site has no Supabase project configured yet.';
+} else {
+  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+  const sb = createClient(cfg.url, cfg.anonKey);
+
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.replace('/login'); }
+
+  $('#who').textContent = session.user.email;
+  $('#out').onclick = async () => { await sb.auth.signOut(); location.replace('/login'); };
+
+  // ---------------------------------------------------------------- creating
+
+  $('#make').onsubmit = async (ev) => {
+    ev.preventDefault();
+    $('#err').hidden = true;
+    $('#go').disabled = true;
+    const { error } = await sb.from('events').insert({
+      owner: session.user.id,
+      code: $('#fCode').value.trim().toUpperCase(),
+      name: $('#fName').value.trim(),
+      round: $('#fRound').value.trim(),
+      track: $('#fTrack').value.trim(),
+      total_laps: Number($('#fLaps').value) || 0
+    });
+    $('#go').disabled = false;
+    if (error) {
+      // The one collision worth naming: codes are unique across the whole install, so a
+      // popular one may be taken by a league you have never heard of.
+      $('#err').textContent = /duplicate|unique/i.test(error.message)
+        ? 'That code is already taken. Pick another.'
+        : error.message;
+      $('#err').hidden = false;
+      return;
+    }
+    $('#make').reset();
+    $('#fLaps').value = 24;
+    load();
+  };
+
+  // ---------------------------------------------------------------- listing
+
+  async function load() {
+    const { data: events } = await sb.from('events').select('*')
+      .eq('owner', session.user.id).order('created_at', { ascending: false });
+
+    const box = $('#events');
+    if (!events || !events.length) {
+      box.innerHTML = '<p class="empty" style="margin-top:22px">No events yet. Make one above.</p>';
+      return;
+    }
+
+    const { data: queue } = await sb.from('registrations').select('*')
+      .in('event_id', events.map((e) => e.id))
+      .order('created_at', { ascending: true });
+
+    const origin = location.origin;
+    box.innerHTML = events.map((e) => {
+      const mine = (queue || []).filter((r) => r.event_id === e.id);
+      const waiting = mine.filter((r) => r.status === 'pending');
+      return `
+      <div class="event">
+        <header>
+          <div>
+            <h3 data-i18n-skip>${esc(e.name)}</h3>
+            <div class="meta" data-i18n-skip>${esc(e.round || t('no round set'))} ·
+              ${esc(e.track || t('no track'))} ·
+              ${e.total_laps || 0} ${t('laps')} · ${t('flag')}: ${t(e.status)}</div>
+          </div>
+          <span class="code">${esc(e.code)}</span>
+        </header>
+
+        <div class="urls">
+          <div class="row-btns">
+            <a class="btn btn-primary" href="/console.html?event=${esc(e.code)}">Open race control</a>
+            <a class="btn btn-ghost" href="/report.html?event=${esc(e.code)}" target="_blank"
+               rel="noopener">Race report</a>
+          </div>
+
+          <div class="url">
+            <span class="tag">REPORT</span>
+            <code>${origin}/report.html?event=${esc(e.code)}</code>
+            <button class="btn btn-ghost btn-sm" data-copy="${origin}/report.html?event=${esc(e.code)}">Copy</button>
+          </div>
+          <div class="url">
+            <span class="tag">OBS</span>
+            <code>${origin}/overlay/all.html?event=${esc(e.code)}</code>
+            <button class="btn btn-ghost btn-sm" data-copy="${origin}/overlay/all.html?event=${esc(e.code)}">Copy</button>
+          </div>
+          <div class="url">
+            <span class="tag">APP</span>
+            <code>drivers type <b style="color:var(--accent)">${esc(e.code)}</b> into the driver app</code>
+          </div>
+        </div>
+
+        <div class="queue">
+          <h4 data-i18n-skip>${t('Driver sign-ins')}${waiting.length ? ` · ${waiting.length} ${t('waiting')}` : ''}</h4>
+          ${mine.length ? mine.map((r) => `
+            <div class="sig">
+              <b data-i18n-skip>${esc(r.nick)}</b><span class="num">#${esc(r.num)}</span>${r.team ? `<span class="team">${esc(r.team)}</span>` : ''}
+              <span class="spacer"></span>
+              ${r.status === 'pending' ? `
+                <button class="btn btn-primary btn-sm" data-accept="${r.id}">Accept</button>
+                <button class="btn btn-ghost btn-sm" data-reject="${r.id}">No</button>
+              ` : `<span class="state" data-i18n-skip>${t(r.status)}</span>`}
+            </div>`).join('')
+            : '<p class="empty">Nobody has signed in yet.</p>'}
+        </div>
+      </div>`;
+    }).join('');
+
+    // Rebuilt markup is new English. Translate it before anybody reads it.
+    if (window.FRL_I18N) window.FRL_I18N.apply();
+
+    box.querySelectorAll('[data-copy]').forEach((b) => {
+      b.onclick = async () => {
+        await navigator.clipboard.writeText(b.dataset.copy);
+        const was = b.textContent;
+        b.textContent = window.FRL_I18N ? window.FRL_I18N.t('Copied') : 'Copied';
+        setTimeout(() => { b.textContent = was; }, 1400);
+      };
+    });
+
+    // Accepting is one call, not three: it creates the car, links the account and marks the
+    // queue in a single statement, so an operator cannot be interrupted halfway.
+    box.querySelectorAll('[data-accept]').forEach((b) => {
+      b.onclick = async () => {
+        b.disabled = true;
+        await sb.rpc('approve_registration', { p_registration: b.dataset.accept });
+        load();
+      };
+    });
+    box.querySelectorAll('[data-reject]').forEach((b) => {
+      b.onclick = async () => {
+        b.disabled = true;
+        await sb.from('registrations').update({ status: 'rejected' }).eq('id', b.dataset.reject);
+        load();
+      };
+    });
+  }
+
+  await load();
+  $('#loading').hidden = true;
+  $('#app').hidden = false;
+  if (window.FRL_I18N) window.FRL_I18N.apply();
+
+  // A driver signing in while this page is open should appear without a refresh: the
+  // operator is usually looking at this screen precisely because they are waiting.
+  // Anything t() built is invisible to the walker, so the cards are rebuilt in the new
+  // language rather than patched in place.
+  document.addEventListener('frl:lang', () => { load(); });
+
+  sb.channel('queue')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, load)
+    .subscribe();
+}
+</script>
+<script src="/js/i18n-core.js?v=20260922152040"></script>
+<script src="/i18n.js?v=20260922152040"></script>
+</body>
+</html>

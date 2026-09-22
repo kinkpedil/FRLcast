@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>document.documentElement.classList.add('js')</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign in to FRL Broadcast</title>
+<meta name="description" content="Sign in to run your FR Legends league event.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b0d11">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  .auth { min-height: calc(100dvh - 68px); display: grid; place-items: center; padding: 48px 0 80px; }
+  .auth-card {
+    width: 100%; max-width: 420px;
+    border: 1px solid var(--line); border-radius: var(--r-lg);
+    background: var(--panel); padding: 32px 30px;
+  }
+  .auth-card h1 { font-size: 1.75rem; margin-bottom: 8px; }
+  .auth-card .lede { font-size: .9375rem; margin-bottom: 26px; }
+
+  .field { display: block; margin-bottom: 16px; }
+  .field span {
+    display: block; margin-bottom: 7px;
+    font-family: var(--mono); font-size: .6875rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .field input {
+    width: 100%; height: 46px; padding: 0 14px;
+    font: 400 1rem var(--sans);
+    color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line-strong); border-radius: var(--r-md);
+  }
+  .field input::placeholder { color: #5a606b; }
+  .field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .auth .btn { width: 100%; margin-top: 6px; }
+  .swap { background: none; border: 0; padding: 12px 0 0; width: 100%;
+          font: 400 .875rem var(--sans); color: var(--ink-2); cursor: pointer; }
+  .swap:hover { color: var(--ink); }
+
+  .msg { margin: 0 0 16px; padding: 12px 14px; border-radius: var(--r-md); font-size: .875rem; line-height: 1.5; }
+  .msg.bad { background: rgba(255, 69, 58, .12); color: #ff9a90; }
+  .msg.ok { background: rgba(0, 224, 164, .1); color: var(--accent); }
+  .msg.warn { background: rgba(255, 214, 10, .1); color: #ffd60a; }
+  .msg code { font-family: var(--mono); font-size: .8125rem; }
+
+  .next { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--line); }
+  .next p { font-size: .875rem; color: var(--ink-2); line-height: 1.55; margin-bottom: 12px; }
+  .next pre {
+    margin: 0; padding: 12px 14px; overflow-x: auto;
+    background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm);
+    font-family: var(--mono); font-size: .8125rem; color: var(--ink);
+  }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="shell">
+    <a class="brand" href="/"><span class="live" aria-hidden="true"></span>FRL BROADCAST</a>
+    <nav class="nav"><a class="nav-link" href="/">Back to the site</a></nav>
+  </div>
+</header>
+
+<main class="auth">
+  <div class="auth-card">
+
+    <div id="setup" hidden>
+      <h1>Not connected yet</h1>
+      <p class="lede">Sign in needs a Supabase project before it can do anything.</p>
+      <p class="msg warn">Put your project URL and anon key into <code>supabase-config.js</code>, then redeploy. Until then this page has nothing to sign you in to.</p>
+    </div>
+
+    <div id="form-wrap" hidden>
+      <h1 id="title">Sign in</h1>
+      <p class="lede" id="lede">Your event, your grid, your overlays.</p>
+
+      <p class="msg bad" id="err" hidden></p>
+      <p class="msg ok" id="ok" hidden></p>
+
+      <form id="form">
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="email" autocomplete="email" placeholder="you@league.example" required>
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" id="pass" autocomplete="current-password" placeholder="••••••••" minlength="8" required>
+        </label>
+        <button class="btn btn-primary" type="submit" id="go">Sign in</button>
+      </form>
+      <button class="swap" type="button" id="swap">First time here? Create an account</button>
+    </div>
+
+    <div id="signed" hidden>
+      <h1>Signed in</h1>
+      <p class="lede" id="who"></p>
+      <a class="btn btn-primary" href="/dashboard" style="display:block;text-align:center">Your events</a>
+      <div class="next">
+        <!--
+          This used to tell people to run npm start and open localhost:4700, which was true
+          while the console was still tied to a server on the operator's own machine. It is
+          not true any more: race control opens from the dashboard and runs in the browser.
+          Leaving it would have sent every new operator to set up something they do not need.
+        -->
+        <p>Race control opens from the dashboard and runs in this browser. Your events, your
+           grid and your driver sign-ins are all there.</p>
+      </div>
+      <button class="btn btn-ghost" type="button" id="out" style="margin-top:14px">Sign out</button>
+    </div>
+
+  </div>
+</main>
+
+<script src="/supabase-config.js?v=20260922152040"></script>
+<script type="module">
+const cfg = window.FRL_SUPABASE || {};
+const $ = (s) => document.querySelector(s);
+
+// Nothing to sign in to without a project. Saying so beats a form that fails silently.
+if (!cfg.url || !cfg.anonKey) {
+  $('#setup').hidden = false;
+} else {
+  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+  const sb = createClient(cfg.url, cfg.anonKey);
+
+  let creating = false;
+  const show = (el, text) => { el.textContent = text; el.hidden = !text; };
+  const clear = () => { $('#err').hidden = true; $('#ok').hidden = true; };
+
+  function render(session) {
+    const inSession = !!session;
+    $('#form-wrap').hidden = inSession;
+    $('#signed').hidden = !inSession;
+    if (inSession) $('#who').textContent = session.user.email;
+  }
+
+  $('#swap').onclick = () => {
+    creating = !creating;
+    clear();
+    $('#title').textContent = creating ? 'Create an account' : 'Sign in';
+    $('#lede').textContent = creating
+      ? 'One account per person who runs events.'
+      : 'Your event, your grid, your overlays.';
+    $('#go').textContent = creating ? 'Create account' : 'Sign in';
+    $('#swap').textContent = creating ? 'Already have an account? Sign in' : 'First time here? Create an account';
+    $('#pass').setAttribute('autocomplete', creating ? 'new-password' : 'current-password');
+  };
+
+  $('#form').onsubmit = async (ev) => {
+    ev.preventDefault();
+    clear();
+    $('#go').disabled = true;
+    const email = $('#email').value.trim();
+    const password = $('#pass').value;
+    try {
+      const { data, error } = creating
+        ? await sb.auth.signUp({ email, password })
+        : await sb.auth.signInWithPassword({ email, password });
+      if (error) { show($('#err'), error.message); return; }
+      // A project with email confirmation switched on returns a user but no session yet.
+      if (creating && !data.session) {
+        show($('#ok'), 'Check your email to confirm the account, then sign in.');
+        return;
+      }
+      if (data.session) { location.replace('/dashboard'); return; }
+      render(data.session);
+    } catch (e) {
+      show($('#err'), 'Could not reach Supabase. Check the project URL.');
+    } finally {
+      $('#go').disabled = false;
+    }
+  };
+
+  $('#out').onclick = async () => { await sb.auth.signOut(); render(null); };
+
+  const { data } = await sb.auth.getSession();
+  render(data.session);
+}
+</script>
+<script src="/js/i18n-core.js?v=20260922152040"></script>
+<script src="/i18n.js?v=20260922152040"></script>
+</body>
+</html>

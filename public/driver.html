@@ -1,0 +1,118 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d11">
+<title>FRL Driver</title>
+<link rel="stylesheet" href="css/driver.css">
+<body>
+
+<div class="wrap" id="signin">
+  <div class="brandline"><span class="dot"></span><b>FRL DRIVER</b></div>
+  <h1 id="signTitle">Sign in</h1>
+  <p class="lede" id="signLede">Your race control will see your name and let you into the event.</p>
+
+  <form id="form" autocomplete="on">
+    <label class="f"><span>Racing name</span>
+      <input type="text" id="fNick" name="nickname" autocomplete="nickname" maxlength="24" placeholder="AKI" required>
+    </label>
+    <label class="f"><span>Race number</span>
+      <input type="text" id="fNum" name="number" inputmode="numeric" maxlength="4" placeholder="7" required>
+    </label>
+    <label class="f"><span>Password</span>
+      <input type="password" id="fPass" name="password" autocomplete="current-password" minlength="4" placeholder="••••" required>
+    </label>
+    <p class="err" id="fErr" hidden></p>
+    <button class="go" type="submit" id="fGo">Sign in</button>
+    <button class="ghost" type="button" id="fSwap">First time here? Register</button>
+  </form>
+
+  <p class="fine">
+    This signs you in to one event on this network. It is not a bank login — over plain
+    <code>http</code> your password is visible to anyone who can watch the network, so
+    do not reuse a password that matters.
+  </p>
+</div>
+
+<div class="wrap" id="live" hidden>
+  <div class="topline">
+    <div class="brandline"><span class="dot"></span><b id="liveWho">--</b></div>
+    <button class="link" id="btnOut">Sign out</button>
+  </div>
+
+  <div class="flagcard" id="flagCard">
+    <div class="flabel" id="flagLabel">WAITING</div>
+    <div class="fsub" id="flagSub">--</div>
+  </div>
+
+  <div class="pending" id="pending" hidden>
+    <b>Waiting for race control</b>
+    <span>They can see your name. Flags will start once they let you in.</span>
+  </div>
+
+  <div class="stats" id="stats" hidden>
+    <div class="s"><span>Position</span><b id="sPos">--</b></div>
+    <div class="s"><span>Lap</span><b id="sLap">--</b></div>
+    <div class="s"><span>Last</span><b id="sLast">--</b></div>
+    <div class="s"><span>Best</span><b id="sBest">--</b></div>
+  </div>
+
+  <div class="mine" id="mine"></div>
+
+  <div class="teamradio" id="teamRadio" hidden>
+    <div class="tr-msg" id="trMsg" hidden><b id="trFrom">TEAM</b><span id="trBody">--</span></div>
+    <div class="tr-in">
+      <input type="text" id="trText" maxlength="120" placeholder="Message your team — e.g. BOX BOX BOX">
+      <button type="button" id="trSend">Send</button>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="go" id="btnFloat">Open floating window</button>
+
+    <div class="pipset">
+      <div class="prow">
+        <span>Window</span>
+        <div class="seg" id="segShape">
+          <button type="button" data-shape="bar">Bar</button>
+          <button type="button" data-shape="wide">Wide</button>
+          <button type="button" data-shape="square">Square</button>
+          <button type="button" data-shape="tall">Tall</button>
+          <button type="button" data-shape="max">Max</button>
+        </div>
+      </div>
+      <div class="prow">
+        <span>Text</span>
+        <div class="seg" id="segText">
+          <button type="button" data-text="s">Small</button>
+          <button type="button" data-text="m">Medium</button>
+          <button type="button" data-text="l">Huge</button>
+        </div>
+      </div>
+      <p class="pipreal" id="pipReal" hidden></p>
+      <p class="pipnote">
+        Android fixes the window's width and takes its height from the shape, so this one
+        row is both: <b>Bar</b> is the smallest window, <b>Max</b> the largest. You can also
+        drag the window's corner. <b>Huge</b> text drops the instruction line so the flag
+        name can fill the window; the full wording stays on this page.
+      </p>
+    </div>
+
+    <button class="ghost" id="btnNotify">Turn on flag alerts</button>
+  </div>
+
+  <div class="secnote" id="secNote" hidden>
+    <b>Flag alerts are off on this address</b>
+    <span>Android only allows alerts over <code>https</code>. Open this page there instead —
+      the floating window and vibration work either way.</span>
+    <a id="secLink" href="#">Open the https address</a>
+  </div>
+
+  <p class="fine" id="floatNote">
+    The floating window rides on top of the game while you drive. Keep this tab open in
+    the background — closing it closes the window too.
+  </p>
+</div>
+
+<video id="pipVideo" playsinline muted></video>
+<canvas id="pipCanvas" width="640" height="360"></canvas>
+
+<script type="module" src="js/driver.js"></script>

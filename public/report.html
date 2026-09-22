@@ -1,0 +1,262 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Race report</title>
+<style>
+  /*
+   * A page that leaves the building.
+   *
+   * Unlike an overlay this is read by people who were not watching: a driver on a phone the
+   * next morning, somebody deciding whether to enter the next round. So it is opaque, it
+   * reflows to a narrow screen, and it prints without a dark rectangle round every table.
+   */
+  :root {
+    --bg: #0b0d11; --panel: #12151b; --line: rgba(255,255,255,.08);
+    --ink: #f2f4f8; --ink-2: rgba(242,244,248,.72); --ink-3: rgba(242,244,248,.45);
+    --accent: #00e0a4; --warn: #ffd60a; --bad: #ff453a;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 400 15px/1.55 Inter, -apple-system, "Segoe UI", system-ui, sans-serif; }
+  .shell { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  header.top { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 26px; }
+  .kicker { font-family: var(--mono); font-size: .6875rem; letter-spacing: .16em;
+            text-transform: uppercase; color: var(--ink-3); }
+  h1 { font-size: 1.85rem; line-height: 1.15; margin: 6px 0 4px; letter-spacing: -.01em; }
+  .where { color: var(--ink-2); font-size: .9375rem; }
+  .flagnote { margin-top: 12px; padding: 9px 12px; border-radius: 6px; font-size: .875rem;
+              background: rgba(255,214,10,.12); color: var(--warn); }
+
+  .heads { display: grid; gap: 12px; grid-template-columns: 1fr; margin-bottom: 26px; }
+  @media (min-width: 700px) { .heads { grid-template-columns: repeat(3, 1fr); } }
+  .head { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 16px 18px; }
+  .head .lbl { font-family: var(--mono); font-size: .625rem; letter-spacing: .14em;
+               text-transform: uppercase; color: var(--ink-3); }
+  .head .big { font-size: 1.25rem; font-weight: 600; margin-top: 6px; letter-spacing: -.01em; }
+  .head .sub { color: var(--ink-2); font-size: .875rem; margin-top: 2px; }
+
+  h2 { font-size: 1.0625rem; margin: 30px 0 12px; letter-spacing: -.005em; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .9375rem; }
+  th { text-align: left; font-family: var(--mono); font-size: .625rem; letter-spacing: .12em;
+       text-transform: uppercase; color: var(--ink-3); font-weight: 500;
+       padding: 0 10px 8px 0; border-bottom: 1px solid var(--line); }
+  td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--line); vertical-align: baseline; }
+  td.num, th.num { font-family: var(--mono); color: var(--ink-2); }
+  td.r, th.r { text-align: right; padding-right: 0; }
+  tr.out td { color: var(--ink-3); }
+  .swatch { display: inline-block; width: 3px; height: 15px; border-radius: 2px;
+            margin-right: 9px; vertical-align: -2px; }
+  .team { color: var(--ink-3); font-size: .8125rem; margin-left: 8px; }
+  .gain { color: var(--accent); font-family: var(--mono); font-size: .8125rem; }
+  .drop { color: var(--ink-3); font-family: var(--mono); font-size: .8125rem; }
+
+  ul.steward { list-style: none; margin: 0; padding: 0; }
+  ul.steward li { padding: 11px 0; border-bottom: 1px solid var(--line); }
+  ul.steward .pen { font-family: var(--mono); color: var(--warn); }
+  ul.steward .why { color: var(--ink-2); }
+  ul.steward .open { color: var(--bad); font-family: var(--mono); font-size: .75rem; }
+
+  .wrap-x { overflow-x: auto; }
+  .btn { font: 500 .875rem Inter, system-ui, sans-serif; cursor: pointer;
+         border: 1px solid var(--line); border-radius: 7px; padding: 9px 15px;
+         background: var(--panel); color: var(--ink); }
+  .btn.primary { background: var(--accent); color: #05070a; border-color: transparent; font-weight: 600; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px; }
+  pre.paste { margin-top: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 8px;
+              background: var(--panel); color: var(--ink-2); font: 400 .8125rem/1.5 var(--mono);
+              white-space: pre-wrap; max-height: 340px; overflow: auto; }
+  .empty { color: var(--ink-3); padding: 40px 0; }
+  [hidden] { display: none !important; }
+
+  @media print {
+    :root { --bg: #fff; --panel: #fff; --ink: #000; --ink-2: #333; --ink-3: #666;
+            --line: rgba(0,0,0,.15); }
+    .actions, pre.paste { display: none; }
+  }
+</style>
+<body>
+<div class="shell">
+  <div id="loading" class="empty">Loading the race…</div>
+
+  <div id="report" hidden>
+    <header class="top">
+      <div class="kicker" id="kicker">RACE REPORT</div>
+      <h1 id="title">—</h1>
+      <div class="where" id="where"></div>
+      <div class="flagnote" id="provisional" hidden>
+        Provisional. This race has not been flagged finished, so everything below can still change.
+      </div>
+    </header>
+
+    <div class="heads" id="heads"></div>
+
+    <h2>Classification</h2>
+    <div class="wrap-x"><table id="classification"></table></div>
+
+    <div id="stewardWrap" hidden>
+      <h2>Stewards</h2>
+      <ul class="steward" id="steward"></ul>
+    </div>
+
+    <div id="champWrap" hidden>
+      <h2 id="champTitle">Championship</h2>
+      <div class="wrap-x"><table id="champ"></table></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="btnCopy">Copy for Discord</button>
+      <button class="btn" id="btnShow">Show the text</button>
+      <button class="btn" id="btnPrint">Print or save as PDF</button>
+    </div>
+    <pre class="paste" id="paste" hidden></pre>
+  </div>
+</div>
+
+<script src="/supabase-config.js"></script>
+<script type="module">
+/*
+ * The report, rendered.
+ *
+ * Reads the event the way every overlay does — the socket on a local league, Supabase on a
+ * hosted one — so a link to this page works for anybody, with no login. The timing data is
+ * public by design: it is being broadcast.
+ */
+import { Bus } from './js/shared.js';
+import { CloudBus, cloudOptions } from './js/cloudbus.js';
+import { buildReport, reportAsText, lapTime } from './js/race-report.js';
+import { fmtGap } from './js/timing.js';
+
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const cloud = cloudOptions();
+const bus = cloud ? new CloudBus('overlay', cloud) : new Bus('overlay');
+let text = '';
+
+bus.on('state', (state) => {
+  const r = buildReport(state);
+  text = reportAsText(r);
+  render(r);
+  $('#loading').hidden = true;
+  $('#report').hidden = false;
+});
+
+function render(r) {
+  if (r.empty) {
+    $('#loading').textContent = 'This event has no classification yet.';
+    $('#loading').hidden = false;
+    $('#report').hidden = true;
+    return;
+  }
+
+  document.title = `${r.event.name} — race report`;
+  $('#kicker').textContent = r.event.round ? esc(r.event.round).toUpperCase() : 'RACE REPORT';
+  $('#title').textContent = r.event.name;
+  $('#where').textContent = [r.event.track, r.event.session,
+    r.event.totalLaps ? `${r.event.totalLaps} laps` : ''].filter(Boolean).join(' · ');
+  $('#provisional').hidden = !r.provisional;
+
+  // ---------------------------------------------------------------- the three headlines
+  const heads = [];
+  if (r.winner) {
+    heads.push(card('Winner', `${esc(r.winner.name)} <span class="num">#${esc(r.winner.num)}</span>`,
+      r.margin && r.margin.text ? `by ${esc(r.margin.text)} from ${esc(r.margin.to.name)}` : ''));
+  }
+  if (r.fastest) {
+    heads.push(card('Fastest lap', esc(r.fastest.bestText),
+      `${esc(r.fastest.name)}${r.fastest.marginText ? ` · ${esc(r.fastest.marginText)} clear` : ''}`));
+  }
+  if (r.movers.length) {
+    const m = r.movers[0];
+    heads.push(card('Biggest mover', esc(m.name), `P${m.startedAt} to P${m.position}, ${m.gained} places`));
+  } else if (r.retirements.length) {
+    heads.push(card('Retirements', String(r.retirements.length),
+      r.retirements.map((x) => esc(x.name)).join(', ')));
+  }
+  $('#heads').innerHTML = heads.join('');
+
+  // ---------------------------------------------------------------- classification
+  const grid = r.classification.some((x) => x.startedAt);
+  $('#classification').innerHTML = `
+    <tr>
+      <th class="num">P</th><th class="num">No</th><th>Driver</th>
+      ${grid ? '<th class="num">Start</th>' : ''}
+      <th class="num r">Laps</th><th class="num r">Best</th><th class="num r">Gap</th>
+    </tr>` + r.classification.map((d) => `
+    <tr class="${d.dnf ? 'out' : ''}">
+      <td class="num">${d.dnf ? '—' : d.position}</td>
+      <td class="num">${esc(d.num)}</td>
+      <td><span class="swatch" style="background:${esc(d.color)}"></span>${esc(d.name)}
+        ${d.team ? `<span class="team">${esc(d.team)}</span>` : ''}
+        ${d.penaltySec ? `<span class="team">+${d.penaltySec}s</span>` : ''}</td>
+      ${grid ? `<td class="num">${d.startedAt
+        ? d.startedAt + (d.gained > 0 ? ` <span class="gain">+${d.gained}</span>`
+            : d.gained < 0 ? ` <span class="drop">${d.gained}</span>` : '')
+        : '—'}</td>` : ''}
+      <td class="num r">${d.laps}</td>
+      <td class="num r">${d.bestText ? esc(d.bestText) : '—'}</td>
+      <td class="num r">${d.dnf ? 'DNF'
+        : d.position === 1 ? 'WINNER'
+        : d.gapMs == null ? '—' : '+' + esc(fmtGap(d.gapMs))}</td>
+    </tr>`).join('');
+
+  // ---------------------------------------------------------------- stewards
+  $('#stewardWrap').hidden = !r.penalties.length;
+  $('#steward').innerHTML = r.penalties.map((p) => `
+    <li><span class="pen">${esc(p.headline)}</span> — <b>${esc(p.driver)}</b>
+      <span class="num">#${esc(p.num)}</span>, lap ${p.lap}
+      ${p.open ? '<span class="open">UNDER INVESTIGATION</span>' : ''}
+      <div class="why">${esc(p.reason)}</div></li>`).join('');
+
+  // ---------------------------------------------------------------- championship
+  const table = r.standings.moved;
+  $('#champWrap').hidden = !table.length;
+  $('#champTitle').textContent = r.round.counted
+    ? 'Championship' : 'Championship, with this round included';
+  $('#champ').innerHTML = `
+    <tr><th class="num">#</th><th>Driver</th><th class="num r">This round</th>
+        <th class="num r">Total</th><th class="num r">Move</th></tr>`
+    + table.map((e) => {
+      const here = r.round.scored.find((x) => x.driverId === e.driverId);
+      const move = e.change == null ? '<span class="team">new</span>'
+        : e.change > 0 ? `<span class="gain">+${e.change}</span>`
+        : e.change < 0 ? `<span class="drop">${e.change}</span>` : '<span class="team">–</span>';
+      return `<tr>
+        <td class="num">${e.rank}</td>
+        <td>${esc(e.name)} <span class="team">#${esc(e.num)}</span></td>
+        <td class="num r">${here ? here.points : 0}</td>
+        <td class="num r"><b>${e.points}</b></td>
+        <td class="num r">${move}</td>
+      </tr>`;
+    }).join('');
+}
+
+function card(label, big, sub) {
+  return `<div class="head"><div class="lbl">${label}</div>
+    <div class="big">${big}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`;
+}
+
+$('#btnCopy').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(text);
+    $('#btnCopy').textContent = 'Copied';
+    setTimeout(() => { $('#btnCopy').textContent = 'Copy for Discord'; }, 1500);
+  } catch {
+    // Clipboard access is refused in plenty of ordinary situations — an insecure origin,
+    // a browser that wants a gesture it did not see. Showing the text is the fallback that
+    // always works, so it is offered rather than an error.
+    $('#paste').textContent = text;
+    $('#paste').hidden = false;
+  }
+};
+$('#btnShow').onclick = () => {
+  $('#paste').textContent = text;
+  $('#paste').hidden = !$('#paste').hidden;
+};
+$('#btnPrint').onclick = () => window.print();
+</script>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FRL Capture Node</title>
+<link rel="stylesheet" href="css/panel.css">
+<style>
+  /* Deliberately tiny: this window sits on the machine that runs the game and does
+     nothing but capture and detect. Every pixel it repaints is a pixel stolen from
+     the encoder, so there is no table, no preview and no chrome. */
+  body { display: grid; place-items: center; min-height: 100vh; }
+  .node { width: 420px; }
+  .node .brand { justify-content: center; padding-bottom: 14px; }
+  .stat { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .stat:last-child { border-bottom: 0; }
+  .stat span { color: var(--ink-mute); }
+  .stat b { font-family: var(--mono); font-weight: 700; }
+  .big {
+    text-align: center; padding: 18px 0 6px;
+    font-family: var(--mono); font-size: 40px; font-weight: 700; letter-spacing: -.02em;
+  }
+  .big small { display: block; font-family: var(--sans); font-size: 10px; letter-spacing: .18em; color: var(--ink-mute); text-transform: uppercase; margin-top: 4px; }
+  .ok { color: var(--accent); }
+  .bad { color: var(--red); }
+  .blocked { border-color: var(--red); }
+  .blocked h3 { color: var(--red); }
+  .blocked p { margin: 0 0 12px; font-size: 13px; line-height: 1.55; color: var(--ink-mute); }
+  .blocked .btn { display: block; text-align: center; text-decoration: none; font-family: var(--mono); font-size: 12px; word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="node">
+  <div class="brand">
+    <span class="dot"></span>
+    <div><b>FRL Capture Node</b><small>Runs the detection, nothing else</small></div>
+  </div>
+
+  <!-- Only shown when the browser will not hand over screen capture at all. -->
+  <div class="card blocked" id="blocked" hidden>
+    <h3>Capture unavailable here</h3>
+    <div class="body">
+      <p id="blockedWhy"></p>
+      <a class="btn primary" id="blockedGo" style="display:none">Open the secure address</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Detection <span class="right conn"><i></i><b></b></span></h3>
+    <div class="body">
+      <div class="big" id="bigFps">--<small id="bigMode">idle</small></div>
+
+      <div class="row" style="margin:14px 0 6px">
+        <button class="btn primary" id="btnCapture" style="flex:1">Select game window</button>
+        <button class="btn" id="btnStop">Stop</button>
+      </div>
+      <button class="btn" id="btnDetect" style="width:100%">Start detection</button>
+
+      <div style="margin-top:16px">
+        <div class="stat"><span>Capture source</span><b id="stSource">none</b></div>
+        <div class="stat"><span>Pixels read / frame</span><b id="stPixels">--</b></div>
+        <div class="stat"><span>Regions · timing lines</span><b id="stCal">0 · 0</b></div>
+        <div class="stat"><span>Drivers tracked</span><b id="stDrivers">0</b></div>
+        <div class="stat"><span>Last event</span><b id="stLast">--</b></div>
+      </div>
+
+      <label class="toggle" style="margin-top:14px">
+        <span>Share preview to operator panel</span>
+        <input type="checkbox" id="sharePreview" checked><i class="sw"></i>
+      </label>
+
+      <p class="hint" style="margin-top:12px">
+        Leave this window open and visible on the machine showing the game. Do the race
+        control, calibration and overlays from the operator panel on your other device —
+        it can draw regions on the preview this node shares.
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Log</h3>
+    <div class="body"><div class="log" id="log"></div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script type="module" src="js/node.js"></script>
+</body>
+</html>

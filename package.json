@@ -1,0 +1,18 @@
+{
+  "name": "frl-broadcast",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FR Legends broadcast operator - auto timing, leaderboard and OBS overlays",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "fetch-tessdata": "node scripts/fetch-tessdata.mjs"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "tesseract.js": "^5.1.1",
+    "ws": "^8.18.0"
+  }
+}

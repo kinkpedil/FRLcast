@@ -1,0 +1,222 @@
+<meta charset="utf-8">
+<title>FRL Overlay — commentary</title>
+<style>
+  /*
+   * A page that is mostly sound.
+   *
+   * The caption exists for two reasons and neither is decoration: an operator needs to see
+   * that it is alive before the race starts, and a viewer with the stream muted gets the
+   * commentary anyway. It can be switched off, and then this page draws nothing at all.
+   */
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  body {
+    font: 500 26px/1.35 Inter, -apple-system, "Segoe UI", system-ui, sans-serif;
+    color: #fff;
+  }
+
+  .caption {
+    position: absolute; left: 60px; right: 60px; bottom: 70px;
+    display: flex; gap: 16px; align-items: flex-start;
+    padding: 18px 24px;
+    background: rgba(10, 12, 16, .82);
+    border-left: 4px solid var(--accent, #00e0a4);
+    border-radius: 4px;
+    backdrop-filter: blur(8px);
+    opacity: 0; transform: translateY(10px);
+    transition: opacity .28s cubic-bezier(.16,1,.3,1), transform .28s cubic-bezier(.16,1,.3,1);
+  }
+  .caption.on { opacity: 1; transform: none; }
+
+  .mic {
+    flex: 0 0 auto; width: 12px; height: 12px; margin-top: 9px; border-radius: 50%;
+    background: var(--accent, #00e0a4);
+  }
+  .mic.live { animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  .calm .mic.live { animation: none; }
+
+  .text { flex: 1; min-width: 0; }
+
+  /* The operator's own view, off-air: only visible with ?debug=1. */
+  .panel {
+    position: absolute; top: 20px; left: 20px; display: none;
+    max-width: 560px; padding: 14px 16px; border-radius: 6px;
+    background: rgba(10, 12, 16, .9); font-size: 13px; line-height: 1.6;
+    font-family: ui-monospace, Menlo, Consolas, monospace; color: #b9c0cb;
+  }
+  .debug .panel { display: block; }
+  .panel b { color: #fff; font-weight: 600; }
+  .panel .bad { color: #ff9a80; }
+  .panel .ok { color: #00e0a4; }
+  .panel ol { margin: 6px 0 0; padding-left: 20px; }
+</style>
+<body>
+<div class="caption" id="cap"><span class="mic" id="mic"></span><span class="text" id="text"></span></div>
+<div class="panel" id="panel"></div>
+
+<script src="/supabase-config.js"></script>
+<script type="module">
+/*
+ * The commentator.
+ *
+ * One page, one voice. Add this as a single Browser Source in OBS and nowhere else: every
+ * copy of it would work out the same lines from the same state and say them in chorus.
+ *
+ * Nothing is fetched to produce a sentence. The state arrives the way it does for every
+ * other overlay, the model runs the race forward from it, and the words are chosen here.
+ * That means the commentary costs no egress at all, works with the internet down on a
+ * local event, and cannot be delayed by a service having a bad afternoon.
+ */
+import { Bus } from '../js/shared.js';
+import { CloudBus, cloudOptions } from '../js/cloudbus.js';
+import { outlook } from '../js/race-model.js';
+import { Commentary, P_HIGH, P_NORMAL, P_COLOUR } from '../js/commentary.js';
+import { Speaker } from '../js/speaker.js';
+
+const params = new URLSearchParams(location.search);
+if (params.get('motion') === 'calm') document.documentElement.classList.add('calm');
+if (params.get('debug') === '1') document.documentElement.classList.add('debug');
+
+const cap = document.getElementById('cap');
+const text = document.getElementById('text');
+const mic = document.getElementById('mic');
+const panel = document.getElementById('panel');
+
+const cloud = cloudOptions();
+const bus = cloud ? new CloudBus('overlay', cloud) : new Bus('overlay');
+
+const commentary = new Commentary({ lang: 'id' });
+const speaker = new Speaker({ enabled: false, onchange: paint });
+
+/*
+ * Team radio, read aloud.
+ *
+ * Its own voice and its own queue, separate from the commentary: radio is always spoken —
+ * even with commentary switched off — and in the voice the operator asked for (Microsoft
+ * Mark), not whatever the commentary is set to. A driver's "BOX BOX BOX" is urgent, so it
+ * cuts in ahead of anything the commentator is mid-sentence on.
+ */
+const radioSpeaker = new Speaker({ enabled: true, voiceName: 'Microsoft Mark', lang: 'en-US', rate: 1.02 });
+radioSpeaker.chooseVoice();
+let lastRadioId = null;
+
+let voiceReport = null;
+let last = null;              // last outlook, for the closing-gap signals
+let settings = {};
+let hideTimer = null;
+
+// How much it is allowed to say. Everything is generated either way; this decides what
+// reaches the queue, so turning it down mid-race takes effect on the next event.
+const CEILING = { calm: P_HIGH, normal: P_NORMAL, busy: P_COLOUR };
+
+/*
+ * The words follow the voice, not the setting.
+ *
+ * Asking for Indonesian on a machine with no Indonesian voice gets an English one, and
+ * Indonesian read by an English voice is not accented — it is unintelligible. So whichever
+ * voice was actually resolved decides which language the sentences are written in.
+ */
+function resolveVoice() {
+  return speaker.chooseVoice().then((r) => {
+    voiceReport = r;
+    commentary.setLang(speaker.spokenLang() === 'id' ? 'id' : 'en');
+    paint();
+  });
+}
+resolveVoice();
+
+bus.on('state', (state) => {
+  const cfg = state.commentary || {};
+  applySettings(cfg);
+
+  // Read a new team-radio message aloud, once. Seed on the first state so a message already
+  // on screen when the overlay starts is not re-read; after that, a changed id is a new call.
+  const rm = (state.radio || [])[0];
+  if (rm && rm.id !== lastRadioId) {
+    if (lastRadioId !== null && rm.text) {
+      radioSpeaker.offer([{
+        key: 'radio' + rm.id, channel: 'radio', priority: 1, staleMs: 15000,
+        text: (rm.from ? rm.from + ' says, ' : '') + rm.text
+      }]);
+    }
+    lastRadioId = rm.id;
+  }
+
+  // The model, then the words. Both are pure functions of the state that just arrived.
+  const view = outlook(state, { previous: last });
+  last = view;
+
+  const lines = commentary.update(state, view);
+  const ceiling = CEILING[settings.verbosity] ?? P_NORMAL;
+  speaker.offer(lines.filter((l) => l.priority <= ceiling));
+
+  // A new session is a new race. Without this the first green flag of race two is compared
+  // against the last lap of race one and half the grid appears to have overtaken at once.
+  if (state.race.status === 'idle' && commentary.started) commentary.reset();
+
+  paint();
+});
+
+function applySettings(cfg) {
+  settings = cfg;
+  const engine = cfg.engine || 'browser';
+  const voice = cfg.voice || '';
+  // Engine, language or voice: any of them changes what speaks, so re-resolve.
+  const changed = engine !== speaker.engine
+    || (cfg.lang && cfg.lang !== speaker.lang)
+    || voice !== speaker.voiceName;
+  speaker.engine = engine;
+  speaker.lang = cfg.lang || speaker.lang;
+  speaker.voiceName = voice;
+  if (changed) {
+    if (engine === 'piper') {
+      // Piper voices are per language and the operator picks one, so the words follow the
+      // language setting directly rather than a browser voice we would have to resolve.
+      commentary.setLang(String(speaker.lang).slice(0, 2).toLowerCase() === 'id' ? 'id' : 'en');
+      voiceReport = { ok: true, voice: voice ? `piper · ${voice}` : 'piper · default voice' };
+      paint();
+    } else {
+      // Browser: the language of the words follows whichever voice actually resolved.
+      resolveVoice();
+    }
+  }
+  speaker.rate = cfg.rate ?? 1.05;
+  speaker.volume = cfg.volume ?? 1;
+  speaker.saying = cfg.saying || {};
+  if (!!cfg.on !== speaker.enabled) speaker.setEnabled(!!cfg.on);
+}
+
+function paint() {
+  const now = speaker.current || speaker.spoken[0];
+  const show = settings.caption !== false && !!now && speaker.enabled;
+
+  if (show) {
+    text.textContent = now.text;
+    cap.classList.add('on');
+    mic.classList.toggle('live', !!speaker.current);
+    clearTimeout(hideTimer);
+    // Held a moment after the voice stops, so a viewer reading it is not cut off, then
+    // out of the way: a caption that never leaves is a caption nobody reads.
+    if (!speaker.current) hideTimer = setTimeout(() => cap.classList.remove('on'), 4000);
+  } else {
+    cap.classList.remove('on');
+  }
+
+  if (!document.documentElement.classList.contains('debug')) return;
+  const v = voiceReport;
+  panel.innerHTML = `
+    <div><b>commentary</b> ${speaker.enabled ? '<span class="ok">on</span>' : 'off'}
+      · ${settings.verbosity || 'normal'} · rate ${speaker.rate}</div>
+    <div>voice: ${v ? (v.ok
+      ? `<span class="ok">${v.voice}</span>${v.missing
+          ? ` <span class="bad">(${v.missing} not on this machine)</span>` : ''}`
+      : `<span class="bad">${v.error}</span>`) : 'looking…'}</div>
+    <div>writing in: <b>${commentary.lang}</b></div>
+    <div>queue: ${speaker.queue.length}${speaker.current ? ' · speaking' : ''}</div>
+    <ol>${speaker.spoken.slice(0, 6).map((s) =>
+      `<li>[${s.priority}] ${s.text}</li>`).join('')}</ol>`;
+}
+
+paint();
+</script>

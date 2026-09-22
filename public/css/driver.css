@@ -1,0 +1,195 @@
+/* The driver's phone.
+ *
+ * Sized for a hand, not a desk: everything tappable is at least 48px, the flag fills the
+ * screen, and nothing needs a second look to read. This is the one page in the project
+ * that will be used at arm's length, in daylight, by someone about to drive. */
+
+:root {
+  --ink: #fff;
+  --ink-dim: rgba(255, 255, 255, .58);
+  --bg: #0b0d11;
+  --panel: #14171d;
+  --line: rgba(255, 255, 255, .1);
+  --accent: #00e0a4;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* The browser's own `[hidden]` rule is only `display: none`, so any author rule that sets
+   a display — `.f { display: block }`, `.stats { display: grid }` — silently outranks it
+   and the element stays on screen. Every hidden thing on this page is hidden by that
+   attribute, so it is stated once here rather than guarded at each of them. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.5 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* viewport-fit + env() keeps content clear of a notch and the gesture bar */
+.wrap {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: calc(20px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom));
+}
+
+.brandline { display: flex; align-items: center; gap: 9px; font-size: 12px; letter-spacing: .16em; }
+.brandline .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.topline { display: flex; align-items: center; justify-content: space-between; }
+
+h1 { margin: 18px 0 6px; font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+.lede { margin: 0 0 22px; color: var(--ink-dim); font-size: 14px; }
+
+.f { display: block; margin-bottom: 14px; }
+.f > span { display: block; margin-bottom: 6px; font-size: 12px; letter-spacing: .1em; color: var(--ink-dim); text-transform: uppercase; }
+.f input {
+  width: 100%;
+  /* 17px, not 16: iOS Safari zooms the page in on any input under 16px, and the zoom
+     never comes back on its own. */
+  padding: 14px 15px; font-size: 17px;
+  color: var(--ink); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 12px;
+}
+.f input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.err { margin: 0 0 12px; padding: 11px 13px; border-radius: 10px; font-size: 14px; background: rgba(255, 59, 48, .14); color: #ff8a80; }
+
+button { font: inherit; cursor: pointer; }
+.go {
+  width: 100%; min-height: 52px; margin-top: 6px;
+  font-size: 17px; font-weight: 700;
+  color: #05070a; background: var(--accent);
+  border: 0; border-radius: 12px;
+}
+.go:disabled { opacity: .5; }
+.ghost {
+  width: 100%; min-height: 48px; margin-top: 10px;
+  font-size: 15px; color: var(--ink-dim);
+  background: transparent; border: 1px solid var(--line); border-radius: 12px;
+}
+.link { background: none; border: 0; color: var(--ink-dim); font-size: 14px; padding: 8px; }
+
+.fine { margin: 20px 0 0; font-size: 12px; line-height: 1.6; color: rgba(255, 255, 255, .38); }
+.fine code { font-family: var(--mono); }
+
+/* ---------------- the flag ---------------- */
+
+/* The largest thing on the page by a wide margin: read at a glance, from a distance,
+   in sunlight. Everything else on this screen is secondary to it. */
+.flagcard {
+  margin: 18px 0 14px; padding: 34px 20px;
+  border-radius: 18px;
+  background: var(--flag, #8e8e93);
+  text-align: center;
+  transition: background .3s ease;
+}
+.flabel { font-size: 34px; font-weight: 800; letter-spacing: -.01em; color: #fff; }
+.fsub { margin-top: 6px; font-size: 14px; color: rgba(255, 255, 255, .82); }
+.flagcard.dark .flabel { color: #05070a; }
+.flagcard.dark .fsub { color: rgba(0, 0, 0, .68); }
+
+.pending {
+  padding: 14px 16px; border: 1px dashed var(--line); border-radius: 12px;
+  margin-bottom: 14px;
+}
+.pending b { display: block; font-size: 15px; }
+.pending span { display: block; margin-top: 4px; font-size: 13px; color: var(--ink-dim); }
+
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+.stats .s { padding: 10px 8px; background: var(--panel); border-radius: 10px; text-align: center; }
+.stats .s span { display: block; font-size: 10px; letter-spacing: .12em; color: var(--ink-dim); text-transform: uppercase; }
+.stats .s b { display: block; margin-top: 3px; font-family: var(--mono); font-size: 17px; }
+
+.mine .m {
+  padding: 12px 14px; margin-bottom: 8px; border-radius: 10px;
+  font-size: 14px; font-weight: 700;
+}
+.mine .black { background: #fff; color: #000; }
+.mine .blue { background: #0a84ff; color: #fff; }
+.mine .inv { background: #ffd60a; color: #05070a; }
+.mine .pen { background: rgba(255, 69, 58, .18); color: #ff8a80; }
+
+/* Team radio: a teammate's message lands as a banner, and the input pushes one back. Same
+   team only — the server routes by the driver's team, so drivers on other teams never see it. */
+.teamradio { margin-top: 14px; }
+.tr-msg {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 12px 14px; margin-bottom: 8px; border-radius: 10px;
+  background: rgba(0, 163, 255, .16); border: 1px solid rgba(0, 163, 255, .4);
+  animation: trPop .3s ease;
+}
+.tr-msg b { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #7fd0ff; }
+.tr-msg span { font-size: 18px; font-weight: 800; letter-spacing: .02em; }
+@keyframes trPop { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.tr-in { display: flex; gap: 8px; }
+.tr-in input {
+  flex: 1; min-width: 0; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--line, rgba(255,255,255,.12)); background: var(--panel);
+  color: inherit; font-size: 14px;
+}
+.tr-in input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tr-in button {
+  padding: 0 18px; border: 0; border-radius: 10px; cursor: pointer;
+  font-size: 14px; font-weight: 700; color: #05070a; background: var(--accent);
+}
+
+.actions { margin-top: 18px; }
+
+/* Window shape and size. Segmented rather than a slider: a slider asks for precision the
+   OS will not honour anyway, and is hard to hit with a thumb through a race glove. */
+.pipset { margin-top: 12px; }
+.prow { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.prow > span {
+  flex: 0 0 52px;
+  font-size: 12px; letter-spacing: .1em; color: var(--ink-dim); text-transform: uppercase;
+}
+.seg {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  flex: 1; gap: 4px; padding: 4px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 11px;
+}
+.seg button {
+  min-height: 40px; padding: 0 2px;
+  font-size: 13px; color: var(--ink-dim);
+  background: transparent; border: 0; border-radius: 8px;
+}
+.seg button.on { color: #05070a; background: var(--accent); font-weight: 700; }
+.pipnote { margin: 6px 0 0; font-size: 12px; line-height: 1.55; color: rgba(255, 255, 255, .38); }
+
+/* What the phone actually did, in its own words. */
+.pipreal {
+  margin: 8px 0 0; padding: 8px 11px; border-radius: 9px;
+  font-family: var(--mono); font-size: 12px; line-height: 1.5;
+  color: var(--accent); background: rgba(0, 224, 164, .1);
+}
+.pipreal.warn { color: #ffd60a; background: rgba(255, 214, 10, .1); }
+
+/* Not an error — the page works, one part of it does not. Amber rather than red, and it
+   carries the way out rather than only the bad news. */
+.secnote {
+  margin-top: 14px; padding: 13px 15px;
+  border: 1px solid rgba(255, 214, 10, .34); border-radius: 12px;
+  background: rgba(255, 214, 10, .09);
+}
+.secnote b { display: block; font-size: 14px; color: #ffd60a; }
+.secnote span { display: block; margin-top: 5px; font-size: 13px; line-height: 1.55; color: var(--ink-dim); }
+.secnote code { font-family: var(--mono); }
+.secnote a {
+  display: block; margin-top: 11px; min-height: 44px; line-height: 44px;
+  text-align: center; text-decoration: none;
+  font-size: 15px; font-weight: 700; color: #05070a; background: #ffd60a;
+  border-radius: 10px;
+}
+
+/* The PiP plumbing. Both must stay in the layout — a display:none video cannot be
+   handed to Picture-in-Picture, and a canvas that is never composited stops producing
+   frames for captureStream. One pixel in a corner satisfies both. */
+#pipVideo, #pipCanvas {
+  position: fixed; left: 0; bottom: 0;
+  width: 1px; height: 1px; opacity: .01; pointer-events: none;
+}

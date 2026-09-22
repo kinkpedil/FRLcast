@@ -1,0 +1,68 @@
+<meta charset="utf-8">
+<title>race-state in a browser</title>
+<body style="background:#0b0d11;color:#e6e9ee;font:14px ui-monospace,Menlo,monospace;padding:24px">
+<pre id="out">running...</pre>
+<script type="module">
+/*
+ * The timing code, run in a browser.
+ *
+ * The point of splitting persistence out of RaceState was that the operator's console has
+ * to be able to run the same logic the server runs, rather than a second implementation of
+ * it that agrees with the first until it does not. Parsing is not evidence of that; this
+ * page actually drives a session and checks the answers.
+ */
+import { RaceState } from './js/race-state.js';
+
+const lines = [];
+let pass = 0, fail = 0;
+const ok = (c, m) => { c ? (pass++, lines.push('PASS  ' + m)) : (fail++, lines.push('FAIL  ' + m)); };
+
+// No store at all. In a browser there is no file to read, and an event that has not been
+// chosen yet has nothing to load.
+const race = new RaceState();
+ok(!!race.state && !!race.state.race, 'RaceState constructs in a browser with no store');
+ok(race.store === null, 'and holds no persistence of its own');
+
+race.state.drivers.length = 0;
+['REZA A.', 'BAGAS W.', 'DIMAS PRAK', 'ARYA S.'].forEach((name, i) =>
+  race.apply({ type: 'driver.add', driver: { id: 'd' + i, name, num: String(i + 1) } }));
+ok(race.state.drivers.length === 4, 'drivers can be added');
+
+race.apply({ type: 'race.config', patch: { totalLaps: 10 } });
+race.apply({ type: 'race.start' });
+ok(race.state.race.status === 'green', 'the race starts green');
+
+// Laps out of order, so the ordering is doing real work rather than echoing the input.
+const t0 = Date.now();
+race.now = () => t0 + 60000;
+race.apply({ type: 'driver.lap', id: 'd1', at: t0 + 41000 });
+race.apply({ type: 'driver.lap', id: 'd0', at: t0 + 40200 });
+race.apply({ type: 'driver.lap', id: 'd2', at: t0 + 42500 });
+race.emit();
+
+const order = race.state.drivers.slice().sort((a, b) => a.position - b.position).map((d) => d.num);
+ok(order[0] === '1', `the quickest lap leads (order ${order.join(',')})`);
+ok(race.state.drivers.find((d) => d.num === '1').gap === 'LEADER',
+   'the leader is labelled, not given a time');
+ok(/^\+\d/.test(race.state.drivers.find((d) => d.num === '2').gap),
+   'and everybody else gets a gap to them');
+
+race.apply({ type: 'penalty.add', driverId: 'd2', kind: 'time', seconds: 5, reason: 'Contact' });
+ok(race.state.race.penalties.length === 1, 'a penalty is recorded');
+const composed = race.penaltyText(race.state.race.penalties[0]);
+ok(composed.startsWith('+5s PENALTY') && composed.endsWith('Contact'),
+   `and is composed by the one composer there is (${composed})`);
+
+race.apply({ type: 'race.flag', flag: 'yellow' });
+ok(race.state.race.status === 'yellow', 'a flag thrown by hand sticks');
+
+// The one thing a browser cannot do is write to disk, and it must not try.
+let threw = false;
+try { race.writeNow(); } catch { threw = true; }
+ok(!threw, 'writing with no store is a no-op rather than an error');
+
+lines.push('');
+lines.push(`${pass} pass, ${fail} fail`);
+document.getElementById('out').textContent = lines.join('\n');
+document.title = fail ? 'FAIL' : 'PASS';
+</script>

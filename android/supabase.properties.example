@@ -1,0 +1,8 @@
+# Copy to supabase.properties and fill in from your Supabase dashboard:
+# Project Settings, then API.
+#
+# The anon key belongs in the app. It is public by design and grants nothing on its own;
+# what it may do is decided by the policies on the tables. The service_role key must never
+# appear here.
+SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+SUPABASE_ANON_KEY=

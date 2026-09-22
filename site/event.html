@@ -1,0 +1,237 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Event hub</title>
+<style>
+  /*
+   * The event hub: one public page that gathers everything about a single event in one place
+   * for the people at an on-site day. It reads the same hosted event the overlays do
+   * (?event=CODE), needs no login, and links out to the live timing, the printable report and
+   * the share card. The entry list, championship and past rounds are all read straight from
+   * the database, so the page is current without anyone maintaining it.
+   */
+  :root {
+    --bg: #0b0d11; --panel: #12151b; --line: rgba(255,255,255,.08);
+    --ink: #f2f4f8; --ink-2: rgba(242,244,248,.72); --ink-3: rgba(242,244,248,.45);
+    --accent: #00e0a4; --warn: #ffd60a; --bad: #ff453a; --purple: #bf5af2;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 400 15px/1.5 Inter, -apple-system, "Segoe UI", system-ui, sans-serif; }
+  .shell { max-width: 900px; margin: 0 auto; padding: 22px 16px 70px; }
+
+  header.top { display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 18px; }
+  .kicker { font-family: var(--mono); font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+  h1 { font-size: 1.6rem; line-height: 1.15; margin: 4px 0 2px; letter-spacing: -.01em; }
+  .where { color: var(--ink-2); font-size: .9rem; }
+  .langbtns { margin-left: auto; display: flex; gap: 4px; }
+  .langbtns button { font: inherit; font-size: .8rem; padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink-2); cursor: pointer; }
+  .langbtns button.on { border-color: var(--accent); color: var(--accent); }
+
+  .flagpill { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 6px 12px; border-radius: 20px; font-size: .82rem; font-weight: 600; letter-spacing: .04em; background: rgba(48,209,88,.14); color: #30d158; }
+  .flagpill.yellow, .flagpill.safety, .flagpill.vsc, .flagpill.formation { background: rgba(255,214,10,.14); color: var(--warn); }
+  .flagpill.red { background: rgba(255,69,58,.16); color: var(--bad); }
+  .flagpill.finished, .flagpill.idle { background: rgba(255,255,255,.08); color: var(--ink-2); }
+  .flagpill i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  .links { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
+  .links a { text-decoration: none; font-size: .9rem; font-weight: 600; padding: 11px 18px; border-radius: 9px; border: 1px solid var(--line); color: var(--ink); background: var(--panel); display: inline-flex; align-items: center; gap: 8px; }
+  .links a.primary { background: var(--accent); color: #05221b; border-color: transparent; }
+  .links a .ic { font-size: 1.05rem; }
+
+  h2.sec { font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin: 30px 0 10px; font-weight: 700; }
+  .wrap-x { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th { text-align: left; font-family: var(--mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+  td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,.05); }
+  td.r, th.r { text-align: right; }
+  .mono { font-family: var(--mono); }
+  .pos { color: var(--ink-2); width: 40px; }
+  .cbar { display: inline-block; width: 4px; height: 15px; border-radius: 2px; vertical-align: -2px; margin-right: 9px; }
+  .nm { font-weight: 500; }
+  .team { color: var(--ink-3); font-size: .82rem; margin-left: 8px; }
+  tr.dnf td { color: var(--ink-3); }
+
+  .rounds { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .rounds { grid-template-columns: 1fr 1fr; } }
+  .round { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 14px 16px; }
+  .round h3 { margin: 0 0 8px; font-size: .95rem; }
+  .round table { font-size: .86rem; }
+
+  .empty { color: var(--ink-3); font-size: .88rem; padding: 8px 0; }
+  #loading { color: var(--ink-2); padding: 40px 0; text-align: center; }
+  .foot { color: var(--ink-3); font-size: .8rem; margin-top: 34px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .foot a { color: var(--accent); text-decoration: none; }
+</style>
+
+<div class="shell">
+  <header class="top">
+    <div>
+      <div class="kicker" id="round"></div>
+      <h1 id="evname">Event</h1>
+      <div class="where" id="where"></div>
+    </div>
+    <div class="langbtns">
+      <button data-lang="en" class="on">EN</button>
+      <button data-lang="id">ID</button>
+    </div>
+  </header>
+
+  <div id="loading" data-t="loading">Loading event…</div>
+
+  <div id="app" hidden>
+    <div class="flagpill" id="flag"><i></i><span id="flagtext">—</span></div>
+
+    <div class="links" id="links"></div>
+
+    <h2 class="sec" data-t="entries">Entry list</h2>
+    <div class="wrap-x"><table id="grid"></table></div>
+    <div class="empty" id="gridEmpty" hidden data-t="noentries">No cars on the grid yet.</div>
+
+    <div id="standingsWrap" hidden>
+      <h2 class="sec" data-t="standings">Championship</h2>
+      <div class="wrap-x"><table id="std"></table></div>
+    </div>
+
+    <div id="roundsWrap" hidden>
+      <h2 class="sec" data-t="results">Past rounds</h2>
+      <div class="rounds" id="rounds"></div>
+    </div>
+
+    <p class="foot"><span data-t="foot">Live event hub — updates automatically.</span>
+      · <a href="https://frlcast.my.id">FRLcast by kinkpedil12</a></p>
+  </div>
+</div>
+
+<script src="/supabase-config.js?v=20260922152040"></script>
+<script type="module">
+  import { classification, FLAG_LABEL } from './js/shared.js';
+  import { CloudBus, cloudOptions } from './js/cloudbus.js';
+
+  const $ = (s) => document.querySelector(s);
+  const params = new URLSearchParams(location.search);
+  const code = params.get('event') || '';
+
+  const STR = {
+    en: { loading: 'Loading event…', entries: 'Entry list', standings: 'Championship',
+          results: 'Past rounds', noentries: 'No cars on the grid yet.',
+          foot: 'Live event hub — updates automatically.',
+          live: 'Live timing', report: 'Race report', recap: 'Recap card',
+          POS: 'POS', NO: 'NO', DRIVER: 'DRIVER', TEAM: 'TEAM', PTS: 'PTS' },
+    id: { loading: 'Memuat event…', entries: 'Daftar peserta', standings: 'Klasemen juara',
+          results: 'Round sebelumnya', noentries: 'Belum ada mobil di grid.',
+          foot: 'Hub event langsung — diperbarui otomatis.',
+          live: 'Timing langsung', report: 'Laporan balapan', recap: 'Kartu recap',
+          POS: 'POS', NO: 'NO', DRIVER: 'PEMBALAP', TEAM: 'TIM', PTS: 'POIN' }
+  };
+  let lang = (localStorage.getItem('frl.lang') === 'id') ? 'id' : 'en';
+  let last = null, results = null;
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+  function applyLang() {
+    document.querySelectorAll('[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
+    document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = STR[lang][el.dataset.t] || el.textContent; });
+    renderLinks();
+    if (last) render(last);
+    if (results) renderRounds();
+  }
+  document.querySelectorAll('[data-lang]').forEach((b) => {
+    b.onclick = () => { lang = b.dataset.lang; try { localStorage.setItem('frl.lang', lang); } catch (e) {} applyLang(); };
+  });
+
+  function renderLinks() {
+    const T = STR[lang];
+    const q = '?event=' + encodeURIComponent(code);
+    $('#links').innerHTML =
+      `<a class="primary" href="/live${q}"><span class="ic">◉</span>${T.live}</a>` +
+      `<a href="/report${q}"><span class="ic">▤</span>${T.report}</a>` +
+      `<a href="/recap${q}"><span class="ic">⤓</span>${T.recap}</a>`;
+  }
+
+  function render(s) {
+    last = s;
+    const T = STR[lang];
+    $('#loading').hidden = true;
+    $('#app').hidden = false;
+    $('#round').textContent = s.event.round || '';
+    $('#evname').textContent = s.event.name || 'Event';
+    $('#where').textContent = s.event.track || '';
+
+    const flag = s.race.status || 'idle';
+    $('#flag').className = 'flagpill ' + flag;
+    $('#flagtext').textContent = FLAG_LABEL[flag] || flag.toUpperCase();
+
+    // entry list — sorted by race number
+    const grid = (s.drivers || []).slice().sort((a, b) => (parseInt(a.num, 10) || 999) - (parseInt(b.num, 10) || 999));
+    $('#gridEmpty').hidden = grid.length > 0;
+    if (grid.length) {
+      let h = `<thead><tr><th class="r">${T.NO}</th><th>${T.DRIVER}</th><th>${T.TEAM}</th></tr></thead><tbody>`;
+      for (const d of grid) {
+        h += `<tr><td class="r mono">${esc(d.num)}</td>` +
+          `<td><span class="cbar" style="background:${d.color || '#666'}"></span><span class="nm">${esc(d.name)}</span></td>` +
+          `<td class="team" style="margin:0">${esc(d.team || '')}</td></tr>`;
+      }
+      h += '</tbody>';
+      $('#grid').innerHTML = h;
+    } else { $('#grid').innerHTML = ''; }
+
+    // championship
+    const st = s.standings || [];
+    $('#standingsWrap').hidden = st.length === 0;
+    if (st.length) {
+      const lead = st[0] ? st[0].points : 0;
+      let sh = `<thead><tr><th>${T.POS}</th><th>${T.DRIVER}</th><th class="r">${T.PTS}</th></tr></thead><tbody>`;
+      for (const r of st) {
+        sh += `<tr><td class="pos">${r.rank}</td>` +
+          `<td><span class="cbar" style="background:${r.color || '#666'}"></span><span class="nm">${esc(r.name)}</span></td>` +
+          `<td class="r mono">${r.points}</td></tr>`;
+      }
+      sh += '</tbody>';
+      $('#std').innerHTML = sh;
+    }
+  }
+
+  function renderRounds() {
+    const T = STR[lang];
+    const byRound = new Map();
+    for (const r of results || []) {
+      if (!byRound.has(r.round)) byRound.set(r.round, []);
+      byRound.get(r.round).push(r);
+    }
+    $('#roundsWrap').hidden = byRound.size === 0;
+    const blocks = [];
+    for (const [round, rows] of byRound) {
+      rows.sort((a, b) => a.position - b.position);
+      let h = `<div class="round"><h3>${esc(round || '—')}</h3><table><thead><tr><th>${T.POS}</th><th>${T.DRIVER}</th><th class="r">${T.PTS}</th></tr></thead><tbody>`;
+      for (const r of rows.slice(0, 12)) {
+        h += `<tr><td class="pos">${r.position}</td><td><span class="nm">${esc(r.name)}</span></td><td class="r mono">${r.points}</td></tr>`;
+      }
+      h += '</tbody></table></div>';
+      blocks.push(h);
+    }
+    $('#rounds').innerHTML = blocks.join('');
+  }
+
+  const cloud = cloudOptions();
+  if (!code) { $('#loading').textContent = 'Add ?event=CODE to the address to open an event hub.'; }
+  else if (!cloud) { $('#loading').textContent = 'This page needs Supabase configured.'; }
+  else {
+    const bus = new CloudBus('eventhub', cloud);
+    bus.on('state', render);
+    // Past rounds come straight from the results table, using the bus's own client and the
+    // event id it has already resolved from the code.
+    bus.on('open', async () => {
+      try {
+        const { data } = await bus.sb.from('results').select('round,num,name,position,points,created_at')
+          .eq('event_id', bus.event.id).order('created_at', { ascending: true });
+        results = data || [];
+        renderRounds();
+      } catch (e) { results = []; }
+    });
+    setTimeout(() => { if (!last) $('#loading').textContent = 'No event found for ' + code + '.'; }, 6000);
+  }
+  applyLang();
+</script>

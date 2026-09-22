@@ -1,0 +1,148 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Control room</title>
+<style>
+  /*
+   * A second-screen control room: the live program (the all-in-one overlay) next to a data
+   * readout — flag, session clock, classification and fastest lap — so an operator can watch
+   * everything on one monitor. Read-only; it drives nothing.
+   */
+  :root {
+    --bg: #07080b; --panel: #10131a; --line: rgba(255,255,255,.08);
+    --ink: #f2f4f8; --ink-2: rgba(242,244,248,.7); --ink-3: rgba(242,244,248,.4);
+    --accent: #00e0a4; --warn: #ffd60a; --bad: #ff453a; --purple: #bf5af2;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 400 14px/1.5 Inter, system-ui, sans-serif; }
+  .room { display: grid; grid-template-columns: 1fr 340px; gap: 14px; height: 100vh; padding: 14px; }
+  @media (max-width: 900px) { .room { grid-template-columns: 1fr; height: auto; } }
+
+  .program { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .proghead { display: flex; align-items: center; gap: 10px; }
+  .proghead .k { font-family: var(--mono); font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+  .proghead .langbtns { margin-left: auto; display: flex; gap: 4px; }
+  .langbtns button { font: inherit; font-size: .8rem; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink-2); cursor: pointer; }
+  .langbtns button.on { border-color: var(--accent); color: var(--accent); }
+  /* 16:9 program monitor: the overlay renders at 1920x1080 and is scaled to fit the box */
+  .screen { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000 url('/shots/overlay.png') center/cover no-repeat; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .screen iframe { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; transform-origin: top left; border: 0; }
+
+  .side { display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+  .box { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 12px 14px; }
+  .box h2 { margin: 0 0 8px; font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+  .flagpill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; font-weight: 700; letter-spacing: .04em; background: rgba(48,209,88,.14); color: #30d158; }
+  .flagpill.yellow, .flagpill.safety, .flagpill.vsc, .flagpill.formation { background: rgba(255,214,10,.14); color: var(--warn); }
+  .flagpill.red { background: rgba(255,69,58,.16); color: var(--bad); }
+  .flagpill i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .meta { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+  .meta .lbl { font-family: var(--mono); font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  .meta .val { font-size: 1.05rem; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: .86rem; }
+  .pos { font-family: var(--mono); color: var(--ink-2); width: 26px; }
+  .cbar { display: inline-block; width: 4px; height: 13px; border-radius: 2px; vertical-align: middle; margin-right: 7px; }
+  .gap { text-align: right; font-family: var(--mono); color: var(--ink-2); }
+  .scenes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .scenes .sc { font-size: .78rem; padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); color: var(--ink-2); }
+  .scenes .sc.on { border-color: var(--accent); color: var(--accent); }
+  #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--ink-3); }
+</style>
+
+<div id="loading">Loading…</div>
+<div class="room" id="room" hidden>
+  <div class="program">
+    <div class="proghead">
+      <span class="k">Program · <b id="evname">—</b></span>
+      <div class="langbtns"><button data-lang="id">ID</button><button data-lang="en" class="on">EN</button></div>
+    </div>
+    <div class="screen"><iframe id="prog" title="Program"></iframe></div>
+    <div class="box"><h2 data-t="scenes">Scenes</h2><div class="scenes" id="scenes"></div></div>
+  </div>
+  <div class="side">
+    <div class="box">
+      <div class="flagpill" id="flag"><i></i><span id="flagtext">—</span></div>
+      <div class="meta">
+        <div><div class="lbl" data-t="session">Session</div><div class="val" id="session">—</div></div>
+        <div><div class="lbl" data-t="time">Time</div><div class="val mono" id="clock">—</div></div>
+        <div><div class="lbl" data-t="fastest">Fastest</div><div class="val mono" id="fastest">—</div></div>
+      </div>
+    </div>
+    <div class="box"><h2 data-t="classification">Classification</h2><table id="cls"></table></div>
+  </div>
+</div>
+
+<script src="/supabase-config.js"></script>
+<script type="module">
+  import { Bus, fmtClock, fmtTime, classification, leaderLap, fastestLap, FLAG_LABEL } from './js/shared.js';
+  import { CloudBus, cloudOptions } from './js/cloudbus.js';
+  const $ = (s) => document.querySelector(s);
+  const params = new URLSearchParams(location.search);
+  const code = params.get('event') || '';
+  const STR = {
+    id: { scenes: 'Scene', session: 'Sesi', time: 'Waktu', fastest: 'Tercepat', classification: 'Klasemen' },
+    en: { scenes: 'Scenes', session: 'Session', time: 'Time', fastest: 'Fastest', classification: 'Classification' }
+  };
+  let lang = (localStorage.getItem('frl.lang') === 'id') ? 'id' : 'en';
+
+  const cloud = cloudOptions();
+  const bus = cloud ? new CloudBus('overlay', cloud) : new Bus('overlay');
+  let last = null;
+
+  // scale the 1920x1080 program iframe into its box
+  function fitProgram() {
+    const box = document.querySelector('.screen'); const f = $('#prog');
+    if (box && f) f.style.transform = `scale(${box.clientWidth / 1920})`;
+  }
+  window.addEventListener('resize', fitProgram);
+
+  function applyLang() {
+    document.querySelectorAll('[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
+    document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = STR[lang][el.dataset.t] || el.textContent; });
+    if (last) render(last);
+  }
+  document.querySelectorAll('[data-lang]').forEach((b) => { b.onclick = () => { lang = b.dataset.lang; try { localStorage.setItem('frl.lang', lang); } catch (e) {} applyLang(); }; });
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+  function render(s) {
+    last = s;
+    $('#room').hidden = false; $('#loading').hidden = true;
+    $('#evname').textContent = s.event.name || 'Program';
+    const flag = s.race.status || 'idle';
+    $('#flag').className = 'flagpill ' + flag;
+    $('#flagtext').textContent = FLAG_LABEL[flag] || flag.toUpperCase();
+    $('#session').textContent = s.event.sessionName || (s.event.sessionType || 'race').toUpperCase();
+    const timed = (s.event.sessionType === 'qualifying' || s.event.sessionType === 'practice' || s.event.sessionType === 'endurance');
+    const lim = (s.race.timeLimitSec || 0) * 1000;
+    if (timed && lim > 0) $('#clock').textContent = fmtClock(Math.max(0, lim - elapsed(s)));
+    else if (s.race.totalLaps > 0) $('#clock').textContent = `L ${Math.min(leaderLap(s) + 1, s.race.totalLaps)}/${s.race.totalLaps}`;
+    else $('#clock').textContent = fmtClock(elapsed(s));
+    const fl = fastestLap(s);
+    $('#fastest').textContent = fl && fl.bestLap != null ? fmtTime(fl.bestLap) : '—';
+
+    const rows = classification(s).slice(0, 12);
+    $('#cls').innerHTML = rows.map((d) =>
+      `<tr><td class="pos">${d.dnf ? 'DNF' : d.position}</td>` +
+      `<td><span class="cbar" style="background:${d.color || '#666'}"></span>${esc(d.name)}</td>` +
+      `<td class="gap">${d.position === 1 ? '—' : (d.predicted ? '~' : '') + (d.gap || '')}</td></tr>`).join('');
+
+    const sc = s.overlay.scenes || [];
+    $('#scenes').innerHTML = sc.map((x) => `<span class="sc ${x.id === s.overlay.activeScene ? 'on' : ''}">${esc(x.name)}</span>`).join('');
+  }
+  function elapsed(s) { const r = s.race; if (!r.startedAt) return 0; const end = r.finishedAt || r.pausedAt || Date.now(); return Math.max(0, end - r.startedAt - (r.pausedTotal || 0)); }
+
+  if (cloud && !code) { $('#loading').textContent = 'Add ?event=CODE to the address.'; }
+  else {
+    // hosted event carries ?event; a local server serves the overlay from the same origin
+    $('#prog').src = '/overlay/all.html' + (code ? '?event=' + encodeURIComponent(code) : '');
+    $('#prog').addEventListener('load', fitProgram);
+    fitProgram();
+    bus.on('state', render);
+    setTimeout(() => { if (!last) $('#loading').textContent = code ? ('No event found for ' + code + '.') : 'Waiting for the broadcast server…'; }, 6000);
+  }
+  applyLang();
+  setInterval(() => { if (last) render(last); }, 1000);   // keep the clock ticking
+</script>

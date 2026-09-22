@@ -1,0 +1,2719 @@
+/* FR Legends broadcast overlays — designed for a 1920x1080 transparent OBS source. */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+  --accent: #00e0a4;
+  --ink: #ffffff;
+  --ink-dim: rgba(255, 255, 255, 0.55);
+  --ink-mute: rgba(255, 255, 255, 0.35);
+  --panel-alpha: .88;
+  --panel: rgba(11, 13, 17, var(--panel-alpha));
+  --panel-hi: rgba(24, 27, 34, 0.86);
+  --line: rgba(255, 255, 255, 0.09);
+  --purple: #bf5af2;
+  --gain: #30d158;
+  --lose: #ff453a;
+  --radius: 10px;
+  --shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+  --safe: 48px;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* motion */
+  --ease: cubic-bezier(.22, .9, .3, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --dur: .5s;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: transparent;
+  font-family: var(--sans);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.stage { position: relative; width: 1920px; height: 1080px; }
+
+/* ---------------- widget show / hide ---------------- */
+
+/* Two layers on purpose:
+   .widget  = placement (left/top/width/scale) written by the layout editor. Never
+              animated, so dragging it never fights an in-flight transition.
+   .wrap    = show/hide motion. Keeping these apart is what lets a widget be moved
+              and scaled while its entrance animation still plays correctly. */
+.widget {
+  position: absolute;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.widget > .wrap {
+  opacity: 0;
+  visibility: hidden;
+  /* opacity + transform only — both run on the compositor, no repaint per frame */
+  transition:
+    opacity .42s var(--ease),
+    transform .55s var(--ease-out),
+    visibility 0s linear .6s;
+}
+.widget.on > .wrap {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
+}
+
+/* Each widget enters from the edge it lives on. These live on .wrap, so they are
+   independent of wherever the operator has dragged the widget to. */
+#leaderboard:not(.on) > .wrap { transform: translateX(-46px) scale(.98); }
+#tower:not(.on)       > .wrap { transform: translateX(46px) scale(.98); }
+#lowerthird:not(.on)  > .wrap { transform: translateX(-64px) scale(.98); }
+#ticker:not(.on)      > .wrap { transform: translateY(52px); }
+#status:not(.on)      > .wrap { transform: translateY(-34px) scale(.96); }
+#gap:not(.on)         > .wrap { transform: translateY(34px) scale(.97); }
+#results:not(.on)     > .wrap { transform: scale(.93); }
+#battle:not(.on)      > .wrap { transform: translateY(-30px) scale(.97); }
+#bracket:not(.on)     > .wrap { transform: translateX(46px) scale(.98); }
+
+/* ---------------- shared chrome ---------------- */
+
+.card {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+/* No backdrop-filter on purpose: an OBS browser source has a transparent backdrop,
+   so blurring it costs a full-frame GPU pass and changes nothing on screen. The
+   gameplay sits underneath in OBS's own compositor, not behind this element. */
+
+/* slow light sweep so panels never look like a dead PNG */
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 36%, rgba(255, 255, 255, .09) 48%, transparent 60%);
+  transform: translateX(-120%);
+  animation: sheen 6.5s var(--ease-out) infinite;
+}
+@keyframes sheen {
+  0%, 55% { transform: translateX(-120%); }
+  88%, 100% { transform: translateX(120%); }
+}
+
+.card-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255,255,255,.05), transparent);
+}
+
+.card-head .tick {
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 10px 0 rgba(0, 224, 164, .45);
+  animation: tickPulse 2.4s var(--ease) infinite;
+}
+@keyframes tickPulse {
+  0%, 100% { transform: scaleY(1);    opacity: .7; }
+  50%      { transform: scaleY(1.2);  opacity: 1; }
+}
+
+.card-head .title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.card-head .sub {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: .08em;
+  color: var(--ink-dim);
+}
+
+/* live underline that crawls along the header */
+.card-head::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: -1px;
+  height: 1px; width: 42%;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: .7;
+  animation: crawl 5.5s linear infinite;
+}
+@keyframes crawl {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(340%); }
+}
+
+/* ---------------- value-change motion ---------------- */
+
+/* any text cell that just changed */
+@keyframes valueIn {
+  0%   { opacity: 0; transform: translateY(9px); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
+/* NB: per-value change and pop animations are driven from JS via the Web Animations
+   API (see setText in overlay.js) so they never need a forced reflow to replay.
+   `valueIn` stays here because the flag-pill label still uses it declaratively. */
+
+/* personal best / fastest lap */
+@keyframes purpleSweep {
+  0%   { background: rgba(191, 90, 242, .55); color: #fff; }
+  100% { background: transparent; }
+}
+.sweep-purple { animation: purpleSweep 1.3s var(--ease-out); }
+
+@keyframes accentSweep {
+  0%   { background: rgba(0, 224, 164, .38); }
+  100% { background: transparent; }
+}
+.sweep-accent { animation: accentSweep 1.1s var(--ease-out); }
+
+/* Row-level highlights.
+   Both live on pseudo-elements that are painted once and then only faded out, so a
+   sweep costs one composited opacity animation instead of a per-frame repaint. */
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+.lb-row::before, .tw-row::before,
+.lb-row::after,  .tw-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  /* behind the row's own text, but still above the card background — `isolation`
+     on the row keeps this z-index local instead of sinking under the card */
+  z-index: -1;
+}
+
+/* ::before = lap completed */
+.lb-row::before, .tw-row::before {
+  background: linear-gradient(90deg, rgba(0, 224, 164, .3), transparent 55%);
+  box-shadow: inset 3px 0 0 0 var(--accent);
+}
+.pulse-lap::before { animation: fadeOut 1.2s var(--ease-out); }
+
+/* ::after = position gained / lost */
+.lb-row::after, .tw-row::after {
+  background: linear-gradient(90deg, var(--sweep, transparent), transparent 70%);
+}
+.sweep-gain { --sweep: rgba(48, 209, 88, .5); }
+.sweep-lose { --sweep: rgba(255, 69, 58, .5); }
+.sweep-gain::after, .sweep-lose::after { animation: fadeOut 1.15s var(--ease-out); }
+
+/* the little +N / -N position arrow */
+.delta {
+  position: absolute;
+  right: -3px;
+  top: 50%;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+}
+.delta.up   { color: var(--gain); animation: deltaUp 2.4s var(--ease-out); }
+.delta.down { color: var(--lose); animation: deltaDown 2.4s var(--ease-out); }
+@keyframes deltaUp {
+  0%   { opacity: 0; transform: translateY(4px); }
+  12%  { opacity: 1; transform: translateY(-8px); }
+  70%  { opacity: 1; transform: translateY(-8px); }
+  100% { opacity: 0; transform: translateY(-14px); }
+}
+@keyframes deltaDown {
+  0%   { opacity: 0; transform: translateY(-4px); }
+  12%  { opacity: 1; transform: translateY(8px); }
+  70%  { opacity: 1; transform: translateY(8px); }
+  100% { opacity: 0; transform: translateY(14px); }
+}
+
+/* ---------------- leaderboard (left rail) ---------------- */
+
+#leaderboard { left: var(--safe); top: 132px; width: 430px; }
+
+.lb-row {
+  display: grid;
+  grid-template-columns: 30px 6px 40px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 14px 0 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+  position: relative;
+  isolation: isolate;
+}
+
+.lb-row:last-child { border-bottom: 0; }
+.lb-row.focus { background: rgba(255, 255, 255, .07); }
+.lb-row.dnf { opacity: .4; }
+.lb-row.leaving { pointer-events: none; }
+
+.lb-row .pos {
+  position: relative;
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--ink);
+}
+
+.lb-row .bar {
+  width: 6px; height: 24px; border-radius: 3px;
+  background: var(--c);
+  position: relative; overflow: hidden;
+}
+/* leader's colour bar gets a running highlight */
+.lb-row.p1 .bar::after, .tw-row.p1 .bar::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent, rgba(255,255,255,.85), transparent);
+  transform: translateY(-100%);
+  animation: barRun 2.6s var(--ease-out) infinite;
+}
+@keyframes barRun {
+  0%, 55% { transform: translateY(-100%); }
+  85%, 100% { transform: translateY(100%); }
+}
+
+.lb-row .num {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-dim);
+}
+
+/* The WEC-skin team box and the tower's car number are markup every row now carries, but
+   only that skin lays them out — hidden everywhere else so they take no grid cell. */
+.lb-row .logo, .tw-row .logo, .tw-row .num { display: none; }
+
+.lb-row .name {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lb-row .name small {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .1em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+}
+
+.lb-row .gap {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-dim);
+  text-align: right;
+  min-width: 78px;
+}
+
+.lb-row .gap.leader { color: var(--accent); font-weight: 700; }
+
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  padding: 2px 5px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: 2px;
+  animation: tagIn .4s var(--ease-out) backwards;
+}
+@keyframes tagIn {
+  from { opacity: 0; transform: scale(.6) translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+.tag.pit { background: #ffd60a; color: #05070a; animation: tagIn .4s var(--ease-out) backwards, pitBlink 1.1s steps(1) infinite .4s; }
+.tag.pb  { background: var(--accent); color: #05070a; }
+.tag.fl  { background: var(--purple); color: #fff; box-shadow: 0 0 14px -2px var(--purple); }
+@keyframes pitBlink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: .35; } }
+
+/* ---------------- timing tower (right rail) ---------------- */
+
+#tower { right: var(--safe); top: 132px; width: 560px; }
+
+.tw-head, .tw-row {
+  display: grid;
+  grid-template-columns: 34px 8px 1fr 56px 92px 92px 70px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+}
+
+.tw-head {
+  height: 30px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+
+.tw-row {
+  position: relative;
+  isolation: isolate;
+  height: 42px;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+  font-size: 15px;
+}
+.tw-row:last-child { border-bottom: 0; }
+.tw-row.dnf { opacity: .4; }
+
+.tw-row .pos { position: relative; font-family: var(--mono); font-weight: 700; text-align: center; }
+.tw-row .bar { width: 8px; height: 22px; border-radius: 3px; background: var(--c); position: relative; overflow: hidden; }
+.tw-row .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tw-row .t { font-family: var(--mono); font-size: 14px; text-align: right; color: var(--ink-dim); border-radius: 4px; }
+.tw-row .t.best { color: var(--purple); }
+.tw-row .t.strong { color: var(--ink); }
+
+/* ---------------- status bar (top) ---------------- */
+
+#status { left: 50%; top: 42px; transform: translateX(-50%); }
+
+.status-bar {
+  display: flex;
+  align-items: stretch;
+  height: 62px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.status-bar .seg {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 22px;
+  border-right: 1px solid var(--line);
+}
+.status-bar .seg:last-child { border-right: 0; }
+
+.status-bar .k {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+}
+
+.status-bar .v {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1.15;
+}
+
+.status-bar .seg.event .v { font-family: var(--sans); font-size: 17px; letter-spacing: .1em; }
+
+/* seconds tick — tiny breath so the clock reads as live */
+@keyframes secTick {
+  0%   { transform: translateY(2px); opacity: .55; }
+  100% { transform: none; opacity: 1; }
+}
+#stClock.sectick { animation: secTick .22s var(--ease-out); }
+
+.flag-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 24px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #05070a;
+  background: var(--flag, #30d158);
+  /* No flag label may wrap: a second line changes the height of the whole status bar. */
+  white-space: nowrap;
+  overflow: hidden;
+  transition: background .35s var(--ease);
+}
+.flag-pill.dark { color: #fff; }
+
+/* white wipe across the pill whenever the flag changes */
+.flag-pill.wipe::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(255, 255, 255, .85);
+  animation: flagWipe .6s var(--ease-out);
+}
+@keyframes flagWipe {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.flag-pill .label { display: inline-block; }
+.flag-pill.wipe .label { animation: valueIn .45s var(--ease-out) .18s backwards; }
+
+.flag-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.4s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .25; transform: scale(.72); }
+}
+
+/* ---------------- lower third ---------------- */
+
+#lowerthird { left: 96px; bottom: 96px; }
+
+.l3 {
+  display: flex;
+  align-items: stretch;
+  min-width: 620px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.l3 .accentbar {
+  width: 8px;
+  background: var(--c, var(--accent));
+  transform-origin: bottom;
+}
+.widget.on .l3 .accentbar { animation: barGrow .55s var(--ease-out); }
+@keyframes barGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+.l3 .body { padding: 18px 30px 20px; overflow: hidden; }
+
+.l3 .kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .24em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.l3 .name {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -.015em;
+  line-height: 1.05;
+  margin-top: 4px;
+}
+
+.l3 .meta {
+  margin-top: 8px;
+  display: flex;
+  gap: 22px;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--ink-dim);
+}
+.l3 .meta b { color: var(--ink); font-weight: 700; }
+
+/* staggered reveal of the three text blocks */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+.widget.on .l3 .kicker { animation: riseIn .45s var(--ease-out) .06s backwards; }
+.widget.on .l3 .name   { animation: riseIn .55s var(--ease-out) .12s backwards; }
+.widget.on .l3 .meta   { animation: riseIn .55s var(--ease-out) .2s backwards; }
+
+/* ---------------- battle / gap bar ---------------- */
+
+#gap { left: 50%; bottom: 72px; transform: translateX(-50%); }
+
+.gapbar { width: 640px; padding: 16px 22px 18px; }
+
+.gapbar .heads { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; }
+.gapbar .heads .r { text-align: right; }
+.gapbar .heads small { display: block; font-family: var(--mono); font-size: 12px; color: var(--ink-dim); font-weight: 500; }
+
+.gaptrack {
+  position: relative;
+  height: 8px;
+  margin-top: 14px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .1);
+  overflow: hidden;
+}
+.gapfill {
+  position: absolute; inset: 0 auto 0 0;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width .45s var(--ease-out), background .3s var(--ease);
+}
+/* energy running along the bar */
+.gapfill::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent);
+  transform: translateX(-100%);
+  animation: gapRun 1.9s var(--ease-out) infinite;
+}
+@keyframes gapRun {
+  0%, 40% { transform: translateX(-100%); }
+  100%    { transform: translateX(100%); }
+}
+
+.gapval {
+  margin-top: 10px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+/* closing in -> green, dropping back -> red */
+.gapval.closing { color: var(--gain); }
+.gapval.opening { color: var(--lose); }
+
+/* ---------------- results ---------------- */
+
+#results { left: 50%; top: 50%; width: 900px; transform: translate(-50%, -50%); }
+
+.res-title { position: relative; padding: 26px 32px 20px; border-bottom: 1px solid var(--line); overflow: hidden; }
+.res-title h1 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -.02em; }
+.res-title p { margin: 6px 0 0; font-size: 13px; letter-spacing: .2em; color: var(--accent); text-transform: uppercase; font-weight: 700; }
+.widget.on .res-title h1 { animation: riseIn .5s var(--ease-out) .1s backwards; }
+.widget.on .res-title p  { animation: riseIn .5s var(--ease-out) .18s backwards; }
+
+.res-row {
+  display: grid;
+  grid-template-columns: 60px 8px 46px 1fr 150px 150px;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+  font-size: 17px;
+}
+.res-row .pos { font-family: var(--mono); font-size: 22px; font-weight: 700; }
+.res-row .bar { width: 8px; height: 26px; border-radius: 3px; background: var(--c); }
+.res-row .num { font-family: var(--mono); color: var(--ink-dim); font-weight: 700; }
+.res-row .name { font-weight: 700; }
+.res-row .t { font-family: var(--mono); font-size: 15px; text-align: right; color: var(--ink-dim); }
+.res-row:first-child .pos { color: var(--accent); }
+
+/* results roll in one row at a time */
+@keyframes resRowIn {
+  from { opacity: 0; transform: translateX(-26px); }
+  to   { opacity: 1; transform: none; }
+}
+.widget.on .res-row {
+  animation: resRowIn .5s var(--ease-out) backwards;
+  animation-delay: calc(.24s + var(--i) * .07s);
+}
+
+/* ---------------- ticker ---------------- */
+
+#ticker { left: 0; bottom: 0; width: 1920px; }
+.ticker-bar {
+  display: flex;
+  align-items: center;
+  height: 46px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.ticker-tag {
+  position: relative;
+  padding: 0 20px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: #05070a;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  overflow: hidden;
+}
+.ticker-tag::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(255, 255, 255, .55);
+  transform: translateX(-100%);
+  animation: sheen 4.5s var(--ease-out) infinite;
+}
+.ticker-track { flex: 1; overflow: hidden; white-space: nowrap; }
+.ticker-move { display: inline-block; padding-left: 100%; animation: ticker 26s linear infinite; font-size: 15px; letter-spacing: .04em; }
+.ticker-move span { margin: 0 34px; color: var(--ink-dim); }
+.ticker-move b { color: var(--ink); font-weight: 700; }
+@keyframes ticker { to { transform: translateX(-100%); } }
+
+html.disconnected .stage { filter: grayscale(.4); }
+
+/* Ambient loops only. Event-driven motion (position swaps, value changes, flag
+   wipes) always stays on — that motion carries information. Add ?motion=calm to an
+   overlay URL to switch the loops off in OBS. */
+html.calm .card::after,
+html.calm .card-head::after,
+html.calm .ticker-tag::after,
+html.calm .lb-row.p1 .bar::after,
+html.calm .tw-row.p1 .bar::after,
+html.calm .gapfill::after,
+html.calm .card-head .tick,
+html.calm .tag.pit { animation: none; }
+
+/* Windows "Animation effects: off" makes the browser report reduced motion, which
+   would silently freeze every ambient loop. Honour it by default, but let the
+   operator force motion back on with ?motion=full. */
+@media (prefers-reduced-motion: reduce) {
+  html:not(.motion-full) .card::after,
+  html:not(.motion-full) .card-head::after,
+  html:not(.motion-full) .ticker-tag::after,
+  html:not(.motion-full) .lb-row.p1 .bar::after,
+  html:not(.motion-full) .tw-row.p1 .bar::after,
+  html:not(.motion-full) .gapfill::after { animation: none; }
+}
+
+/* ---------------- density ---------------- */
+
+html.density-compact .lb-row { height: 36px; }
+html.density-compact .lb-row .name { font-size: 14px; }
+html.density-compact .lb-row .name small { display: none; }
+html.density-compact .tw-row { height: 34px; font-size: 14px; }
+html.density-compact .status-bar { height: 52px; }
+html.density-compact .res-row { height: 42px; }
+
+/* ---------------- layout editor (?edit=1) ---------------- */
+
+html.edit .stage { cursor: default; }
+
+/* broadcast safe area */
+html.edit .stage::before {
+  content: '';
+  position: absolute;
+  inset: var(--safe);
+  border: 1px dashed rgba(255, 255, 255, .14);
+  pointer-events: none;
+  z-index: 90;
+}
+
+html.edit .widget {
+  pointer-events: auto;
+  cursor: grab;
+  outline: 1px dashed rgba(255, 255, 255, .3);
+  outline-offset: 3px;
+}
+html.edit .widget:hover { outline-color: rgba(255, 255, 255, .55); }
+html.edit .widget.sel { outline: 2px solid var(--accent); outline-offset: 3px; }
+html.edit .widget.dragging { cursor: grabbing; }
+
+/* nothing should be invisible while you are arranging it */
+/*
+ * The editor shows the scene, not the catalogue.
+ *
+ * It used to force every widget on screen so none could be missed. In a single-layout
+ * world that was reasonable; with scenes it means arranging a drift scene while six race
+ * widgets sit on top of what you are trying to place. A widget the scene does not show is
+ * not part of that scene's layout, so it has no business being in the way.
+ *
+ * Widgets hidden by the layout's own `hidden` flag stay visible at low opacity — those
+ * are part of the scene and have to remain selectable to be brought back.
+ */
+html.edit .widget:not(.on) { display: none; }
+html.edit .widget.on > .wrap { opacity: 1 !important; visibility: visible !important; transform: none !important; }
+html.edit .widget.layout-hidden { opacity: .25; }
+
+html.edit .widget::before {
+  content: attr(data-label);
+  position: absolute;
+  left: 0;
+  top: -22px;
+  font: 700 10px/1 var(--sans);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #05070a;
+  background: var(--accent);
+  padding: 4px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity .15s;
+  pointer-events: none;
+}
+html.edit .widget:hover::before,
+html.edit .widget.sel::before { opacity: 1; }
+
+.rz {
+  display: none;
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--accent);
+  border: 2px solid #05070a;
+  cursor: nwse-resize;
+  z-index: 95;
+}
+html.edit .widget.sel .rz { display: block; }
+
+#guides { position: absolute; inset: 0; pointer-events: none; z-index: 98; }
+#guides .g { position: absolute; background: var(--accent); opacity: .85; }
+#guides .g.v { width: 1px; top: 0; bottom: 0; }
+#guides .g.h { height: 1px; left: 0; right: 0; }
+
+#hud {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 99;
+  display: none;
+  gap: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: rgba(5, 7, 10, .9);
+  border: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+  pointer-events: none;
+  white-space: nowrap;
+}
+html.edit #hud { display: flex; }
+#hud b { color: var(--ink); font-weight: 700; }
+
+/* ---------------- sector pips ---------------- */
+
+.sec { display: flex; gap: 3px; align-items: center; }
+.sec i {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, .12);
+  transition: background .25s var(--ease);
+}
+.sec i.set  { background: #ffd60a; }
+.sec i.pb   { background: var(--gain); }
+.sec i.best { background: var(--purple); box-shadow: 0 0 8px -1px var(--purple); }
+
+.tw-head .sec-h { font-size: 10px; }
+
+/* ---------------- track map ---------------- */
+
+#trackmap { right: var(--safe); bottom: 96px; width: 300px; }
+.tm { padding: 10px 12px 12px; }
+.tm svg { display: block; width: 100%; height: auto; aspect-ratio: 1; overflow: visible; }
+.tm circle { transition: cx .28s linear, cy .28s linear; }
+
+/* ---------------- lite mode (low-end GPU) ----------------
+   Kills every animation that runs forever. Event-driven motion — position swaps,
+   value changes, flag wipes, entrances — all still play, because those carry
+   information. What goes is the decoration that costs GPU time on every frame
+   whether anything is happening or not. */
+
+html.lite .card::after,
+html.lite .card-head::after,
+html.lite .ticker-tag::after,
+html.lite .lb-row.p1 .bar::after,
+html.lite .tw-row.p1 .bar::after,
+html.lite .gapfill::after,
+html.lite .card-head .tick,
+html.lite .tag.pit,
+html.lite .flag-dot { animation: none; }
+
+html.lite .card { box-shadow: none; }
+html.lite .card-head .tick { opacity: 1; }
+html.lite .widget > .wrap { transition-duration: .28s, .3s, 0s; }
+
+/* ---------------- tandem battle ---------------- */
+/* Positioned in stage pixels like every other widget. A percentage plus a translate
+   would fight both `transform-origin: 0 0` and the scale the layout editor writes
+   into the same property. */
+#battle { left: 600px; top: 110px; width: 720px; }
+#battle.empty { opacity: .45; }
+
+.bt { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding: 16px 18px 6px; }
+.bt-side { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.bt-side:last-child { flex-direction: row-reverse; text-align: right; }
+.bt-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, #666); flex: none; }
+.bt-side b {
+  font-size: 26px; font-weight: 700; letter-spacing: -.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bt-side small {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .18em;
+  color: rgba(255, 255, 255, .4); flex: none;
+}
+.bt-side.lead small { color: var(--accent); }
+.bt-side.lead b { text-shadow: 0 0 22px color-mix(in srgb, var(--c) 55%, transparent); }
+.bt-side.won small { color: #30d158; }
+.bt-vs { font-family: var(--mono); font-size: 13px; letter-spacing: .14em; color: rgba(255, 255, 255, .35); }
+
+.bt-votes { display: flex; gap: 7px; justify-content: center; padding: 4px 0 16px; }
+.bt-votes i {
+  width: 34px; height: 5px; border-radius: 3px;
+  background: rgba(255, 255, 255, .13);
+  transition: background .18s var(--ease-out);
+}
+.bt-votes i.a { background: var(--accent); }
+.bt-votes i.b { background: #ff9f0a; }
+.bt-votes i.omt { background: rgba(255, 255, 255, .5); }
+
+/* ---------------- bracket ---------------- */
+/* Below the leaderboard rather than beside the timing tower: a drift event usually
+   hides the tower, but a default that overlaps another widget looks broken the first
+   time it is switched on, before anyone has touched the layout editor. */
+#bracket { left: var(--safe); top: 560px; width: 560px; }
+.bk { display: flex; gap: 10px; padding: 14px 16px 16px; overflow: hidden; }
+.bk-col { flex: 1; min-width: 0; }
+.bk-col h5 {
+  margin: 0 0 7px; font-family: var(--mono); font-size: 9px; letter-spacing: .16em;
+  color: rgba(255, 255, 255, .38); text-transform: uppercase;
+}
+.bk-pair {
+  border-left: 2px solid rgba(255, 255, 255, .12);
+  padding: 3px 0 3px 8px; margin-bottom: 7px; font-size: 12px;
+}
+.bk-pair > div {
+  display: flex; align-items: center; gap: 6px; padding: 1px 0;
+  color: rgba(255, 255, 255, .42);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bk-pair > div.w { color: #fff; font-weight: 600; }
+.bk-pair i { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.bk-empty { padding: 18px; font-size: 12px; color: rgba(255, 255, 255, .35); }
+
+/* ---------------- starting grid ---------------- */
+#grid { left: 660px; top: 150px; width: 600px; }
+#grid:not(.on) > .wrap { transform: scale(.94); }
+
+.grid-title { padding: 18px 22px 12px; text-align: center; }
+.grid-title h1 {
+  margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.01em;
+}
+.grid-title p {
+  margin: 4px 0 0; font-family: var(--mono); font-size: 10px;
+  letter-spacing: .2em; color: rgba(255, 255, 255, .4);
+}
+
+.gd { padding: 4px 22px 20px; }
+/* Offset columns: a flat list reads as a leaderboard, a stagger reads as a grid. */
+.gd-slot {
+  display: flex; align-items: center; gap: 10px;
+  width: 62%; padding: 6px 10px; margin-bottom: 5px;
+  border-radius: 8px; background: rgba(255, 255, 255, .04);
+}
+.gd-slot.right { margin-left: auto; }
+.gd-pos {
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  color: rgba(255, 255, 255, .45); width: 20px; text-align: right;
+}
+.gd-bar { width: 4px; height: 20px; border-radius: 2px; flex: none; }
+.gd-num {
+  font-family: var(--mono); font-size: 12px; color: rgba(255, 255, 255, .5);
+  width: 22px;
+}
+.gd-name {
+  font-size: 15px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gd-empty { padding: 16px 0; font-size: 12px; color: rgba(255, 255, 255, .35); }
+
+/* ---------------- scene transition ---------------- */
+/* One move for the whole stage rather than each widget animating separately: a scene
+   change is a cut, not a dozen independent slides. */
+.stage { transition: opacity .21s cubic-bezier(.4, 0, .2, 1); }
+.stage.scene-swap { opacity: 0; }
+
+/* ---------------- head to head ---------------- */
+#h2h { left: 660px; top: 720px; width: 600px; }
+#h2h:not(.on) > .wrap { transform: translateY(26px) scale(.97); }
+
+.hh { padding: 12px 16px 14px; }
+.hh-empty { padding: 14px 0; font-size: 12px; color: rgba(255, 255, 255, .35); }
+
+.hh-head {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 12px; padding-bottom: 10px; margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
+}
+.hh-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hh-name.r { flex-direction: row-reverse; }
+.hh-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.hh-num { font-family: var(--mono); font-size: 11px; color: rgba(255, 255, 255, .45); }
+.hh-name b {
+  font-size: 16px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hh-gap { text-align: center; }
+.hh-gap b { display: block; font-family: var(--mono); font-size: 19px; font-weight: 700; }
+.hh-gap i {
+  display: block; font-style: normal; font-family: var(--mono);
+  font-size: 9px; letter-spacing: .12em; min-height: 11px;
+}
+.hh-gap i.closing { color: #30d158; }
+.hh-gap i.opening { color: #ff453a; }
+
+/* Three columns so the two times sit either side of what they are comparing — a table
+   with the label in the middle reads as a duel, one with it on the left reads as a list. */
+.hh-row {
+  display: grid; grid-template-columns: 1fr 92px 1fr; align-items: center;
+  padding: 3px 0; font-family: var(--mono); font-size: 13px;
+}
+.hh-row.strong { font-size: 14px; margin-top: 4px; }
+.hh-v { color: rgba(255, 255, 255, .55); }
+.hh-v:first-child { text-align: right; }
+.hh-v:last-child { text-align: left; }
+.hh-v.win { color: #fff; font-weight: 700; }
+.hh-k {
+  text-align: center; font-family: var(--sans); font-size: 10px;
+  letter-spacing: .14em; color: rgba(255, 255, 255, .4);
+}
+.hh-k i {
+  display: block; font-style: normal; font-family: var(--mono);
+  font-size: 10px; letter-spacing: 0; color: rgba(255, 255, 255, .28);
+}
+
+/* Race control badges. INV is the loud one on purpose: an open investigation is the
+   single most useful thing a viewer can be told about a running order. */
+.tag.inv { background: #ffd60a; color: #05070a; }
+.tag.pen { background: rgba(255, 69, 58, .18); color: #ff453a; }
+.tag.blue { background: #0a84ff; color: #fff; }
+
+/* ---------------- championship standings ---------------- */
+#standings { left: 610px; top: 130px; width: 700px; }
+#standings:not(.on) > .wrap { transform: scale(.94); }
+
+.std-row {
+  display: grid; grid-template-columns: 42px 5px 1fr 70px 74px;
+  align-items: center; gap: 12px;
+  padding: 7px 22px; border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+.std-row:last-child { border-bottom: 0; }
+.std-row.p1 { background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%); }
+.std-pos { font-family: var(--mono); font-size: 15px; font-weight: 700; color: rgba(255, 255, 255, .5); }
+.std-row.p1 .std-pos { color: var(--accent); }
+.std-bar { height: 22px; border-radius: 3px; }
+.std-name {
+  font-size: 17px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.std-gap { font-family: var(--mono); font-size: 13px; color: rgba(255, 255, 255, .38); text-align: right; }
+.std-pts { font-family: var(--mono); font-size: 20px; font-weight: 800; text-align: right; }
+.std-empty { padding: 18px 22px; font-size: 12px; color: rgba(255, 255, 255, .35); }
+
+/* ================================================================ templates ==
+ *
+ * Each template is a set of tokens, nothing more. Every widget already draws itself
+ * from these, so a theme restyles the whole broadcast without any widget knowing
+ * themes exist — and a widget written next month inherits all ten for free.
+ *
+ * Only tokens are redefined here. The moment a theme needs a rule of its own, it stops
+ * being a theme and becomes a fork of the stylesheet.
+ */
+
+html[data-theme="carbon"] {
+  --panel: rgba(0, 0, 0, var(--panel-alpha));
+  --panel-hi: rgba(18, 18, 18, .9);
+  --line: rgba(255, 255, 255, .14);
+  --ink-dim: rgba(255, 255, 255, .6);
+  --ink-mute: rgba(255, 255, 255, .38);
+}
+
+html[data-theme="neon"] {
+  --panel: rgba(10, 4, 20, var(--panel-alpha));
+  --panel-hi: rgba(30, 10, 48, .9);
+  --line: rgba(255, 43, 209, .28);
+  --ink-mute: rgba(214, 168, 255, .45);
+  --purple: #b026ff;
+  --gain: #39ff88;
+  --lose: #ff2d6f;
+  --shadow: 0 18px 44px rgba(120, 0, 160, .45);
+}
+
+html[data-theme="ice"] {
+  --panel: rgba(8, 16, 32, var(--panel-alpha));
+  --panel-hi: rgba(18, 34, 60, .9);
+  --line: rgba(140, 190, 255, .16);
+  --ink-dim: rgba(220, 236, 255, .62);
+  --ink-mute: rgba(180, 210, 245, .4);
+  --purple: #7d8cff;
+}
+
+html[data-theme="sunset"] {
+  --panel: rgba(24, 12, 6, var(--panel-alpha));
+  --panel-hi: rgba(48, 24, 10, .9);
+  --line: rgba(255, 170, 90, .18);
+  --ink-dim: rgba(255, 232, 210, .6);
+  --ink-mute: rgba(255, 200, 150, .4);
+  --purple: #ff7ab8;
+}
+
+/* The one light template. Every token flips, including the shadow, which has to be
+   softer or a light panel looks like it is floating off the screen. */
+html[data-theme="paper"] {
+  --ink: #14161a;
+  --ink-dim: rgba(20, 22, 26, .62);
+  --ink-mute: rgba(20, 22, 26, .42);
+  --panel: rgba(248, 247, 244, var(--panel-alpha));
+  --panel-hi: rgba(255, 255, 255, .95);
+  --line: rgba(20, 22, 26, .12);
+  --purple: #7c3aed;
+  --gain: #15803d;
+  --lose: #b91c1c;
+  --shadow: 0 14px 34px rgba(0, 0, 0, .22);
+}
+
+html[data-theme="mono"] {
+  --panel: rgba(14, 14, 14, var(--panel-alpha));
+  --panel-hi: rgba(30, 30, 30, .9);
+  --line: rgba(255, 255, 255, .12);
+  --purple: #d4d4d4;
+  --gain: #e5e5e5;
+  --lose: #8a8a8a;
+}
+
+html[data-theme="retro"] {
+  --panel: rgba(12, 10, 2, var(--panel-alpha));
+  --panel-hi: rgba(30, 22, 4, .92);
+  --ink: #ffce6a;
+  --ink-dim: rgba(255, 206, 106, .62);
+  --ink-mute: rgba(255, 206, 106, .38);
+  --line: rgba(255, 176, 0, .22);
+  --purple: #ffe08a;
+  --gain: #b6ff6a;
+  --lose: #ff7a4a;
+  --sans: 'JetBrains Mono', ui-monospace, monospace;
+  --shadow: 0 0 26px rgba(255, 176, 0, .18);
+}
+
+html[data-theme="bold"] {
+  --panel: rgba(9, 10, 14, .97);
+  --panel-hi: rgba(28, 30, 38, .97);
+  --line: rgba(255, 255, 255, .16);
+  --shadow: 0 22px 56px rgba(0, 0, 0, .6);
+}
+
+html[data-theme="broadcast"] {
+  --panel: rgba(8, 14, 34, var(--panel-alpha));
+  --panel-hi: rgba(16, 26, 58, .92);
+  --line: rgba(212, 175, 55, .22);
+  --ink-dim: rgba(230, 236, 255, .6);
+  --ink-mute: rgba(200, 210, 240, .4);
+  --purple: #b08cff;
+}
+
+/* ---------------- league branding in the status bar ---------------- */
+
+/*
+ * The flag and the logo share one slot and take turns.
+ *
+ * Giving the logo its own permanent corner is the obvious approach and the wrong one:
+ * screen space next to the flag is the most valuable on the layout, and a logo parked
+ * there permanently stops being seen after about a minute. Alternating means both get
+ * the same prominent spot, and the movement is what makes the branding register.
+ */
+/*
+ * The alternation is a CSS animation, not a JavaScript timer.
+ *
+ * A timer that toggles a class works until it meets the render loop: state arrives
+ * several times a second, and anything that touches these elements restarts the
+ * transition mid-fade. Two counter-phased keyframe animations on one shared period have
+ * no such coupling — they keep their own clock, they cannot be interrupted by a lap
+ * being scored, and the browser runs them on the compositor for free.
+ */
+/*
+ * Both children occupy the same grid cell, so the slot takes the width of the wider of
+ * them and holds it. Absolutely positioning the logo instead lets the slot collapse to
+ * the flag pill's width, and a league name longer than "RED FLAG" then spills across the
+ * event title beside it.
+ */
+/*
+ * Stretched vertically, not centred. The status bar is a flex row with align-items:
+ * stretch, so the flag pill has always filled its full height — that solid block of
+ * colour edge to edge is what makes a flag read as a flag. Centring the grid items
+ * shrank it to the height of its own text and left it floating in the bar.
+ */
+.brand-slot { display: grid; align-items: stretch; --brand-slide: 8px; }
+/*
+ * Stacked, but not stretched. A grid item fills its cell by default, which made the flag
+ * pill inherit the width of the league name sitting behind it — a "RED FLAG" badge three
+ * times wider than its own text. The cell still sizes to the wider of the two so nothing
+ * spills into the event title; each child just keeps its own width inside it.
+ */
+.brand-slot > * { grid-area: 1 / 1; justify-self: start; }
+.brand-slot .brand-logo {
+  display: flex; align-items: center; gap: 9px;
+  /* the logo is content, not a block of colour: it centres rather than filling */
+  align-self: center;
+  opacity: 0; pointer-events: none;
+}
+/* Sized against the 58px bar rather than the text beside it: a square logo at 30px
+   wasted half the height it had. max-width still caps a very wide wordmark. */
+.brand-slot .brand-logo img { height: 38px; width: auto; max-width: 190px; display: block; }
+.brand-slot .brand-logo b {
+  font-size: 15px; font-weight: 800; letter-spacing: .02em; white-space: nowrap;
+}
+
+/*
+ * Beside the flag: two columns, both on screen the whole time.
+ *
+ * This is the default because it is the honest use of the space — the logo is always
+ * readable, and the flag never has to disappear for branding to be seen. Alternating
+ * gives each of them a larger slot, which is worth having when the bar is tight, but it
+ * means the flag is absent half the time and the flag is the more urgent of the two.
+ */
+.brand-slot.beside { grid-auto-flow: column; }
+.brand-slot.beside > * { grid-area: auto; }
+.brand-slot.beside .brand-logo {
+  opacity: 1; transform: none; align-self: center; padding: 0 16px;
+}
+
+/* Only when there is something to alternate with. Otherwise the flag simply stays. */
+.brand-slot.rotate .flag-pill {
+  animation: brandFlagPhase var(--brand-cycle, 12s) var(--ease-out) infinite;
+}
+.brand-slot.rotate .brand-logo {
+  animation: brandLogoPhase var(--brand-cycle, 12s) var(--ease-out) infinite;
+}
+/* Held for most of each half, so the swap reads as a deliberate cut rather than a
+   constant cross-dissolve that never settles on either. */
+@keyframes brandFlagPhase {
+  0%, 44%   { opacity: 1; transform: translateX(0); }
+  50%, 94%  { opacity: 0; transform: translateX(var(--brand-slide)); }
+  100%      { opacity: 1; transform: translateX(0); }
+}
+@keyframes brandLogoPhase {
+  0%, 44%   { opacity: 0; transform: translateX(calc(-1 * var(--brand-slide))); }
+  50%, 94%  { opacity: 1; transform: translateX(0); }
+  100%      { opacity: 0; transform: translateX(calc(-1 * var(--brand-slide))); }
+}
+
+/* A still overlay is a screenshot: with motion reduced the logo simply sits beside the
+   flag instead of taking turns with it. */
+/*
+ * Lite keeps the alternation, and drops only the slide.
+ *
+ * Lite exists to cull animation that runs continuously for decoration — a shimmer sweep
+ * repainting at 60fps costs real GPU on a weak machine. This is not that: one opacity
+ * cross-fade every few seconds, on two small elements, composited. It also carries
+ * information the operator deliberately switched on. Culling it here was over-applying
+ * the rule; what Lite drops is the horizontal movement, which is the decorative part.
+ */
+html.lite .brand-slot { --brand-slide: 0px; }
+/* Black on white rather than white on black: a black badge on a dark panel would
+   disappear, and this is the one flag that must not be missed. */
+.tag.black { background: #fff; color: #000; }
+
+/* ============================================================================
+   SKIN: MotoGP
+   ----------------------------------------------------------------------------
+   A second look for the same widgets, selected with data-skin="motogp". It only
+   reshapes; the colours still come from the active theme, so any theme works
+   under it. The classic look is the default and is never touched — everything
+   is scoped under html[data-skin="motogp"].
+
+   Modelled on a modern motorsport timing tower: a tilted number chip in the
+   driver's colour, hard italic condensed type, an orange-to-red accent, top
+   places boxed in white, vertical sector bars, and green-up / yellow-down
+   position arrows. The header logo slot and any sponsor mark are the league's
+   own; nothing here reproduces another series' logotype or font.
+   ========================================================================== */
+html[data-skin="motogp"] {
+  --radius: 3px;
+  --mgp: linear-gradient(90deg, #ff7a00 0%, #ff2d2d 100%);
+}
+
+/* Panels flatter and blacker, the way a broadcast bug reads over bright gameplay. */
+html[data-skin="motogp"] .card {
+  background: linear-gradient(180deg, rgba(4,5,7,.97), rgba(4,5,7,.7));
+  border-radius: 3px;
+}
+
+/* ---------- header block ---------- */
+html[data-skin="motogp"] .card-head {
+  padding: 14px 16px 16px;
+  border-bottom: 0;
+  background: #000;
+}
+html[data-skin="motogp"] .card-head .tick { display: none; }
+html[data-skin="motogp"] .card-head .title {
+  font-style: italic;
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: .01em;
+}
+/* the lap counter / session sub becomes the big italic line under the title */
+html[data-skin="motogp"] .card-head .sub {
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--ink);
+  letter-spacing: 0;
+}
+/* a session-progress bar under the wordmark: a faint full-width track (::before) with an
+   orange→red fill (::after) scaled to --prog. With no time limit --prog is 1, so it simply
+   reads as the solid accent line the tower already had. */
+html[data-skin="motogp"] .card-head::before {
+  content: '';
+  position: absolute;
+  left: 16px; right: 16px; bottom: 8px;
+  height: 3px;
+  background: rgba(255, 255, 255, .14);
+  border-radius: 2px;
+}
+html[data-skin="motogp"] .card-head::after {
+  content: '';
+  position: absolute;
+  left: 16px; right: 16px; bottom: 8px;
+  height: 3px; width: auto;
+  background: var(--mgp);
+  border-radius: 2px;
+  opacity: 1;
+  animation: none;
+  transform: scaleX(var(--prog, 1));
+  transform-origin: left center;
+}
+html[data-skin="motogp"] .res-title,
+html[data-skin="motogp"] .grid-title { position: relative; }
+html[data-skin="motogp"] .res-title h1,
+html[data-skin="motogp"] .grid-title h1,
+html[data-skin="motogp"] #stdTitle {
+  font-style: italic;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -.01em;
+}
+html[data-skin="motogp"] .res-title::after,
+html[data-skin="motogp"] .grid-title::after {
+  content: '';
+  position: absolute; left: 32px; right: 32px; bottom: 0; height: 3px;
+  background: var(--mgp);
+}
+
+/* ---------- status bar ---------- */
+html[data-skin="motogp"] .status-bar { position: relative; }
+html[data-skin="motogp"] .status-bar::before {
+  content: '';
+  position: absolute; left: 0; right: 0; top: 0; height: 3px;
+  background: var(--mgp);
+}
+html[data-skin="motogp"] .status-bar .v { font-style: italic; font-weight: 800; }
+
+/* ---------- the tilted number chip (leaderboard + results) ---------- */
+html[data-skin="motogp"] .lb-row .num,
+html[data-skin="motogp"] .res-row .num {
+  background: var(--c);
+  color: #fff;
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1;
+  text-align: center;
+  padding: 4px 9px;
+  min-width: 42px;
+  border-radius: 2px;
+  /* a parallelogram via clip-path leans the chip like the reference without skewing the
+     digits, which skewX would have dragged over with it */
+  clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+  box-shadow: 0 1px 3px rgba(0,0,0,.5);
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+
+/* ---------- leaderboard row: pos | NAME | gap | numchip ---------- */
+html[data-skin="motogp"] .lb-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px 0 18px;
+}
+html[data-skin="motogp"] .lb-row .pos {
+  order: 1;
+  min-width: 30px;
+  flex: 0 0 auto;
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 18px;
+  text-align: left;
+}
+/* the leader (and any car boxed by the broadcast) gets a white rounded plate */
+html[data-skin="motogp"] .lb-row.p1 .posnum {
+  background: #fff;
+  color: #000;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-style: italic;
+}
+html[data-skin="motogp"] .lb-row .name {
+  order: 2;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+/* the vertical tower reference is pos · name · number chip — no gap column; the timing
+   tower widget is where the gaps and lap times live */
+html[data-skin="motogp"] .lb-row .gap { display: none; }
+html[data-skin="motogp"] .lb-row .num { order: 4; flex: 0 0 auto; }
+html[data-skin="motogp"] .lb-row .bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px; height: auto;
+  border-radius: 0;
+}
+
+/* ---------- position arrows: green-up / yellow-down chevron chips ---------- */
+html[data-skin="motogp"] .delta {
+  position: static;
+  display: inline-block;
+  margin-left: 4px;
+  font-family: var(--sans);
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 900;
+}
+html[data-skin="motogp"] .delta.up   { color: #30d158; }
+html[data-skin="motogp"] .delta.down { color: #ffd60a; }
+
+/* ---------- tower: keep timing columns, take the MotoGP type + bars ---------- */
+html[data-skin="motogp"] .tw-row .pos {
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 800;
+}
+html[data-skin="motogp"] .tw-row.p1 .posnum {
+  background: #fff; color: #000; border-radius: 4px; padding: 1px 6px;
+}
+html[data-skin="motogp"] .tw-row .name { text-transform: uppercase; font-weight: 700; letter-spacing: .03em; }
+html[data-skin="motogp"] .tw-row .t { font-style: italic; }
+html[data-skin="motogp"] .tw-row .bar,
+html[data-skin="motogp"] .tw-row.p1 .bar { border-radius: 0; }
+/* sector pips become upright bars like a qualifying screen */
+html[data-skin="motogp"] .sec { gap: 4px; }
+html[data-skin="motogp"] .sec i {
+  height: 14px;
+  width: 4px;
+  flex: 0 0 4px;
+  border-radius: 1px;
+  transform: skewX(-11deg);
+}
+
+/* ---------- results: FINISH + tilted numbers, DNF rows dropped out ---------- */
+html[data-skin="motogp"] .res-row .pos { font-style: italic; font-weight: 800; }
+html[data-skin="motogp"] .res-row .name { text-transform: uppercase; }
+html[data-skin="motogp"] .res-row .bar { border-radius: 0; }
+html[data-skin="motogp"] .res-row.dnf,
+html[data-skin="motogp"] .res-row:has(.t:first-of-type) { }
+
+/* ---------- championship box ---------- */
+html[data-skin="motogp"] .std-pos { font-style: italic; font-weight: 800; }
+html[data-skin="motogp"] .std-name { text-transform: uppercase; font-weight: 700; letter-spacing: .02em; }
+html[data-skin="motogp"] .std-pts { font-style: italic; font-weight: 900; }
+html[data-skin="motogp"] .std-bar { border-radius: 0; }
+
+/* ---------- footer accent strip under the tower ---------- */
+html[data-skin="motogp"] #leaderboard .card,
+html[data-skin="motogp"] #tower .card { position: relative; }
+html[data-skin="motogp"] #leaderboard .card::after,
+html[data-skin="motogp"] #tower .card::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: var(--mgp);
+  z-index: 2;
+}
+
+/* the "GAP x.xxx" divider between the front group and the rest (MotoGP skin) */
+html[data-skin="motogp"] .lb-gap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 26px;
+  padding: 0 14px 0 18px;
+  background: linear-gradient(90deg, rgba(255,122,0,.22), rgba(255,45,45,.14));
+  border-top: 1px solid rgba(255,255,255,.12);
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+html[data-skin="motogp"] .lb-gap .lg-k {
+  font-style: italic; font-weight: 900; font-size: 13px; letter-spacing: .12em; color: #fff;
+}
+html[data-skin="motogp"] .lb-gap .lg-v {
+  font-family: var(--sans); font-style: italic; font-weight: 800; font-size: 14px; color: #fff;
+}
+
+/* ================================================================ WEC skin
+   Endurance broadcast look: navy→purple panels, an operator-set wordmark over a race
+   countdown, class banners (HYPERCAR / LMGT3 …) grouping the field, rows of
+   position · team-colour box · car number · surname. The leaderboard is the compact
+   name tower; the timing tower keeps every driver's last/best/interval, themed to match.
+   Colours and layout only — the timing underneath is untouched.
+   Reference: referensi UI/WEC/WEC tower.png
+*/
+html[data-skin="wec"] { --accent: #38bdf8; }   /* WEC cyan for the ticks/underlines everywhere */
+
+/* every panel takes the navy endurance look so the whole overlay reads as one design */
+html[data-skin="wec"] .card {
+  background: linear-gradient(180deg, #0a1a4d 0%, #0b0a34 44%, #08051f 100%);
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgba(90, 130, 255, .16), 0 12px 44px rgba(0, 0, 0, .55),
+              inset 3px 0 0 rgba(64, 196, 255, .5), inset 0 -3px 0 rgba(64, 196, 255, .35);
+}
+
+html[data-skin="wec"] #leaderboard { width: 300px; }
+html[data-skin="wec"] #tower       { width: 560px; }
+
+/* header: the wordmark stacked over the countdown, both centred with a side margin so the
+   time never sits flush against the panel edge */
+html[data-skin="wec"] #leaderboard .card-head,
+html[data-skin="wec"] #tower .card-head {
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 20px 8px;
+  border: 0;
+}
+html[data-skin="wec"] #leaderboard .card-head .tick,
+html[data-skin="wec"] #tower .card-head .tick,
+html[data-skin="wec"] #leaderboard .card-head::after,
+html[data-skin="wec"] #tower .card-head::after { display: none; }
+html[data-skin="wec"] #leaderboard .card-head .title,
+html[data-skin="wec"] #tower .card-head .title {
+  display: block;
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 30px;
+  letter-spacing: .02em;
+  line-height: 1;
+  text-transform: none;
+  color: #fff;
+  text-align: center;
+}
+html[data-skin="wec"] #leaderboard .card-head .sub,
+html[data-skin="wec"] #tower .card-head .sub {
+  margin: 0;                      /* base uses margin-left:auto, which shoved it to the edge */
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: .06em;
+  color: #fff;
+  opacity: 1;
+}
+
+/* class banner between groups */
+html[data-skin="wec"] .lb-classbanner {
+  margin: 3px 0;
+  padding: 5px 0;
+  text-align: center;
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(180deg, var(--cb1, #3a3f52) 0%, var(--cb2, #222534) 100%);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .38), 0 1px 3px rgba(0, 0, 0, .4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+}
+
+/* shared row chrome */
+html[data-skin="wec"] .lb-row,
+html[data-skin="wec"] .tw-row {
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
+  background: linear-gradient(90deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, 0));
+}
+/* leaderboard: pos · team box · number · name */
+html[data-skin="wec"] .lb-row {
+  grid-template-columns: 24px 40px 34px 1fr;
+  height: 40px;
+  padding: 0 14px;
+}
+/* timing tower: same identity, but the per-driver timing stays — last · best · interval */
+html[data-skin="wec"] .tw-row {
+  grid-template-columns: 22px 38px 32px 1fr 78px 78px 60px;
+  height: 42px;
+  padding: 0 14px;
+}
+html[data-skin="wec"] .lb-row.focus,
+html[data-skin="wec"] .tw-row.focus { background: rgba(120, 160, 255, .12); }
+
+/* hidden bits — the tower KEEPS its time cells, so they are not listed here */
+html[data-skin="wec"] .lb-row .bar,
+html[data-skin="wec"] .tw-row .bar,
+html[data-skin="wec"] .lb-row .gap,
+html[data-skin="wec"] .tw-row .sec,
+html[data-skin="wec"] .tw-head,
+html[data-skin="wec"] .lb-row .name small,
+html[data-skin="wec"] .lb-row .tags,
+html[data-skin="wec"] .tw-row .tags,
+html[data-skin="wec"] .lb-row .delta,
+html[data-skin="wec"] .tw-row .delta { display: none; }
+
+/* team-colour box with a short code (no logo files) */
+html[data-skin="wec"] .lb-row .logo,
+html[data-skin="wec"] .tw-row .logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 28px;
+  border-radius: 3px;
+  background: var(--c);
+  overflow: hidden;
+}
+html[data-skin="wec"] .logo span {
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: .01em;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .55);
+}
+html[data-skin="wec"] .logo.on-light span { color: #10131c; text-shadow: none; }
+
+/* car number */
+html[data-skin="wec"] .tw-row .num { display: block; }
+html[data-skin="wec"] .lb-row .num,
+html[data-skin="wec"] .tw-row .num {
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 15px;
+  color: #fff;
+  text-align: left;
+}
+
+/* position */
+html[data-skin="wec"] .lb-row .pos,
+html[data-skin="wec"] .tw-row .pos {
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 18px;
+  color: #dfe6f5;
+  text-align: left;
+}
+
+/* surname, with the thin separator the reference draws before it */
+html[data-skin="wec"] .lb-row .name,
+html[data-skin="wec"] .tw-row .name {
+  border-left: 2px solid rgba(255, 255, 255, .20);
+  padding-left: 12px;
+  min-width: 0;
+}
+html[data-skin="wec"] .lb-row .name .nm,
+html[data-skin="wec"] .tw-row .name .nm {
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+/* the tower's timing columns, themed to the navy panel */
+html[data-skin="wec"] .tw-row .t {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+  color: rgba(255, 255, 255, .72);
+}
+html[data-skin="wec"] .tw-row .t.best { color: #b98cff; }
+html[data-skin="wec"] .tw-row .t.strong { color: #fff; }
+
+/* ---------- MotoGP: the remaining widgets, same black + orange language ---------- */
+html[data-skin="motogp"] #lowerthird .accentbar { background: var(--mgp); }
+html[data-skin="motogp"] #lowerthird .kicker {
+  font-style: italic; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: #ff7a00;
+}
+html[data-skin="motogp"] #lowerthird .name {
+  font-style: italic; font-weight: 900; text-transform: uppercase; letter-spacing: .01em;
+}
+html[data-skin="motogp"] #lowerthird .meta { font-style: italic; }
+
+html[data-skin="motogp"] #gap .gapfill { background: var(--mgp); }
+html[data-skin="motogp"] #gap .heads span {
+  font-style: italic; font-weight: 900; text-transform: uppercase;
+}
+html[data-skin="motogp"] #gap .gapval { font-style: italic; font-weight: 800; }
+
+html[data-skin="motogp"] .ticker-tag {
+  background: var(--mgp); color: #fff; font-style: italic; font-weight: 900; letter-spacing: .06em;
+}
+html[data-skin="motogp"] .ticker-move { font-style: italic; }
+
+/* number chips also carry the tilt on the standings/championship rows for one language */
+html[data-skin="motogp"] .std-bar { border-radius: 0; }
+
+/* ================================================================ F1 skin
+   Formula 1 broadcast tower: near-black panel, a red wordmark over the lap counter or a
+   session countdown, rows of position · team-colour tab · 3-letter code · gap/interval,
+   purple personal-best times. Team logos and tyre compounds are not reproduced (no assets
+   for them); the team colour carries the identity. References: referensi UI/F1/*
+*/
+html[data-skin="f1"] {
+  --f1red: #e10600;
+  --f1purple: #b026ff;
+  --radius: 4px;
+}
+
+/* every panel goes near-black so the whole overlay matches the tower */
+html[data-skin="f1"] .card {
+  background: linear-gradient(180deg, rgba(10, 10, 14, .95) 0%, rgba(10, 10, 14, .82) 100%);
+  border: 0;
+  border-radius: 4px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .55);
+}
+
+html[data-skin="f1"] #leaderboard { width: 300px; }
+html[data-skin="f1"] #tower       { width: 560px; }
+
+/* header: F1 wordmark, then the lap counter / session countdown, left aligned */
+html[data-skin="f1"] #leaderboard .card-head,
+html[data-skin="f1"] #tower .card-head {
+  position: relative;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 10px 14px 9px;
+  border: 0;
+}
+html[data-skin="f1"] #leaderboard .card-head .tick,
+html[data-skin="f1"] #tower .card-head .tick,
+html[data-skin="f1"] #leaderboard .card-head::after,
+html[data-skin="f1"] #tower .card-head::after { display: none; }
+html[data-skin="f1"] #leaderboard .card-head::before,
+html[data-skin="f1"] #tower .card-head::before {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 2px; background: rgba(255, 255, 255, .14);
+}
+html[data-skin="f1"] #leaderboard .card-head .title,
+html[data-skin="f1"] #tower .card-head .title {
+  display: inline-block;
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: -.02em;
+  line-height: 1.05;
+  text-transform: none;
+  color: #fff;
+  padding: 1px 8px;
+  background: var(--f1red);
+  border-radius: 2px;
+}
+html[data-skin="f1"] #leaderboard .card-head .sub,
+html[data-skin="f1"] #tower .card-head .sub {
+  margin: 4px 0 0;
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: .03em;
+  color: #fff;
+  opacity: 1;
+}
+
+/* rows: position · team-colour tab · code · gap */
+html[data-skin="f1"] .lb-row {
+  grid-template-columns: 26px 5px 1fr auto;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+  align-items: stretch;
+}
+html[data-skin="f1"] .tw-row {
+  grid-template-columns: 26px 5px 1fr 78px 78px 60px;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+  align-items: stretch;
+}
+html[data-skin="f1"] .lb-row.focus,
+html[data-skin="f1"] .tw-row.focus { background: rgba(225, 6, 0, .16); }
+
+/* things the F1 tower does not show */
+html[data-skin="f1"] .lb-row .logo,
+html[data-skin="f1"] .tw-row .logo,
+html[data-skin="f1"] .lb-row .num,
+html[data-skin="f1"] .tw-row .num,
+html[data-skin="f1"] .lb-row .name small,
+html[data-skin="f1"] .lb-row .tags,
+html[data-skin="f1"] .tw-row .tags,
+html[data-skin="f1"] .tw-row .sec,
+html[data-skin="f1"] .tw-head,
+html[data-skin="f1"] .lb-row .delta,
+html[data-skin="f1"] .tw-row .delta { display: none; }
+
+/* the team-colour tab down the left of each row */
+html[data-skin="f1"] .lb-row .bar,
+html[data-skin="f1"] .tw-row .bar {
+  width: 5px;
+  height: auto;
+  align-self: stretch;
+  border-radius: 0;
+  background: var(--c);
+}
+
+html[data-skin="f1"] .lb-row .pos,
+html[data-skin="f1"] .tw-row .pos {
+  align-self: center;
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 15px;
+  color: #fff;
+  text-align: center;
+}
+
+html[data-skin="f1"] .lb-row .name,
+html[data-skin="f1"] .tw-row .name {
+  align-self: center;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+html[data-skin="f1"] .lb-row .name .nm,
+html[data-skin="f1"] .tw-row .name .nm {
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+html[data-skin="f1"] .lb-row .gap {
+  align-self: center;
+  font-family: var(--sans);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 14px;
+  color: #d6d6de;
+  text-align: right;
+  min-width: 60px;
+}
+html[data-skin="f1"] .lb-row .gap.leader { color: #fff; }
+
+html[data-skin="f1"] .tw-row .t {
+  align-self: center;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: rgba(255, 255, 255, .76);
+  text-align: right;
+}
+html[data-skin="f1"] .tw-row .t.best { color: var(--f1purple); }
+html[data-skin="f1"] .tw-row .t.strong { color: #fff; }
+
+/* status bar + lower third + gap, same F1 language */
+html[data-skin="f1"] .status-bar::before {
+  content: '';
+  position: absolute; left: 0; right: 0; top: 0; height: 3px;
+  background: var(--f1red);
+}
+html[data-skin="f1"] .status-bar { position: relative; }
+html[data-skin="f1"] .status-bar .v { font-style: italic; font-weight: 800; }
+html[data-skin="f1"] #lowerthird .accentbar { background: var(--f1red); }
+html[data-skin="f1"] #lowerthird .kicker {
+  font-style: italic; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #ff5b57;
+}
+html[data-skin="f1"] #lowerthird .name {
+  font-style: italic; font-weight: 900; text-transform: uppercase;
+}
+html[data-skin="f1"] #gap .gapfill { background: var(--f1red); }
+html[data-skin="f1"] #gap .heads span { font-style: italic; font-weight: 900; text-transform: uppercase; }
+html[data-skin="f1"] .res-title h1,
+html[data-skin="f1"] .grid-title h1,
+html[data-skin="f1"] #stdTitle { font-style: italic; font-weight: 900; text-transform: uppercase; }
+html[data-skin="f1"] .res-title::after,
+html[data-skin="f1"] .grid-title::after {
+  content: ''; position: absolute; left: 32px; right: 32px; bottom: 0; height: 3px; background: var(--f1red);
+}
+html[data-skin="f1"] .ticker-tag { background: var(--f1red); color: #fff; font-style: italic; font-weight: 900; }
+
+/* ---------------- fastest-lap banner (all skins) ---------------- */
+#fastlap { left: 50%; top: 92px; transform: translateX(-50%); }
+#fastlap:not(.on) > .wrap { transform: translateY(-16px) scale(.97); }
+.fastlap-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 400px;
+  padding: 9px 18px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #8a1fb0 0%, #4a0d72 55%, rgba(10, 10, 14, .92) 100%);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.fastlap-bar::before {
+  content: '';
+  width: 5px; align-self: stretch;
+  background: var(--c, #b026ff);
+  margin: -9px 2px -9px -6px;
+}
+.fastlap-bar .fl-tag {
+  font-family: var(--sans); font-style: italic; font-weight: 900;
+  font-size: 15px; letter-spacing: .08em; color: #fff; text-transform: uppercase;
+}
+.fastlap-bar .fl-name {
+  margin-left: auto;
+  font-family: var(--sans); font-weight: 700; font-size: 15px;
+  color: #fff; text-transform: uppercase; letter-spacing: .02em;
+}
+.fastlap-bar .fl-time {
+  font-family: var(--mono); font-weight: 700; font-size: 16px; color: #f0d6ff;
+}
+
+/* F1: the classic purple fastest-lap pill */
+html[data-skin="f1"] .fastlap-bar {
+  border-radius: 3px;
+  background: linear-gradient(90deg, #a300f0 0%, #6b00b0 52%, rgba(10, 10, 14, .92) 100%);
+}
+html[data-skin="f1"] .fastlap-bar .fl-tag,
+html[data-skin="f1"] .fastlap-bar .fl-name { font-style: italic; }
+html[data-skin="f1"] .fastlap-bar .fl-time { color: #e6bbff; }
+
+/* MotoGP: orange→red flourish instead of purple */
+html[data-skin="motogp"] .fastlap-bar {
+  background: linear-gradient(90deg, #ff7a00 0%, #cc1f1f 55%, rgba(4, 5, 7, .95) 100%);
+}
+html[data-skin="motogp"] .fastlap-bar .fl-time { color: #ffd9b0; }
+
+/* ---------------- sector-times card (all skins) ---------------- */
+#sectors { left: 50%; bottom: 90px; top: auto; transform: translateX(-50%); }
+#sectors:not(.on) > .wrap { transform: translateY(16px) scale(.97); }
+.sec-card { min-width: 460px; padding: 0; overflow: hidden; }
+.sec-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 14px; border-left: 5px solid var(--c, #888);
+}
+.sec-head .sc-name { font-family: var(--sans); font-weight: 800; font-size: 16px; text-transform: uppercase; letter-spacing: .02em; color: #fff; }
+.sec-head .sc-lap { margin-left: auto; font-family: var(--mono); font-size: 15px; color: var(--ink-dim); }
+.sec-cells { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+.sc-cell {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 6px; border-top: 2px solid transparent; background: rgba(255, 255, 255, .03);
+}
+.sc-cell + .sc-cell { border-left: 1px solid rgba(255, 255, 255, .06); }
+.sc-cell .sc-lab { font-size: 10px; letter-spacing: .14em; color: var(--ink-mute); font-weight: 700; }
+.sc-cell .sc-t { font-family: var(--mono); font-size: 15px; font-weight: 600; color: #fff; }
+.sc-cell.best { background: rgba(176, 38, 255, .18); border-top-color: #b026ff; }
+.sc-cell.best .sc-t { color: #e0b3ff; }
+.sc-cell.pb { background: rgba(48, 209, 88, .15); border-top-color: #30d158; }
+.sc-cell.pb .sc-t { color: #8fffa8; }
+.sc-cell.set { background: rgba(255, 214, 10, .10); border-top-color: #ffd60a; }
+
+html[data-skin="f1"] .sec-head .sc-name,
+html[data-skin="motogp"] .sec-head .sc-name { font-style: italic; }
+
+/* ---------------- team-radio card (all skins) ---------------- */
+#radio { right: var(--safe); top: 300px; left: auto; }
+/*
+ * Auto-hide for a driver radio message, driven by CSS so it works where JS timers do not.
+ * An OBS browser source is windowless and throttles setInterval/requestAnimationFrame almost
+ * to a stop, so a JS countdown never fired and the card stayed up forever. A CSS animation
+ * keeps running there, so the message holds visible then fades on its own. The duration is set
+ * inline per message (10-20s by length); this only names the fade curve.
+ */
+@keyframes radioAutoHide { 0%, 88% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+#radio:not(.on) > .wrap { transform: translateX(30px) scale(.97); }
+.radio-card { width: 300px; padding: 0; overflow: hidden; }
+.radio-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  background: linear-gradient(90deg, var(--c, #ff8000) 0%, rgba(0, 0, 0, .55) 100%);
+}
+.radio-head .rd-name { font-family: var(--sans); font-weight: 900; font-size: 16px; text-transform: uppercase; letter-spacing: .02em; color: #fff; }
+.radio-head .rd-tag { font-family: var(--sans); font-weight: 800; font-size: 13px; letter-spacing: .1em; color: rgba(255, 255, 255, .85); }
+.rd-wave { margin-left: auto; display: flex; align-items: flex-end; gap: 2px; height: 16px; }
+.rd-wave i { width: 3px; height: 6px; background: rgba(255, 255, 255, .9); border-radius: 1px; animation: rdWave 1s ease-in-out infinite; }
+.rd-wave i:nth-child(1) { height: 6px; animation-delay: 0s; }
+.rd-wave i:nth-child(2) { height: 12px; animation-delay: .12s; }
+.rd-wave i:nth-child(3) { height: 9px; animation-delay: .24s; }
+.rd-wave i:nth-child(4) { height: 16px; animation-delay: .36s; }
+.rd-wave i:nth-child(5) { height: 8px; animation-delay: .48s; }
+.rd-wave i:nth-child(6) { height: 13px; animation-delay: .6s; }
+.rd-wave i:nth-child(7) { height: 7px; animation-delay: .72s; }
+@keyframes rdWave { 0%, 100% { transform: scaleY(.4); } 50% { transform: scaleY(1); } }
+.rd-wave i { transform-origin: bottom; }
+.radio-quote { padding: 10px 12px; font-size: 14px; font-style: italic; color: #fff; line-height: 1.35; }
+.radio-quote:empty { display: none; }
+
+html[data-skin="f1"] .radio-head .rd-name,
+html[data-skin="motogp"] .radio-head .rd-name { font-style: italic; }
+
+/* ---------------- audience-poll card (all skins) ---------------- */
+#poll { left: 50%; bottom: 90px; top: auto; transform: translateX(-50%); }
+#poll:not(.on) > .wrap { transform: translateY(16px) scale(.97); }
+.poll-card { width: 340px; padding: 0; }
+.poll-q { font-family: var(--sans); font-weight: 800; font-size: 16px; padding: 10px 14px 6px; text-transform: uppercase; letter-spacing: .02em; color: #fff; }
+.poll-bars { display: grid; gap: 7px; padding: 0 14px 8px; }
+.poll-row { display: flex; align-items: center; gap: 8px; height: 22px; }
+.poll-row .pr-l { font-size: 13px; font-weight: 600; min-width: 74px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.poll-row .pr-bar { position: relative; flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,.09); overflow: hidden; }
+.poll-row .pr-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; transition: width .5s var(--ease-out); }
+.poll-row .pr-p { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); min-width: 38px; text-align: right; }
+.poll-row.lead .pr-p { color: #fff; font-weight: 700; }
+.poll-foot { padding: 4px 14px 10px; font-size: 11px; color: var(--ink-mute); letter-spacing: .08em; text-transform: uppercase; }
+
+/* ---------------- sponsor / countdown / driver-intro (all skins) ---------------- */
+#sponsor { left: 50%; bottom: 40px; top: auto; transform: translateX(-50%); }
+#sponsor:not(.on) > .wrap { transform: translateY(14px); }
+.sponsor-card { display: flex; align-items: center; gap: 12px; padding: 8px 18px; min-height: 46px; }
+.sponsor-card .sp-k { font-family: var(--sans); font-weight: 800; font-size: 10px; letter-spacing: .18em; color: var(--ink-mute); text-transform: uppercase; }
+.sponsor-card .sp-body { font-family: var(--sans); font-weight: 700; font-size: 18px; color: #fff; letter-spacing: .02em; }
+.sponsor-card .sp-body img { max-height: 34px; display: block; }
+
+#countdown { left: 50%; top: 40%; transform: translateX(-50%); }
+#countdown:not(.on) > .wrap { transform: translateX(-50%) scale(.96); }
+.cd-card { text-align: center; padding: 16px 34px; }
+.cd-card .cd-label { font-family: var(--sans); font-weight: 800; font-size: 14px; letter-spacing: .16em; color: var(--ink-dim); text-transform: uppercase; }
+.cd-card .cd-time { font-family: var(--mono); font-weight: 700; font-size: 54px; line-height: 1.1; color: #fff; letter-spacing: .02em; }
+
+#intro { left: var(--safe); bottom: 120px; top: auto; }
+#intro:not(.on) > .wrap { transform: translateX(-40px) scale(.97); }
+.intro-card { display: flex; align-items: center; gap: 16px; padding: 14px 22px 14px 16px; border-left: 6px solid var(--c, #888); min-width: 360px; }
+.intro-card .intro-num { font-family: var(--sans); font-style: italic; font-weight: 900; font-size: 46px; line-height: 1; color: var(--c, #fff); }
+.intro-card .intro-main { min-width: 0; }
+.intro-card .intro-name { font-family: var(--sans); font-weight: 800; font-size: 26px; text-transform: uppercase; letter-spacing: .01em; color: #fff; }
+.intro-card .intro-team { font-family: var(--sans); font-weight: 600; font-size: 13px; letter-spacing: .1em; color: var(--ink-dim); text-transform: uppercase; }
+.intro-card .intro-pts { margin-left: auto; font-family: var(--mono); font-weight: 700; font-size: 18px; color: #fff; }
+.intro-card .intro-pts:empty { display: none; }
+
+/* ---------------- QR code (all skins) ---------------- */
+#qr { right: var(--safe); bottom: 40px; left: auto; top: auto; }
+#qr:not(.on) > .wrap { transform: scale(.9); }
+.qr-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; }
+.qr-card img { width: 150px; height: 150px; display: block; background: #fff; border-radius: 6px; }
+.qr-card .qr-cap { font-family: var(--sans); font-weight: 800; font-size: 11px; letter-spacing: .1em; color: var(--ink); text-transform: uppercase; }
+
+/* optional driver photo on the intro card */
+.intro-card .intro-photo { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: rgba(255,255,255,.06); }
+
+/* ================================================================ DTM skin
+   Black panel, yellow 3-letter driver codes, white positions and gaps, a wordmark with the
+   session clock in a lime box. Team colour stands in for the manufacturer badge (no logo
+   assets). References: referensi UI/NewTheme/DTM.jpg
+*/
+html[data-skin="dtm"] { --dtm-yellow: #f2d200; --dtm-lime: #c8d400; --radius: 3px; }
+
+html[data-skin="dtm"] .card {
+  background: linear-gradient(180deg, rgba(12, 12, 12, .96) 0%, rgba(12, 12, 12, .82) 100%);
+  border: 0; border-radius: 4px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .55);
+}
+html[data-skin="dtm"] #leaderboard { width: 320px; }
+html[data-skin="dtm"] #tower       { width: 560px; }
+
+/* header: wordmark + session clock in a lime box, side by side */
+html[data-skin="dtm"] #leaderboard .card-head,
+html[data-skin="dtm"] #tower .card-head {
+  display: flex; flex-direction: row; align-items: center; gap: 10px;
+  padding: 9px 12px; border: 0;
+}
+html[data-skin="dtm"] .card-head .tick { display: none; }
+html[data-skin="dtm"] .card-head::after,
+html[data-skin="dtm"] .card-head::before { display: none; }
+html[data-skin="dtm"] .card-head .title {
+  font-family: var(--sans); font-style: italic; font-weight: 900; font-size: 24px;
+  letter-spacing: .02em; color: #fff; text-transform: none;
+}
+html[data-skin="dtm"] .card-head .sub {
+  margin-left: auto;
+  font-family: var(--mono); font-weight: 700; font-size: 18px; letter-spacing: .02em;
+  color: #12140a; background: var(--dtm-lime); padding: 2px 10px; border-radius: 3px;
+}
+
+/* rows: pos · team tab · CODE · number · gap */
+html[data-skin="dtm"] .lb-row {
+  grid-template-columns: 28px 5px 1fr 44px auto;
+  gap: 8px; height: 32px; padding: 0 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
+  align-items: stretch;
+}
+html[data-skin="dtm"] .tw-row {
+  grid-template-columns: 28px 5px 1fr 44px 78px 78px 60px;
+  gap: 8px; height: 34px; padding: 0 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
+  align-items: stretch;
+}
+html[data-skin="dtm"] .lb-row.focus,
+html[data-skin="dtm"] .tw-row.focus { background: rgba(242, 210, 0, .14); }
+
+html[data-skin="dtm"] .lb-row .logo,
+html[data-skin="dtm"] .tw-row .logo,
+html[data-skin="dtm"] .lb-row .name small,
+html[data-skin="dtm"] .lb-row .tags,
+html[data-skin="dtm"] .tw-row .tags,
+html[data-skin="dtm"] .tw-row .sec,
+html[data-skin="dtm"] .tw-head,
+html[data-skin="dtm"] .lb-row .delta,
+html[data-skin="dtm"] .tw-row .delta { display: none; }
+
+/* team-colour tab down the left */
+html[data-skin="dtm"] .lb-row .bar,
+html[data-skin="dtm"] .tw-row .bar { width: 5px; height: auto; align-self: stretch; border-radius: 0; background: var(--c); }
+
+html[data-skin="dtm"] .lb-row .pos,
+html[data-skin="dtm"] .tw-row .pos {
+  align-self: center; font-family: var(--sans); font-style: italic; font-weight: 800;
+  font-size: 15px; color: #fff; text-align: center;
+}
+html[data-skin="dtm"] .lb-row .name,
+html[data-skin="dtm"] .tw-row .name { align-self: center; border: 0; padding: 0; min-width: 0; }
+html[data-skin="dtm"] .lb-row .name .nm,
+html[data-skin="dtm"] .tw-row .name .nm {
+  font-family: var(--sans); font-style: italic; font-weight: 900; font-size: 15px;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--dtm-yellow);
+}
+html[data-skin="dtm"] .tw-row .num { display: block; }
+html[data-skin="dtm"] .lb-row .num,
+html[data-skin="dtm"] .tw-row .num {
+  align-self: center; font-family: var(--mono); font-weight: 700; font-size: 14px; color: #cfd3da; text-align: left;
+}
+html[data-skin="dtm"] .lb-row .gap {
+  align-self: center; font-family: var(--sans); font-style: italic; font-weight: 700;
+  font-size: 14px; color: #fff; text-align: right; min-width: 66px;
+}
+html[data-skin="dtm"] .lb-row .gap.leader { color: var(--dtm-lime); }
+html[data-skin="dtm"] .tw-row .t {
+  align-self: center; font-family: var(--mono); font-size: 13px; color: rgba(255, 255, 255, .78); text-align: right;
+}
+html[data-skin="dtm"] .tw-row .t.best { color: var(--dtm-yellow); }
+
+/* other widgets pick up the DTM accent */
+html[data-skin="dtm"] .status-bar { position: relative; }
+html[data-skin="dtm"] .status-bar::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--dtm-yellow); }
+html[data-skin="dtm"] #lowerthird .accentbar { background: var(--dtm-yellow); }
+html[data-skin="dtm"] .ticker-tag { background: var(--dtm-yellow); color: #12140a; font-style: italic; font-weight: 900; }
+
+/* ================================================================ Formula E skin
+   Minimal black panel with a blue/purple edge glow, a centred session title over a blue lap
+   line, and rows of position · team-colour badge · full surname. No gap column — the clean
+   running order the reference shows. References: referensi UI/NewTheme/Formula E theme.jpg
+*/
+html[data-skin="fe"] { --fe-blue: #24c1e0; --fe-purple: #7a2ff2; --radius: 2px; }
+
+html[data-skin="fe"] .card {
+  background: linear-gradient(180deg, rgba(6, 8, 14, .97) 0%, rgba(6, 8, 14, .86) 100%);
+  border: 0; border-radius: 3px;
+  box-shadow: inset 3px 0 0 var(--fe-blue), inset -3px 0 0 var(--fe-purple),
+              0 0 22px rgba(36, 193, 224, .25), 0 10px 40px rgba(0, 0, 0, .5);
+}
+html[data-skin="fe"] #leaderboard { width: 320px; }
+html[data-skin="fe"] #tower       { width: 560px; }
+
+html[data-skin="fe"] .card-head {
+  flex-direction: column; align-items: center; gap: 2px; padding: 12px 14px 8px; border: 0;
+}
+html[data-skin="fe"] .card-head .tick,
+html[data-skin="fe"] .card-head::after,
+html[data-skin="fe"] .card-head::before { display: none; }
+html[data-skin="fe"] .card-head .title {
+  font-family: var(--sans); font-weight: 900; font-size: 24px; letter-spacing: .08em;
+  text-transform: uppercase; color: #fff; text-align: center;
+}
+html[data-skin="fe"] .card-head .sub {
+  margin: 2px 0 0; font-family: var(--sans); font-weight: 800; font-size: 15px;
+  letter-spacing: .08em; color: var(--fe-blue); text-transform: uppercase;
+}
+
+/* rows: pos · badge · surname (no gap) */
+html[data-skin="fe"] .lb-row {
+  grid-template-columns: 34px 40px 1fr;
+  gap: 12px; height: 38px; padding: 0 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+html[data-skin="fe"] .tw-row {
+  grid-template-columns: 34px 40px 1fr 78px 78px 60px;
+  gap: 10px; height: 38px; padding: 0 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+html[data-skin="fe"] .lb-row.focus,
+html[data-skin="fe"] .tw-row.focus { background: rgba(36, 193, 224, .14); }
+
+html[data-skin="fe"] .lb-row .bar,
+html[data-skin="fe"] .tw-row .bar,
+html[data-skin="fe"] .lb-row .num,
+html[data-skin="fe"] .lb-row .gap,
+html[data-skin="fe"] .lb-row .name small,
+html[data-skin="fe"] .lb-row .tags,
+html[data-skin="fe"] .tw-row .tags,
+html[data-skin="fe"] .tw-row .sec,
+html[data-skin="fe"] .tw-row .num,
+html[data-skin="fe"] .tw-head,
+html[data-skin="fe"] .lb-row .delta,
+html[data-skin="fe"] .tw-row .delta { display: none; }
+
+html[data-skin="fe"] .lb-row .logo,
+html[data-skin="fe"] .tw-row .logo {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 28px; border-radius: 3px; background: var(--c); overflow: hidden;
+}
+html[data-skin="fe"] .logo span { font-family: var(--sans); font-weight: 900; font-size: 12px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.55); }
+html[data-skin="fe"] .logo.on-light span { color: #10131c; text-shadow: none; }
+
+html[data-skin="fe"] .lb-row .pos,
+html[data-skin="fe"] .tw-row .pos {
+  font-family: var(--sans); font-weight: 700; font-size: 16px; color: #fff; text-align: center;
+}
+html[data-skin="fe"] .lb-row .name,
+html[data-skin="fe"] .tw-row .name { border: 0; padding: 0; min-width: 0; }
+html[data-skin="fe"] .lb-row .name .nm,
+html[data-skin="fe"] .tw-row .name .nm {
+  font-family: var(--sans); font-weight: 800; font-size: 17px; letter-spacing: .02em;
+  text-transform: uppercase; color: #fff;
+}
+html[data-skin="fe"] .tw-row .t { align-self: center; font-family: var(--mono); font-size: 13px; color: rgba(255,255,255,.78); text-align: right; }
+html[data-skin="fe"] .tw-row .t.best { color: var(--fe-purple); }
+
+html[data-skin="fe"] .status-bar { position: relative; }
+html[data-skin="fe"] .status-bar::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: linear-gradient(90deg, var(--fe-blue), var(--fe-purple)); }
+html[data-skin="fe"] #lowerthird .accentbar { background: linear-gradient(180deg, var(--fe-blue), var(--fe-purple)); }
+html[data-skin="fe"] .ticker-tag { background: var(--fe-blue); color: #04121a; font-weight: 900; }
+
+/* ================================================================ GTWC skin
+   SRO GT World Challenge: dark rows, a red position box on the left, white surnames, the car
+   number in a box on the right, and a red header bar with the session clock. Team colour
+   stands in for the manufacturer badge. References: referensi UI/NewTheme/GTWC theme.jpg
+*/
+html[data-skin="gtwc"] { --gt-red: #e2001a; --radius: 2px; }
+
+html[data-skin="gtwc"] .card {
+  background: linear-gradient(180deg, rgba(24, 24, 26, .97), rgba(18, 18, 20, .9));
+  border: 0; border-radius: 3px; box-shadow: 0 10px 40px rgba(0, 0, 0, .55);
+}
+html[data-skin="gtwc"] #leaderboard { width: 340px; }
+html[data-skin="gtwc"] #tower       { width: 560px; }
+
+/* header: red bar, event title, session clock in a dark box */
+html[data-skin="gtwc"] .card-head {
+  flex-direction: row; align-items: center; gap: 10px; padding: 8px 12px; border: 0;
+  background: var(--gt-red);
+}
+html[data-skin="gtwc"] .card-head .tick,
+html[data-skin="gtwc"] .card-head::after,
+html[data-skin="gtwc"] .card-head::before { display: none; }
+html[data-skin="gtwc"] .card-head .title {
+  font-family: var(--sans); font-weight: 900; font-size: 20px; letter-spacing: .02em;
+  color: #fff; text-transform: uppercase;
+}
+html[data-skin="gtwc"] .card-head .sub {
+  margin-left: auto; font-family: var(--mono); font-weight: 700; font-size: 16px;
+  color: #fff; background: rgba(0, 0, 0, .35); padding: 2px 9px; border-radius: 2px;
+}
+
+/* rows: red pos box · badge · surname · number box */
+html[data-skin="gtwc"] .lb-row {
+  grid-template-columns: 34px 32px 1fr 46px;
+  gap: 8px; height: 30px; padding: 0 8px 0 0;
+  border-bottom: 1px solid rgba(0, 0, 0, .5);
+  align-items: stretch;
+}
+html[data-skin="gtwc"] .tw-row {
+  grid-template-columns: 34px 32px 1fr 46px 78px 74px;
+  gap: 8px; height: 32px; padding: 0 8px 0 0;
+  border-bottom: 1px solid rgba(0, 0, 0, .5);
+  align-items: stretch;
+}
+html[data-skin="gtwc"] .lb-row:nth-child(even),
+html[data-skin="gtwc"] .tw-row:nth-child(even) { background: rgba(255, 255, 255, .03); }
+html[data-skin="gtwc"] .lb-row.focus,
+html[data-skin="gtwc"] .tw-row.focus { background: rgba(226, 0, 26, .18); }
+
+html[data-skin="gtwc"] .lb-row .bar,
+html[data-skin="gtwc"] .tw-row .bar,
+html[data-skin="gtwc"] .lb-row .gap,
+html[data-skin="gtwc"] .lb-row .name small,
+html[data-skin="gtwc"] .lb-row .tags,
+html[data-skin="gtwc"] .tw-row .tags,
+html[data-skin="gtwc"] .tw-row .sec,
+html[data-skin="gtwc"] .tw-head,
+html[data-skin="gtwc"] .lb-row .delta,
+html[data-skin="gtwc"] .tw-row .delta { display: none; }
+
+/* red position box */
+html[data-skin="gtwc"] .lb-row .pos,
+html[data-skin="gtwc"] .tw-row .pos {
+  align-self: stretch; display: flex; align-items: center; justify-content: center;
+  background: var(--gt-red); color: #fff;
+  font-family: var(--sans); font-style: italic; font-weight: 800; font-size: 15px;
+}
+/* team-colour badge in place of the manufacturer logo */
+html[data-skin="gtwc"] .lb-row .logo,
+html[data-skin="gtwc"] .tw-row .logo {
+  display: flex; align-items: center; justify-content: center; align-self: center;
+  width: 30px; height: 22px; border-radius: 2px; background: var(--c); overflow: hidden;
+}
+html[data-skin="gtwc"] .logo span { font-family: var(--sans); font-weight: 900; font-size: 10px; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.6); }
+html[data-skin="gtwc"] .logo.on-light span { color: #111; text-shadow: none; }
+
+html[data-skin="gtwc"] .lb-row .name,
+html[data-skin="gtwc"] .tw-row .name { align-self: center; border: 0; padding: 0; min-width: 0; }
+html[data-skin="gtwc"] .lb-row .name .nm,
+html[data-skin="gtwc"] .tw-row .name .nm {
+  font-family: var(--sans); font-weight: 800; font-size: 15px; letter-spacing: .01em;
+  text-transform: uppercase; color: #fff;
+}
+/* car number in a box on the right */
+html[data-skin="gtwc"] .tw-row .num { display: flex; }
+html[data-skin="gtwc"] .lb-row .num,
+html[data-skin="gtwc"] .tw-row .num {
+  align-self: stretch; display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, .12); color: #fff;
+  font-family: var(--sans); font-weight: 900; font-size: 14px;
+}
+html[data-skin="gtwc"] .tw-row .t { align-self: center; font-family: var(--mono); font-size: 13px; color: rgba(255,255,255,.8); text-align: right; }
+html[data-skin="gtwc"] .tw-row .t.best { color: #ff9a3c; }
+
+html[data-skin="gtwc"] .status-bar { position: relative; }
+html[data-skin="gtwc"] .status-bar::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--gt-red); }
+html[data-skin="gtwc"] #lowerthird .accentbar { background: var(--gt-red); }
+html[data-skin="gtwc"] .ticker-tag { background: var(--gt-red); color: #fff; font-weight: 900; }
+
+/* GTWC column order: pos · badge · name · number (DOM has number before name) */
+html[data-skin="gtwc"] .lb-row .pos, html[data-skin="gtwc"] .tw-row .pos { order: 1; }
+html[data-skin="gtwc"] .lb-row .logo, html[data-skin="gtwc"] .tw-row .logo { order: 2; }
+html[data-skin="gtwc"] .lb-row .name, html[data-skin="gtwc"] .tw-row .name { order: 3; }
+html[data-skin="gtwc"] .lb-row .num, html[data-skin="gtwc"] .tw-row .num { order: 4; }
+html[data-skin="gtwc"] .tw-row .t.last { order: 5; }
+html[data-skin="gtwc"] .tw-row .t.best { order: 6; }
+html[data-skin="gtwc"] .tw-row .t.int { order: 7; }
+
+/* ================================================================ IMSA skin
+   Multi-class endurance board: class banners (GTP / LMP2 / GTD PRO / GTD) each in the class
+   colour, rows of position · class-coloured number box · surname · team badge. Uses the
+   shared class grouping. References: referensi UI/NewTheme/Imsa Theme.jpg
+*/
+html[data-skin="imsa"] { --radius: 3px; }
+html[data-skin="imsa"] .card {
+  background: linear-gradient(180deg, rgba(10, 12, 18, .97), rgba(8, 10, 14, .9));
+  border: 0; border-radius: 4px; box-shadow: 0 10px 40px rgba(0, 0, 0, .55);
+}
+html[data-skin="imsa"] #leaderboard { width: 340px; }
+html[data-skin="imsa"] #tower       { width: 560px; }
+
+/* header: blue endurance bar, event title + clock */
+html[data-skin="imsa"] .card-head {
+  flex-direction: column; align-items: center; gap: 2px; padding: 9px 12px; border: 0;
+  background: linear-gradient(180deg, #1b3fa0, #0a1f5c);
+}
+html[data-skin="imsa"] .card-head .tick,
+html[data-skin="imsa"] .card-head::after,
+html[data-skin="imsa"] .card-head::before { display: none; }
+html[data-skin="imsa"] .card-head .title { font-family: var(--sans); font-weight: 900; font-size: 17px; letter-spacing: .02em; color: #fff; text-transform: uppercase; text-align: center; }
+html[data-skin="imsa"] .card-head .sub { margin: 0; font-family: var(--mono); font-weight: 700; font-size: 17px; color: #fff; }
+
+/* class banner: left, italic, class-coloured underline */
+html[data-skin="imsa"] .lb-classbanner {
+  margin: 4px 0 2px; padding: 4px 12px 5px; text-align: left;
+  font-family: var(--sans); font-style: italic; font-weight: 900; font-size: 15px;
+  letter-spacing: .04em; text-transform: uppercase; color: #fff;
+  background: linear-gradient(180deg, rgba(255,255,255,.05), transparent);
+  border-bottom: 3px solid var(--cb1, #888);
+}
+
+html[data-skin="imsa"] .lb-row {
+  grid-template-columns: 30px 42px 1fr 38px;
+  gap: 8px; height: 30px; padding: 0 12px 0 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+  align-items: center;
+}
+html[data-skin="imsa"] .tw-row {
+  grid-template-columns: 30px 42px 1fr 38px 76px 74px;
+  gap: 8px; height: 32px; padding: 0 12px 0 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+  align-items: center;
+}
+html[data-skin="imsa"] .lb-row.focus,
+html[data-skin="imsa"] .tw-row.focus { background: rgba(255, 255, 255, .06); }
+
+html[data-skin="imsa"] .lb-row .bar,
+html[data-skin="imsa"] .tw-row .bar,
+html[data-skin="imsa"] .lb-row .gap,
+html[data-skin="imsa"] .lb-row .name small,
+html[data-skin="imsa"] .lb-row .tags,
+html[data-skin="imsa"] .tw-row .tags,
+html[data-skin="imsa"] .tw-row .sec,
+html[data-skin="imsa"] .tw-head,
+html[data-skin="imsa"] .lb-row .delta,
+html[data-skin="imsa"] .tw-row .delta { display: none; }
+
+/* order: pos · number · name · badge */
+html[data-skin="imsa"] .lb-row .pos, html[data-skin="imsa"] .tw-row .pos { order: 1; }
+html[data-skin="imsa"] .lb-row .num, html[data-skin="imsa"] .tw-row .num { order: 2; }
+html[data-skin="imsa"] .lb-row .name, html[data-skin="imsa"] .tw-row .name { order: 3; }
+html[data-skin="imsa"] .lb-row .logo, html[data-skin="imsa"] .tw-row .logo { order: 4; }
+html[data-skin="imsa"] .tw-row .t.last { order: 5; }
+html[data-skin="imsa"] .tw-row .t.best { order: 6; }
+
+html[data-skin="imsa"] .lb-row .pos, html[data-skin="imsa"] .tw-row .pos {
+  font-family: var(--sans); font-style: italic; font-weight: 800; font-size: 14px; color: #fff; text-align: right;
+}
+html[data-skin="imsa"] .lb-row .pos::after, html[data-skin="imsa"] .tw-row .pos::after { content: '.'; }
+
+/* class-coloured number box */
+html[data-skin="imsa"] .tw-row .num { display: flex; }
+html[data-skin="imsa"] .lb-row .num, html[data-skin="imsa"] .tw-row .num {
+  align-self: center; display: flex; align-items: center; justify-content: center;
+  height: 22px; border-radius: 4px; background: var(--cc, #5b6470); color: #fff;
+  font-family: var(--sans); font-style: italic; font-weight: 900; font-size: 13px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
+}
+html[data-skin="imsa"] .lb-row .name .nm, html[data-skin="imsa"] .tw-row .name .nm {
+  font-family: var(--sans); font-weight: 800; font-size: 15px; letter-spacing: .01em; text-transform: uppercase; color: #fff;
+}
+html[data-skin="imsa"] .lb-row .name, html[data-skin="imsa"] .tw-row .name { border: 0; padding: 0; min-width: 0; }
+/* team badge on the right in place of the manufacturer logo */
+html[data-skin="imsa"] .lb-row .logo, html[data-skin="imsa"] .tw-row .logo {
+  display: block; width: 30px; height: 18px; border-radius: 2px; background: var(--c); overflow: hidden;
+}
+html[data-skin="imsa"] .logo span { display: none; }
+html[data-skin="imsa"] .tw-row .t { font-family: var(--mono); font-size: 12px; color: rgba(255,255,255,.78); text-align: right; }
+html[data-skin="imsa"] .tw-row .t.best { color: #ffd24a; }
+
+html[data-skin="imsa"] .status-bar::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: #1b3fa0; }
+html[data-skin="imsa"] .status-bar { position: relative; }
+
+/* ================================================================ IndyCar skin
+   Dark navy, a session progress bar + lap counter in the header, rows of position ·
+   team-coloured car number · surname · gap. References: referensi UI/NewTheme/Indycar theme.jpg
+*/
+html[data-skin="indycar"] { --ic-blue: #1a9fff; --radius: 3px; }
+html[data-skin="indycar"] .card {
+  background: linear-gradient(180deg, rgba(10, 20, 34, .97), rgba(7, 14, 24, .9));
+  border: 0; border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(40, 120, 220, .25), 0 10px 40px rgba(0, 0, 0, .55);
+}
+html[data-skin="indycar"] #leaderboard { width: 330px; }
+html[data-skin="indycar"] #tower       { width: 560px; }
+
+html[data-skin="indycar"] .card-head {
+  position: relative; flex-direction: column; align-items: stretch; gap: 4px; padding: 10px 14px 12px; border: 0;
+}
+html[data-skin="indycar"] .card-head .tick { display: none; }
+html[data-skin="indycar"] .card-head .title {
+  font-family: var(--sans); font-style: italic; font-weight: 900; font-size: 20px;
+  letter-spacing: .02em; color: #fff; text-transform: uppercase;
+}
+html[data-skin="indycar"] .card-head .sub {
+  margin: 0; align-self: flex-end; font-family: var(--sans); font-style: italic; font-weight: 900;
+  font-size: 20px; color: #fff; letter-spacing: .02em;
+}
+/* progress bar under the header */
+html[data-skin="indycar"] .card-head::before {
+  content: ''; position: absolute; left: 14px; right: 14px; bottom: 4px; height: 4px;
+  background: rgba(255, 255, 255, .14); border-radius: 2px;
+}
+html[data-skin="indycar"] .card-head::after {
+  content: ''; position: absolute; left: 14px; right: 14px; bottom: 4px; height: 4px;
+  background: linear-gradient(90deg, #16d05a, #16d05a); border-radius: 2px;
+  transform: scaleX(var(--prog, 1)); transform-origin: left center; animation: none; opacity: 1;
+}
+
+html[data-skin="indycar"] .lb-row {
+  grid-template-columns: 30px 5px 36px 1fr auto;
+  gap: 8px; height: 32px; padding: 0 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .06); align-items: stretch;
+}
+html[data-skin="indycar"] .tw-row {
+  grid-template-columns: 30px 5px 36px 1fr 78px 74px;
+  gap: 8px; height: 34px; padding: 0 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .06); align-items: stretch;
+}
+html[data-skin="indycar"] .lb-row.focus, html[data-skin="indycar"] .tw-row.focus { background: rgba(26, 159, 255, .14); }
+
+html[data-skin="indycar"] .lb-row .logo, html[data-skin="indycar"] .tw-row .logo,
+html[data-skin="indycar"] .lb-row .name small, html[data-skin="indycar"] .lb-row .tags,
+html[data-skin="indycar"] .tw-row .tags, html[data-skin="indycar"] .tw-row .sec,
+html[data-skin="indycar"] .tw-head, html[data-skin="indycar"] .lb-row .delta, html[data-skin="indycar"] .tw-row .delta { display: none; }
+
+html[data-skin="indycar"] .lb-row .bar, html[data-skin="indycar"] .tw-row .bar { width: 5px; height: auto; align-self: stretch; border-radius: 0; background: var(--c); }
+html[data-skin="indycar"] .lb-row .pos, html[data-skin="indycar"] .tw-row .pos {
+  align-self: center; font-family: var(--sans); font-style: italic; font-weight: 800; font-size: 16px; color: #fff; text-align: center;
+}
+/* car number in the team colour */
+html[data-skin="indycar"] .tw-row .num { display: block; }
+html[data-skin="indycar"] .lb-row .num, html[data-skin="indycar"] .tw-row .num {
+  align-self: center; font-family: var(--sans); font-style: italic; font-weight: 900; font-size: 16px; color: var(--c); text-align: center;
+}
+html[data-skin="indycar"] .lb-row .name, html[data-skin="indycar"] .tw-row .name { align-self: center; border: 0; padding: 0; min-width: 0; }
+html[data-skin="indycar"] .lb-row .name .nm, html[data-skin="indycar"] .tw-row .name .nm {
+  font-family: var(--sans); font-weight: 800; font-size: 16px; letter-spacing: .01em; text-transform: uppercase; color: #fff;
+}
+html[data-skin="indycar"] .lb-row .gap {
+  align-self: center; font-family: var(--sans); font-style: italic; font-weight: 700; font-size: 14px; color: #dfe6f5; text-align: right; min-width: 74px;
+}
+html[data-skin="indycar"] .lb-row .gap.leader { color: var(--ic-blue); }
+html[data-skin="indycar"] .tw-row .t { align-self: center; font-family: var(--mono); font-size: 13px; color: rgba(255,255,255,.78); text-align: right; }
+html[data-skin="indycar"] .tw-row .t.best { color: var(--ic-blue); }
+html[data-skin="indycar"] .status-bar::before { content:''; position:absolute; left:0; right:0; top:0; height:3px; background: var(--ic-blue); }
+html[data-skin="indycar"] .status-bar { position: relative; }
+
+/* ================================================================ NASCAR skin
+   Dark panel with green top/bottom edges, a grey sub-header, big team-coloured italic car
+   numbers, surnames and gaps. References: referensi UI/NewTheme/Nascar theme.jpg
+*/
+html[data-skin="nascar"] { --nas-green: #16d05a; --radius: 2px; }
+html[data-skin="nascar"] .card {
+  background: linear-gradient(180deg, rgba(30, 30, 33, .97), rgba(20, 20, 22, .92));
+  border: 0; border-radius: 3px;
+  box-shadow: inset 0 3px 0 var(--nas-green), inset 0 -3px 0 var(--nas-green), 0 10px 40px rgba(0, 0, 0, .55);
+}
+html[data-skin="nascar"] #leaderboard { width: 340px; }
+html[data-skin="nascar"] #tower       { width: 560px; }
+
+html[data-skin="nascar"] .card-head {
+  flex-direction: column; align-items: center; gap: 2px; padding: 10px 12px 8px; border: 0;
+}
+html[data-skin="nascar"] .card-head .tick,
+html[data-skin="nascar"] .card-head::after,
+html[data-skin="nascar"] .card-head::before { display: none; }
+html[data-skin="nascar"] .card-head .title { font-family: var(--sans); font-weight: 900; font-size: 20px; letter-spacing: .01em; color: #fff; text-transform: uppercase; text-align: center; }
+html[data-skin="nascar"] .card-head .sub { margin: 0; font-family: var(--sans); font-weight: 700; font-size: 14px; letter-spacing: .04em; color: #cfd3da; text-transform: uppercase; }
+
+html[data-skin="nascar"] .lb-row {
+  grid-template-columns: 30px 52px 1fr auto;
+  gap: 10px; height: 34px; padding: 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, .06); align-items: center;
+}
+html[data-skin="nascar"] .tw-row {
+  grid-template-columns: 30px 52px 1fr 78px 74px;
+  gap: 10px; height: 34px; padding: 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, .06); align-items: center;
+}
+html[data-skin="nascar"] .lb-row:nth-child(even), html[data-skin="nascar"] .tw-row:nth-child(even) { background: rgba(255,255,255,.03); }
+html[data-skin="nascar"] .lb-row.focus, html[data-skin="nascar"] .tw-row.focus { background: rgba(22, 208, 90, .14); }
+
+html[data-skin="nascar"] .lb-row .bar, html[data-skin="nascar"] .tw-row .bar,
+html[data-skin="nascar"] .lb-row .logo, html[data-skin="nascar"] .tw-row .logo,
+html[data-skin="nascar"] .lb-row .name small, html[data-skin="nascar"] .lb-row .tags,
+html[data-skin="nascar"] .tw-row .tags, html[data-skin="nascar"] .tw-row .sec,
+html[data-skin="nascar"] .tw-head, html[data-skin="nascar"] .lb-row .delta, html[data-skin="nascar"] .tw-row .delta { display: none; }
+
+html[data-skin="nascar"] .lb-row .pos, html[data-skin="nascar"] .tw-row .pos {
+  font-family: var(--sans); font-weight: 700; font-size: 15px; color: #fff; text-align: center;
+}
+/* big team-coloured car number */
+html[data-skin="nascar"] .tw-row .num { display: block; }
+html[data-skin="nascar"] .lb-row .num, html[data-skin="nascar"] .tw-row .num {
+  font-family: var(--sans); font-style: italic; font-weight: 900; font-size: 22px;
+  color: var(--c); text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.7), 0 0 1px rgba(255,255,255,.3);
+}
+html[data-skin="nascar"] .lb-row .name, html[data-skin="nascar"] .tw-row .name { border: 0; padding: 0; min-width: 0; }
+html[data-skin="nascar"] .lb-row .name .nm, html[data-skin="nascar"] .tw-row .name .nm {
+  font-family: var(--sans); font-weight: 800; font-size: 16px; letter-spacing: .01em; text-transform: uppercase; color: #fff;
+}
+html[data-skin="nascar"] .lb-row .gap {
+  font-family: var(--sans); font-weight: 700; font-size: 14px; color: #dfe6f5; text-align: right; min-width: 66px;
+}
+html[data-skin="nascar"] .lb-row .gap.leader { color: var(--nas-green); }
+html[data-skin="nascar"] .tw-row .t { font-family: var(--mono); font-size: 13px; color: rgba(255,255,255,.78); text-align: right; }
+html[data-skin="nascar"] .tw-row .t.best { color: var(--nas-green); }
+html[data-skin="nascar"] .status-bar::before { content:''; position:absolute; left:0; right:0; top:0; height:3px; background: var(--nas-green); }
+html[data-skin="nascar"] .status-bar { position: relative; }
+
+/* fix: order-based towers (IMSA, GTWC) only lay out 2 time columns, so the interval cell
+   must be hidden — otherwise it has no grid order and jumps to the front, shoving the
+   number and name out of place */
+html[data-skin="imsa"] .tw-row .t.int,
+html[data-skin="gtwc"] .tw-row .t.int { display: none; }
+
+/* ================================================================ Porsche Cup skin
+   Dark, big white surnames, a team-coloured position box, the car number in a white box, and
+   the gap on the right. References: referensi UI/NewTheme/Porsche Cup theme.jpg
+*/
+html[data-skin="porsche"] { --radius: 2px; }
+html[data-skin="porsche"] .card {
+  background: linear-gradient(180deg, rgba(20, 20, 22, .97), rgba(14, 14, 16, .92));
+  border: 0; border-radius: 3px; box-shadow: 0 10px 40px rgba(0, 0, 0, .55);
+}
+html[data-skin="porsche"] #leaderboard { width: 340px; }
+html[data-skin="porsche"] #tower       { width: 560px; }
+
+html[data-skin="porsche"] .card-head {
+  flex-direction: row; align-items: center; gap: 10px; padding: 8px 12px; border: 0; background: #000;
+}
+html[data-skin="porsche"] .card-head .tick,
+html[data-skin="porsche"] .card-head::after,
+html[data-skin="porsche"] .card-head::before { display: none; }
+html[data-skin="porsche"] .card-head .title { font-family: var(--sans); font-weight: 800; font-size: 16px; letter-spacing: .06em; color: #fff; text-transform: uppercase; }
+html[data-skin="porsche"] .card-head .sub { margin-left: auto; font-family: var(--mono); font-weight: 700; font-size: 18px; color: #fff; }
+
+html[data-skin="porsche"] .lb-row {
+  grid-template-columns: 34px 1fr 50px auto;
+  gap: 10px; height: 32px; padding: 0 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .06); align-items: stretch;
+}
+html[data-skin="porsche"] .tw-row {
+  grid-template-columns: 34px 1fr 50px 78px 74px;
+  gap: 10px; height: 34px; padding: 0 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .06); align-items: stretch;
+}
+html[data-skin="porsche"] .lb-row.focus, html[data-skin="porsche"] .tw-row.focus { background: rgba(255,255,255,.06); }
+
+html[data-skin="porsche"] .lb-row .bar, html[data-skin="porsche"] .tw-row .bar,
+html[data-skin="porsche"] .lb-row .logo, html[data-skin="porsche"] .tw-row .logo,
+html[data-skin="porsche"] .lb-row .name small, html[data-skin="porsche"] .lb-row .tags,
+html[data-skin="porsche"] .tw-row .tags, html[data-skin="porsche"] .tw-row .sec,
+html[data-skin="porsche"] .tw-head, html[data-skin="porsche"] .tw-row .t.int,
+html[data-skin="porsche"] .lb-row .delta, html[data-skin="porsche"] .tw-row .delta { display: none; }
+
+/* column order: pos box · name · number box · gap */
+html[data-skin="porsche"] .lb-row .pos, html[data-skin="porsche"] .tw-row .pos { order: 1; }
+html[data-skin="porsche"] .lb-row .name, html[data-skin="porsche"] .tw-row .name { order: 2; }
+html[data-skin="porsche"] .lb-row .num, html[data-skin="porsche"] .tw-row .num { order: 3; }
+html[data-skin="porsche"] .lb-row .gap { order: 4; }
+html[data-skin="porsche"] .tw-row .t.last { order: 4; }
+html[data-skin="porsche"] .tw-row .t.best { order: 5; }
+
+/* team-coloured position box */
+html[data-skin="porsche"] .lb-row .pos, html[data-skin="porsche"] .tw-row .pos {
+  align-self: stretch; display: flex; align-items: center; justify-content: center;
+  background: var(--c, #333); color: #fff;
+  font-family: var(--sans); font-weight: 800; font-size: 15px;
+}
+html[data-skin="porsche"] .lb-row .name, html[data-skin="porsche"] .tw-row .name { align-self: center; border: 0; padding: 0 0 0 6px; min-width: 0; }
+html[data-skin="porsche"] .lb-row .name .nm, html[data-skin="porsche"] .tw-row .name .nm {
+  font-family: var(--sans); font-weight: 800; font-size: 17px; letter-spacing: .01em; text-transform: uppercase; color: #fff;
+}
+/* car number in a white box */
+html[data-skin="porsche"] .tw-row .num { display: flex; }
+html[data-skin="porsche"] .lb-row .num, html[data-skin="porsche"] .tw-row .num {
+  align-self: center; display: flex; align-items: center; justify-content: center;
+  height: 22px; background: #fff; color: #111; border-radius: 2px;
+  font-family: var(--sans); font-weight: 900; font-size: 14px;
+}
+html[data-skin="porsche"] .lb-row .gap {
+  align-self: center; font-family: var(--sans); font-weight: 700; font-size: 14px; color: #fff; text-align: right; min-width: 60px; padding-right: 4px;
+}
+html[data-skin="porsche"] .tw-row .t { align-self: center; font-family: var(--mono); font-size: 13px; color: rgba(255,255,255,.8); text-align: right; }
+html[data-skin="porsche"] .tw-row .t.best { color: #ff6a00; }
+html[data-skin="porsche"] .status-bar::before { content:''; position:absolute; left:0; right:0; top:0; height:3px; background: #ff6a00; }
+html[data-skin="porsche"] .status-bar { position: relative; }
+
+/* ================================================================ Super GT skin
+   Class-grouped (GT500 / GT300) with yellow class banners, a red position box, the car
+   number in a class-coloured box, and the team/car name. Uses shared class grouping.
+   References: referensi UI/NewTheme/SuperGT Theme.jpg
+*/
+html[data-skin="supergt"] { --sgt-yellow: #f4d000; --radius: 3px; }
+html[data-skin="supergt"] .card {
+  background: linear-gradient(180deg, rgba(20, 20, 22, .97), rgba(14, 14, 16, .92));
+  border: 0; border-radius: 4px; box-shadow: 0 10px 40px rgba(0, 0, 0, .55);
+}
+html[data-skin="supergt"] #leaderboard { width: 330px; }
+html[data-skin="supergt"] #tower       { width: 560px; }
+
+/* header: just the lap box */
+html[data-skin="supergt"] .card-head { flex-direction: row; align-items: center; gap: 8px; padding: 8px 12px; border: 0; }
+html[data-skin="supergt"] .card-head .tick,
+html[data-skin="supergt"] .card-head .title,
+html[data-skin="supergt"] .card-head::after,
+html[data-skin="supergt"] .card-head::before { display: none; }
+html[data-skin="supergt"] .card-head .sub {
+  margin: 0; font-family: var(--sans); font-style: italic; font-weight: 900; font-size: 20px;
+  color: #12140a; background: var(--sgt-yellow); padding: 3px 14px; border-radius: 4px; letter-spacing: .02em;
+}
+
+/* yellow class banner */
+html[data-skin="supergt"] .lb-classbanner {
+  margin: 4px 0 2px; padding: 3px 12px 4px; text-align: left;
+  font-family: var(--sans); font-weight: 900; font-size: 14px; letter-spacing: .06em;
+  text-transform: uppercase; color: #12140a; background: var(--sgt-yellow); border-radius: 2px;
+}
+
+html[data-skin="supergt"] .lb-row {
+  grid-template-columns: 30px 42px 1fr;
+  gap: 8px; height: 30px; padding: 0 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .06); align-items: stretch;
+}
+html[data-skin="supergt"] .tw-row {
+  grid-template-columns: 30px 42px 1fr 76px 74px;
+  gap: 8px; height: 32px; padding: 0 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .06); align-items: stretch;
+}
+html[data-skin="supergt"] .lb-row.focus, html[data-skin="supergt"] .tw-row.focus { background: rgba(244, 208, 0, .14); }
+
+html[data-skin="supergt"] .lb-row .bar, html[data-skin="supergt"] .tw-row .bar,
+html[data-skin="supergt"] .lb-row .logo, html[data-skin="supergt"] .tw-row .logo,
+html[data-skin="supergt"] .lb-row .gap, html[data-skin="supergt"] .lb-row .name small,
+html[data-skin="supergt"] .lb-row .tags, html[data-skin="supergt"] .tw-row .tags,
+html[data-skin="supergt"] .tw-row .sec, html[data-skin="supergt"] .tw-head,
+html[data-skin="supergt"] .tw-row .t.int, html[data-skin="supergt"] .lb-row .delta, html[data-skin="supergt"] .tw-row .delta { display: none; }
+
+/* order: red pos box · number box · name */
+html[data-skin="supergt"] .lb-row .pos, html[data-skin="supergt"] .tw-row .pos { order: 1; }
+html[data-skin="supergt"] .lb-row .num, html[data-skin="supergt"] .tw-row .num { order: 2; }
+html[data-skin="supergt"] .lb-row .name, html[data-skin="supergt"] .tw-row .name { order: 3; }
+html[data-skin="supergt"] .tw-row .t.last { order: 4; }
+html[data-skin="supergt"] .tw-row .t.best { order: 5; }
+
+html[data-skin="supergt"] .lb-row .pos, html[data-skin="supergt"] .tw-row .pos {
+  align-self: stretch; display: flex; align-items: center; justify-content: center;
+  background: #e2001a; color: #fff; font-family: var(--sans); font-weight: 800; font-size: 14px;
+}
+/* class-coloured number box */
+html[data-skin="supergt"] .tw-row .num { display: flex; }
+html[data-skin="supergt"] .lb-row .num, html[data-skin="supergt"] .tw-row .num {
+  align-self: center; display: flex; align-items: center; justify-content: center;
+  height: 22px; border-radius: 3px; background: var(--cc, #e6e6e6); color: #111;
+  font-family: var(--sans); font-style: italic; font-weight: 900; font-size: 13px;
+}
+html[data-skin="supergt"] .lb-row .name, html[data-skin="supergt"] .tw-row .name { align-self: center; border: 0; padding: 0 0 0 4px; min-width: 0; }
+html[data-skin="supergt"] .lb-row .name .nm, html[data-skin="supergt"] .tw-row .name .nm {
+  font-family: var(--sans); font-weight: 700; font-size: 15px; color: #fff;
+}
+html[data-skin="supergt"] .tw-row .t { align-self: center; font-family: var(--mono); font-size: 13px; color: rgba(255,255,255,.8); text-align: right; }
+html[data-skin="supergt"] .tw-row .t.best { color: var(--sgt-yellow); }
+
+/* ---------------- scene-change stinger (all skins) ---------------- */
+.stinger { position: absolute; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; opacity: 0; }
+.stinger.play { opacity: 1; }
+.stinger-panel {
+  position: absolute; top: -10%; height: 120%; width: 200%; left: -200%;
+  transform: skewX(-14deg);
+  background: linear-gradient(90deg, transparent 0%, var(--sting, #00e0a4) 30%, #0b0d11 60%, var(--sting, #00e0a4) 90%, transparent 100%);
+}
+.stinger.play .stinger-panel { animation: stingSweep .9s var(--ease-out) forwards; }
+@keyframes stingSweep { 0% { left: -200%; } 45% { left: -50%; } 55% { left: -50%; } 100% { left: 110%; } }
+.stinger-word {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--sans); font-style: italic; font-weight: 900; font-size: 64px;
+  letter-spacing: .05em; text-transform: uppercase; color: #fff; opacity: 0;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, .6);
+}
+.stinger.play .stinger-word { animation: stingWord .9s var(--ease-out) forwards; }
+@keyframes stingWord { 0%, 25% { opacity: 0; transform: translateX(-30px); } 45%, 55% { opacity: 1; transform: none; } 78%, 100% { opacity: 0; transform: translateX(30px); } }

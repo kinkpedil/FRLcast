@@ -1,0 +1,1319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FR Legends — Broadcast Operator</title>
+<link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+<div class="app">
+
+  <aside class="side">
+    <div class="brand">
+      <span class="dot"></span>
+      <div><b>FRL Broadcast</b><small>Operator console</small></div>
+    </div>
+    <div data-i18n-mount></div>
+    <button class="navbtn on" data-page="race">Race control <span class="kbd">1</span></button>
+    <button class="navbtn" data-page="event">Event scenes <span class="kbd">2</span></button>
+    <button class="navbtn" data-page="champ">Championship <span class="kbd">3</span></button>
+    <button class="navbtn" data-page="drivers">Drivers <span class="kbd">4</span></button>
+    <button class="navbtn" data-page="drift">Drift battles <span class="kbd">5</span></button>
+    <button class="navbtn" data-page="vision">Vision / AI <span class="kbd">6</span></button>
+    <button class="navbtn" data-page="overlay">Overlays <span class="kbd">7</span></button>
+    <button class="navbtn" data-page="layout">Layout <span class="kbd">8</span></button>
+    <button class="navbtn" data-page="obs">OBS setup <span class="kbd">9</span></button>
+    <button class="navbtn" data-page="help">Help</button>
+    <div class="side-foot">
+      <div class="conn"><i></i><b></b></div>
+      <div style="margin-top:8px">Lap hotkeys <span class="hot">Q W E R T Y U I</span> fire a lap for drivers 1-8.<br>
+      <span class="hot">Space</span> start / green flag.</div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="warnbar" id="visionWarn" hidden></div>
+
+    <!-- ============ RACE ============ -->
+    <section class="page on" id="page-race">
+      <h2>Race control</h2>
+      <p class="lede">Authoritative timing. Everything here is live on the overlays instantly.</p>
+      <div class="scenestrip" id="sceneStrip"></div>
+
+      <div class="split">
+        <div>
+          <div class="card">
+            <h3>Session <span class="right" id="raceStatusPill">IDLE</span></h3>
+            <div class="body">
+              <div class="row" style="margin-bottom:16px">
+                <div>
+                  <div class="clocklabel">Race time</div>
+                  <div class="clock" id="raceClock">00:00</div>
+                </div>
+                <div style="margin-left:26px">
+                  <div class="clocklabel">Leader lap</div>
+                  <div class="clock" id="leaderLapBig">0<span style="font-size:20px;color:var(--ink-mute)" id="totalLapsSmall">/10</span></div>
+                </div>
+                <div style="margin-left:26px">
+                  <div class="clocklabel">Fastest lap</div>
+                  <div class="clock" style="font-size:26px" id="flBig">--:--.---</div>
+                  <div class="hint" id="flWho"></div>
+                </div>
+                <div style="margin-left:auto;display:flex;gap:8px">
+                  <button class="btn primary" id="btnStart">Start race</button>
+                  <button class="btn ghost" id="btnUndo" title="Undo last race-control action (Ctrl+Z)">↶ Undo</button>
+                  <button class="btn" id="btnReset">Reset</button>
+                  <button class="btn ghost" id="btnResultCsv">Export result</button>
+                </div>
+              </div>
+
+              <div class="row" style="margin-bottom:10px;align-items:center">
+                <span class="hint" id="flagOwner">--</span>
+                <button class="btn" id="btnBrandToggle" style="margin-left:auto">Show logo</button>
+                <button class="btn ghost" id="btnFlagRelease">Hand back to auto</button>
+              </div>
+              <div class="flags">
+                <button class="flagbtn" data-flag="formation">Formation</button>
+                <button class="flagbtn" data-flag="green">Green</button>
+                <button class="flagbtn" data-flag="yellow">Yellow</button>
+                <button class="flagbtn" data-flag="safety">Safety car</button>
+                <button class="flagbtn" data-flag="vsc">VSC</button>
+                <button class="flagbtn" data-flag="red">Red</button>
+                <button class="flagbtn" data-flag="finished">Chequered</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Live classification</h3>
+            <div class="body" style="padding-top:6px">
+              <table class="drivers" id="liveTable"></table>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Manual control <span class="right"><label class="toggle" style="display:inline-flex"><span style="font-size:12px;color:var(--ink-mute);margin-right:8px">Manual mode</span><input type="checkbox" id="manualMode"><i class="sw"></i></label></span></h3>
+            <div class="body">
+              <p class="hint" style="margin-bottom:10px">For a low-spec setup with no camera. Drag a driver to change position, or use ▲▼. Add a lap with the current time, or type a lap time first. Order and laps are set entirely by hand.</p>
+              <div id="manualList" class="manuallist"></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h3>Event details</h3>
+            <div class="body">
+              <label class="field"><span>Event name</span><input type="text" id="evName"></label>
+              <div class="grid2" style="margin-top:12px">
+                <label class="field"><span>Round</span><input type="text" id="evRound"></label>
+                <label class="field"><span>Track</span><input type="text" id="evTrack"></label>
+              </div>
+              <div class="grid2" style="margin-top:12px">
+                <label class="field"><span>Session type</span>
+                  <select id="evType">
+                    <option value="race">Race (laps)</option>
+                    <option value="endurance">Endurance (time)</option>
+                    <option value="qualifying">Qualifying</option>
+                    <option value="practice">Practice</option>
+                    <option value="drift">Drift (score)</option>
+                  </select>
+                </label>
+                <label class="field"><span>Session label</span><input type="text" id="evSession"></label>
+              </div>
+              <div class="grid2" style="margin-top:12px">
+                <label class="field" id="cfgLapsField"><span>Total laps</span><input type="number" id="cfgLaps" min="0" max="200"></label>
+                <label class="field" id="cfgMinsField" style="display:none"><span>Session minutes</span><input type="number" id="cfgMins" min="0" max="180" step="1"></label>
+                <label class="field"><span>Accent colour</span><input type="color" id="cfgAccent" style="width:100%"></label>
+              </div>
+              <p class="hint" id="sessionHint" style="margin-top:6px;display:none"></p>
+              <label class="toggle" style="margin-top:12px">
+                <span>Predicted running order <b style="color:var(--ink-mute)">the ~ mark on the overlay</b></span>
+                <input type="checkbox" id="cfgPredict"><i class="sw"></i>
+              </label>
+              <p class="hint" style="margin-top:8px">
+                With one timing point, a position is only confirmed as a car crosses the
+                line. This carries every car forward at the pace of its own last lap, so an
+                overtake shows when it happens. Lap times stay measured, never predicted.
+              </p>
+              <div id="liveShare" hidden style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+                <div class="clocklabel">Public live timing</div>
+                <div class="row" style="gap:8px;margin-top:6px;align-items:center">
+                  <input type="text" id="liveUrl" readonly style="flex:1;font-size:12px">
+                  <button class="btn sm" id="btnCopyLive">Copy</button>
+                </div>
+                <p class="hint" style="margin-top:6px">A no-login page viewers can open to follow the race live on their phone.</p>
+                <div class="row" style="gap:8px;margin-top:8px;align-items:center">
+                  <input type="text" id="roomUrl" readonly style="flex:1;font-size:12px">
+                  <button class="btn sm" id="btnCopyRoom">Copy</button>
+                </div>
+                <p class="hint" style="margin-top:6px">Control room: a second-screen monitor — the live program next to flag, clock and classification.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Driver sign-ins <span class="right" id="regCount">none waiting</span></h3>
+            <div class="body">
+              <div id="regList"></div>
+              <p class="hint" style="margin-top:8px">
+                <span id="regHow">Drivers sign in on their phone at <code id="regUrl">/driver.html</code>.</span>
+                Accepting one puts them on the grid and starts sending them flags.
+              </p>
+              <p class="hint" id="regUrlNote" hidden style="margin-top:6px">
+                Their phone will warn about the certificate the first time — that is expected
+                on a private network. Tapping through it is what lets flag alerts work at all;
+                on the plain <code>http</code> address Android silently blocks them.
+              </p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Sessions &amp; grid <span class="right"><button class="btn" id="btnSaveSession">Classify session</button></span></h3>
+            <div class="body">
+              <div id="sessionList"></div>
+              <div class="row" style="margin:14px 0 10px;flex-wrap:wrap;gap:8px">
+                <button class="btn" id="btnGridCurrent">Grid from current order</button>
+                <button class="btn" id="btnGridReverse">Reverse</button>
+                <button class="btn" id="btnGridRandom">Random</button>
+                <button class="btn ghost" id="btnGridClear">Clear grid</button>
+              </div>
+              <div id="gridList"></div>
+              <p class="hint" style="margin-top:8px">
+                Before the flag the grid decides the running order. Without one the
+                leaderboard falls back to roster order, which is not the order on track.
+              </p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Race control <span class="right" id="penCount">0 open</span></h3>
+            <div class="body">
+              <div class="row" style="margin-bottom:12px">
+                <select id="penDriver" style="flex:1"></select>
+                <select id="penKind">
+                  <option value="time">Time penalty</option>
+                  <option value="warning">Warning</option>
+                  <option value="drivethrough">Drive through</option>
+                  <option value="blackflag">Black flag</option>
+                  <option value="dq">Disqualify</option>
+                </select>
+                <input type="number" id="penSecs" value="5" min="0" max="60" style="width:64px">
+                <button class="btn primary" id="penAdd">Issue</button>
+              </div>
+              <input type="text" id="penReason" placeholder="Reason — shown on the broadcast" style="width:100%;margin-bottom:12px">
+              <div id="penList"></div>
+              <details style="margin-top:12px">
+                <summary class="hint" style="cursor:pointer">Automatic findings</summary>
+                <div style="margin-top:10px">
+                  <label class="toggle"><span>Jump start</span><input type="checkbox" id="ruJump"><i class="sw"></i></label>
+                  <label class="toggle"><span>Track limits</span><input type="checkbox" id="ruLimits"><i class="sw"></i></label>
+                  <div class="grid2" style="margin-top:10px">
+                    <label class="field"><span>Warnings allowed</span><input type="number" id="ruAllowed" min="0" max="10"></label>
+                    <label class="field"><span>Penalty seconds</span><input type="number" id="ruSecs" min="0" max="60"></label>
+                  </div>
+                  <label class="toggle" style="margin-top:10px"><span>Apply immediately, no investigation</span><input type="checkbox" id="ruAuto"><i class="sw"></i></label>
+                  <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+                  <label class="toggle"><span>Automatic flags</span><input type="checkbox" id="flAuto"><i class="sw"></i></label>
+                  <label class="toggle"><span>Neutralise when a car stops on track</span><input type="checkbox" id="flYellow"><i class="sw"></i></label>
+                  <label class="field" style="margin-top:10px"><span>Raise which flag</span>
+                    <select id="flRaises">
+                      <option value="yellow">Yellow flag</option>
+                      <option value="vsc">Virtual safety car</option>
+                    </select>
+                  </label>
+                  <label class="toggle"><span>Blue flags for cars being lapped</span><input type="checkbox" id="flBlue"><i class="sw"></i></label>
+                  <label class="toggle"><span>Chequered at the scheduled distance</span><input type="checkbox" id="flCheq"><i class="sw"></i></label>
+                  <div class="grid2" style="margin-top:10px">
+                    <label class="field"><span>Cars stopped for a red</span><input type="number" id="flRed" min="2" max="20"></label>
+                    <label class="field"><span>Seconds clear before green</span><input type="number" id="flGreen" min="1" max="60"></label>
+                  </div>
+                  <label class="field" style="margin-top:10px"><span>Laps before an unserved drive-through becomes a black flag <b style="color:var(--ink-mute)">0 = off</b></span>
+                    <input type="number" id="flBlack" min="0" max="20">
+                  </label>
+                  <p class="hint" style="margin-top:8px">
+                    Only jump starts and track limits can be detected — both are geometry the
+                    system already measures. Contact and blocking are judgement calls and are
+                    never raised automatically.
+                  </p>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Highlights for the VOD <span class="right" id="recState">not recording</span></h3>
+            <div class="body">
+              <div class="row" style="margin-bottom:12px">
+                <button class="btn primary" id="btnRecStart">Start markers</button>
+                <button class="btn" id="btnRecStop">Stop</button>
+                <button class="btn ghost" id="btnMarkNow">Mark now <span class="kbd">M</span></button>
+              </div>
+              <label class="field" style="margin-bottom:10px">
+                <span>Nudge, if you hit Record in OBS a moment earlier or later</span>
+                <input type="range" id="recOffset" min="-30000" max="30000" step="250">
+              </label>
+              <p class="hint" id="recOffsetVal" style="margin-top:-4px">--</p>
+              <div id="markerList" style="margin-top:10px"></div>
+              <div class="row" style="margin-top:12px">
+                <button class="btn" id="btnExpChapters">YouTube chapters</button>
+                <button class="btn" id="btnExpCsv">Marker CSV</button>
+                <button class="btn primary" id="btnExpReel">Highlight reel</button>
+                <button class="btn ghost" id="btnMarkClear">Clear</button>
+              </div>
+              <p class="hint" style="margin-top:8px">
+                Press <b>Start markers</b> at the same moment you press Record in OBS.
+                Every overtake, fastest lap, pit stop and battle result is timestamped
+                against that moment, so the edit list is written while you broadcast.
+              </p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Recent events</h3>
+            <div class="body"><div class="log" id="eventLog" data-i18n-skip></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ============ EVENT SCENES ============ -->
+    <section class="page" id="page-event">
+      <h2>Event scenes</h2>
+      <p class="lede">One overlay URL, several looks. Clicking a scene puts it on air and cross-fades the overlay; the Overlays and Layout pages then edit that scene.</p>
+
+      <div class="split">
+        <div>
+          <div class="card">
+            <h3>Scenes <span class="right"><button class="btn" id="btnSceneRebuild">Rebuild defaults</button> <button class="btn" id="btnSceneAdd">Duplicate current</button></span></h3>
+            <div class="body"><div id="sceneList"></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <h3>On air <span class="right" id="sceneLiveName">--</span></h3>
+            <div class="body">
+              <div id="sceneWidgets"></div>
+              <label class="field" style="margin-top:14px">
+                <span>Transition length</span>
+                <input type="range" id="sceneTrans" min="120" max="1200" step="20">
+              </label>
+              <p class="hint" id="sceneTransVal">--</p>
+              <label class="toggle" style="margin-top:6px"><span>Stinger wipe on scene change</span><input type="checkbox" id="sceneStinger"><i class="sw"></i></label>
+              <p class="hint" style="margin-top:10px">
+                OBS needs only <code>/overlay/all.html</code>. Scene changes happen inside it,
+                so there is nothing to switch on the OBS side and no second browser source to load.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CHAMPIONSHIP ============ -->
+    <section class="page" id="page-champ">
+      <h2>Championship</h2>
+      <p class="lede">Points across rounds. Each round is banked as a scored snapshot, so editing the roster later never rewrites what somebody won in March.</p>
+
+      <div class="split">
+        <div>
+          <div class="card">
+            <h3>Race report</h3>
+            <div class="body">
+              <div class="urlrow">
+                <b>Report</b>
+                <code id="obsReport">/report.html</code>
+                <button class="btn sm" id="btnCopyReport">Copy</button>
+                <button class="btn sm" id="btnOpenReport">Open</button>
+              </div>
+              <p class="hint" style="margin-top:10px">
+                One page for the people who were not watching: winner and margin, fastest
+                lap, every steward decision with its reason, who gained the most places, and
+                where the championship stands with this round counted. It needs no login, so
+                the link can go straight into the league channel, and <b>Copy for Discord</b>
+                on the page gives you the text rather than a screenshot.
+              </p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Standings <span class="right" id="champRounds">0 rounds</span></h3>
+            <div class="body"><div id="champTable"></div></div>
+          </div>
+
+          <div class="card">
+            <h3>Rounds <span class="right"><button class="btn primary" id="btnRoundAdd">Bank current result</button></span></h3>
+            <div class="body">
+              <div id="roundList"></div>
+              <div class="row" style="margin-top:12px">
+                <select id="roundFrom" style="flex:1"></select>
+                <button class="btn" id="btnRoundFromSession">Bank that session</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h3>Scoring</h3>
+            <div class="body">
+              <label class="field"><span>Championship name</span><input type="text" id="champName"></label>
+              <label class="field" style="margin-top:12px"><span>Points per position, first place first</span>
+                <input type="text" id="champTablePts" placeholder="25,18,15,12,10,8,6,4,2,1">
+              </label>
+              <div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">
+                <button class="btn sm" data-preset="25,18,15,12,10,8,6,4,2,1">F1</button>
+                <button class="btn sm" data-preset="25,20,16,13,11,10,9,8,7,6,5,4,3,2,1">MotoGP</button>
+                <button class="btn sm" data-preset="10,8,6,5,4,3,2,1">Club</button>
+                <button class="btn sm" data-preset="3,2,1">Podium only</button>
+              </div>
+              <div class="grid2" style="margin-top:14px">
+                <label class="field"><span>Fastest lap bonus</span><input type="number" id="champFl" min="0" max="10"></label>
+                <label class="field"><span>Pole bonus</span><input type="number" id="champPole" min="0" max="10"></label>
+              </div>
+              <label class="field" style="margin-top:12px"><span>Drop each driver's worst results</span>
+                <input type="number" id="champDrop" min="0" max="10">
+              </label>
+              <p class="hint" style="margin-top:8px">
+                Changing these affects rounds banked from now on. To apply them to a round
+                already banked, press <b>Rescore</b> on that round — deliberately, one at a time.
+              </p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Export</h3>
+            <div class="body">
+              <button class="btn" id="btnChampCsv">Standings CSV</button>
+              <p class="hint" style="margin-top:8px">Turn on the <b>Standings</b> overlay from the Overlays page to put the table on the broadcast.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- ============ DRIVERS ============ -->
+    <section class="page" id="page-drivers">
+      <h2>Drivers</h2>
+      <p class="lede">Colour matters: the vision engine tracks each car by its minimap colour, so use the exact in-game colour.</p>
+      <div class="card">
+        <h3>Roster <span class="right" id="driverCount">0 cars</span></h3>
+        <div class="body">
+          <div class="row" style="margin-bottom:14px">
+            <button class="btn primary" id="btnAddDriver">Add driver</button>
+            <button class="btn" id="btnImport">Import CSV</button>
+            <button class="btn" id="btnExport">Export CSV</button>
+            <span class="hint" style="margin-left:auto">CSV columns: <code>num,name,team,car,color</code></span>
+          </div>
+          <table class="drivers" id="driverTable"></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VISION ============ -->
+    <section class="page" id="page-vision">
+      <h2>Vision / AI</h2>
+      <p class="lede">Share the emulator window, mark the regions the AI should watch, then let it call the laps.</p>
+
+      <div class="card">
+        <h3>Live timing — official FR Legends API <span class="right" id="tmApiStatus">off</span></h3>
+        <div class="body">
+          <p class="hint" style="margin-top:0">The accurate source: laps come straight from the game server — no capture, no OCR. It runs on <b>this machine only</b> (the API key never leaves it). Set the key once, then enter the <b>Room Key</b> the host typed on the game's Create Room screen and press Start. Players are matched to your drivers by name, so register drivers with the names they use in-game.</p>
+          <div class="grid2">
+            <label class="field"><span>API key</span><input type="password" id="tmApiKey" placeholder="paste your iiley key" autocomplete="off"></label>
+            <label class="field"><span>Region</span>
+              <select id="tmRegion">
+                <option value="SoutheastAsia">Southeast Asia</option>
+                <option value="EastAsia">East Asia</option>
+                <option value="JapanWest">Japan West</option>
+                <option value="AustraliaSoutheast">Australia Southeast</option>
+                <option value="NorthEurope">North Europe</option>
+                <option value="WestEurope">West Europe</option>
+                <option value="EastUs">East US</option>
+                <option value="WestUs">West US</option>
+                <option value="BrazilSouth">Brazil South</option>
+              </select>
+            </label>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn sm" id="btnTmSave">Save key</button>
+            <span class="hint" id="tmKeyNote"></span>
+          </div>
+          <label class="field" style="margin-top:10px"><span>Room Key</span><input type="text" id="tmRoomKey" placeholder="e.g. 8054"></label>
+          <div class="row" style="margin-top:8px">
+            <button class="btn primary" id="btnTmStart">Start live timing</button>
+            <button class="btn" id="btnTmStop">Stop</button>
+            <span class="hint" id="tmNote" style="margin-left:auto"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="split">
+        <div>
+          <div class="card">
+            <h3>Capture <span class="right" id="capInfo">no source</span></h3>
+            <div class="body">
+              <div class="row" style="margin-bottom:12px">
+                <button class="btn primary" id="btnCapture">Select emulator window</button>
+                <button class="btn" id="btnStopCapture">Stop</button>
+                <span style="width:1px;height:26px;background:var(--line)"></span>
+                <button class="btn" id="btnVision">Start AI detection</button>
+                <span class="pill" id="visionPill">idle</span>
+                <label class="field" style="margin-left:auto;min-width:210px">
+                  <span>Capture source</span>
+                  <select id="captureMode">
+                    <option value="auto">Auto</option>
+                    <option value="local">This device</option>
+                    <option value="node">Capture node</option>
+                  </select>
+                </label>
+              </div>
+              <p class="hint" id="visionSourceHint" style="display:none;margin:-4px 0 12px"></p>
+
+              <div class="stagewrap">
+                <canvas id="preview"></canvas>
+                <canvas id="roiLayer"></canvas>
+                <div class="stage-empty" id="stageEmpty">
+                  <b>No capture source</b>
+                  <span class="hint">Click <b>Select emulator window</b> and pick your Android emulator<br>(LDPlayer / BlueStacks / scrcpy) from the window list.</span>
+                </div>
+              </div>
+
+              <div id="pickBar" style="display:none;margin-top:12px">
+                <div class="hint" style="margin-bottom:8px">
+                  <b>Pick the driver first</b>, then click their car in the image above. That pixel's colour is
+                used directly, which is far more accurate than guessing at a colour picker.</div>
+                <div class="pickchips" id="pickChips"></div>
+              </div>
+
+              <div class="row" style="margin-top:12px">
+                <label class="field" style="flex:1"><span>Draw tool</span>
+                  <select id="roiTool">
+                    <option value="minimap">Minimap zone — find the cars</option>
+                    <option value="finish">Finish line — click 2 points</option>
+                    <option value="sector">Sector line — click 2 points</option>
+                    <option value="pitzone">Pit lane zone</option>
+                    <option value="trigger">Trigger zone (image match)</option>
+                    <option value="ocr_lap">OCR — lap counter</option>
+                    <option value="ocr_time">OCR — lap time</option>
+                    <option value="ocr_position">OCR — position</option>
+                    <option value="ocr_speed">OCR — speed</option>
+                    <option value="ocr_name">OCR — driver name</option>
+                    <option value="ocr_leaderboard">OCR leaderboard (rank/name/best/laps)</option>
+                    <option value="detect">Model zone (ONNX)</option>
+                  </select>
+                </label>
+                <label class="field" style="flex:1"><span>Mode</span>
+                  <select id="editMode">
+                    <option value="roi">Draw regions</option>
+                    <option value="path">Draw racing line (inside minimap)</option>
+                    <option value="pick">Pick car colour from the image</option>
+                  </select>
+                </label>
+                <button class="btn" id="btnClearPath" style="margin-top:20px">Clear line</button>
+                <button class="btn" id="btnRelearn">Relearn circuit</button>
+              </div>
+              <div class="card" style="margin-top:12px;background:var(--bg-3)">
+                <h3><span id="helpTitle">Minimap zone</span></h3>
+                <div class="body" style="padding:12px 14px">
+                  <p class="hint" style="margin:0 0 8px"><b>What</b> — <span id="helpWhat">—</span></p>
+                  <p class="hint" style="margin:0 0 8px"><b>How</b> — <span id="helpHow">—</span></p>
+                  <p class="hint" style="margin:0"><b>Gives you</b> — <span id="helpGives">—</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Detection log</h3>
+            <div class="body"><div class="log" id="visionLog"></div></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h3>Timing lines <span class="right" id="lineCount">0</span></h3>
+            <div class="body">
+              <div id="lineList"></div>
+              <p class="hint" id="lineEmptyHint">
+                No lines yet. Pick <b>Finish line</b> above and click two points across the track on
+                the minimap. Add <b>Sector line</b>s in racing order — 2 sector lines gives you 3 sectors.
+              </p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Regions <span class="right" id="roiCount">0</span></h3>
+            <div class="body">
+              <div class="roilist" id="roiList"></div>
+              <p class="hint" id="roiEmptyHint">Nothing calibrated yet.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Tracking <span class="right">whether the car is being found</span></h3>
+            <div class="body">
+              <div id="trackStats"></div>
+              <p class="hint" style="margin-top:10px">
+                <b>seen</b> = the detector found that car's colour a moment ago.<b>not found</b> = not found: check the driver's colour, raise Colour tolerance, lower
+                Min blob pixels, or set Pixel sampling to<b>Every pixel</b> if the car is small on screen.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Engine settings</h3>
+            <div class="body">
+              <div class="grid2">
+                <label class="field" style="grid-column:1 / -1"><span>Tracking method</span>
+                  <select id="setTrackMode">
+                    <option value="color">Colour — match the car's colour</option>
+                    <option value="motion">Motion — find what moves against the static circuit</option>
+                    <option value="hybrid">Hybrid — colour first, motion fills the gaps</option>
+                  </select>
+                </label>
+                <p class="hint" id="motionWarn" style="grid-column:1 / -1;display:none;color:var(--yellow);margin:0"></p>
+                <label class="field" style="grid-column:1 / -1;display:none" id="motionOpts">
+                  <span>Motion sensitivity <b id="motionThrVal">26</b></span>
+                  <input type="range" id="setMotionThr" min="8" max="60" step="1" value="26" style="width:100%">
+                </label>
+                <label class="field"><span>Detection FPS</span><input type="number" id="setFps" min="2" max="60" value="10"></label>
+                <label class="field"><span>Min lap (s)</span><input type="number" id="setMinLap" min="1" max="600" value="8"></label>
+                <label class="field"><span>Colour tolerance</span><input type="number" id="setTol" min="10" max="180" value="70"></label>
+                <label class="field"><span>Min blob pixels</span><input type="number" id="setBlob" min="1" max="500" value="6"></label>
+                <label class="field"><span>Trigger match</span><input type="number" id="setTrig" min="0.3" max="0.99" step="0.01" value="0.82"></label>
+                <label class="field"><span>Racing line direction</span>
+                  <select id="setDir"><option value="1">Forward</option><option value="-1">Reverse</option></select>
+                </label>
+                <label class="field"><span>Pixel sampling</span>
+                  <select id="setStep">
+                    <option value="1">Every pixel (accurate)</option>
+                    <option value="2">Every 2nd (4× cheaper)</option>
+                    <option value="3" selected>Every 3rd (9× cheaper)</option>
+                  </select>
+                </label>
+                <label class="field"><span>Stopped after (s)</span><input type="number" id="setStopped" min="1" max="60" value="4"></label>
+                <label class="field"><span>Coast when unseen (ms)</span><input type="number" id="setMissed" min="0" max="5000" step="100" value="900"></label>
+              </div>
+              <div style="margin-top:12px;display:grid;gap:8px">
+                <label class="toggle"><span>Time from drawn lines <b style="color:var(--accent)">recommended</b></span><input type="checkbox" id="setLapLines" checked><i class="sw"></i></label>
+                <label class="toggle"><span>Fallback: lap when a car wraps the racing line</span><input type="checkbox" id="setLapMinimap"><i class="sw"></i></label>
+                <label class="toggle"><span>Count laps from trigger zones</span><input type="checkbox" id="setLapTrigger" checked><i class="sw"></i></label>
+                <label class="toggle"><span>Count laps from OCR lap counter</span><input type="checkbox" id="setLapOcr"><i class="sw"></i></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Performance <span class="right" id="perfPill">--</span></h3>
+            <div class="body">
+              <div class="row" style="margin-bottom:12px">
+                <button class="btn sm" data-preset="low">Low spec</button>
+                <button class="btn sm" data-preset="balanced">Balanced</button>
+                <button class="btn sm" data-preset="smooth">Smooth 30</button>
+                <button class="btn sm" data-preset="quality">Quality</button>
+              </div>
+              <div class="grid2">
+                <label class="field"><span>Capture width cap</span>
+                  <select id="setMaxWidth">
+                    <option value="0">Native (no cap)</option>
+                    <option value="1600">1600 px</option>
+                    <option value="1280" selected>1280 px</option>
+                    <option value="960">960 px</option>
+                  </select>
+                </label>
+                <label class="field"><span>Preview</span>
+                  <select id="setPreview">
+                    <option value="0" selected>Off (lightest)</option>
+                    <option value="5">5 fps</option>
+                    <option value="10">10 fps</option>
+                    <option value="30">30 fps</option>
+                  </select>
+                </label>
+              </div>
+              <div id="perfStats" class="hint" style="margin-top:12px;line-height:1.9"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Trained model (optional)</h3>
+            <div class="body">
+              <p class="hint" style="margin-top:0">
+                Drop a YOLOv8/YOLO11 export at <code>public/models/frlegends.onnx</code> with
+                <code>frlegends.labels.json</code>, then load it here. See <code>TRAINING.md</code> for how to
+                record and label your own FR Legends footage.
+              </p>
+              <div class="row" style="margin-top:10px">
+                <button class="btn" id="btnLoadModel">Load model</button>
+                <span class="pill" id="modelPill">not loaded</span>
+              </div>
+              <label class="toggle" style="margin-top:10px"><span>Overlay model boxes on preview</span><input type="checkbox" id="setShowBoxes" checked><i class="sw"></i></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ OVERLAY ============ -->
+    <section class="page" id="page-overlay">
+      <h2>Overlays</h2>
+      <p class="lede">Toggle what is on screen. Changes hit OBS in under a frame.</p>
+      <p class="lede" style="margin-top:-8px">Editing scene <b class="scenetag" id="overlayScene">--</b> — switch scenes on the Event scenes page.</p>
+
+      <div class="split">
+        <div>
+          <div class="card">
+            <h3>Visibility</h3>
+            <div class="body" style="display:grid;gap:8px">
+              <label class="toggle"><span>Leaderboard (left rail)</span><input type="checkbox" data-show="leaderboard"><i class="sw"></i></label>
+              <label class="toggle"><span>Timing tower (right rail)</span><input type="checkbox" data-show="tower"><i class="sw"></i></label>
+              <label class="toggle"><span>Status bar (top)</span><input type="checkbox" data-show="status"><i class="sw"></i></label>
+              <label class="toggle"><span>Lower third (focus driver)</span><input type="checkbox" data-show="lowerThird"><i class="sw"></i></label>
+              <label class="toggle"><span>Battle / gap bar</span><input type="checkbox" data-show="gap"><i class="sw"></i></label>
+              <label class="toggle"><span>Results screen</span><input type="checkbox" data-show="results"><i class="sw"></i></label>
+              <label class="toggle"><span>Track map (live car positions)</span><input type="checkbox" data-show="trackmap"><i class="sw"></i></label>
+              <label class="toggle"><span>Tandem battle (drift)</span><input type="checkbox" data-show="battle"><i class="sw"></i></label>
+              <label class="toggle"><span>Bracket (drift)</span><input type="checkbox" data-show="bracket"><i class="sw"></i></label>
+              <label class="toggle"><span>Starting grid</span><input type="checkbox" data-show="grid"><i class="sw"></i></label>
+              <label class="toggle"><span>Head to head</span><input type="checkbox" data-show="h2h"><i class="sw"></i></label>
+              <label class="toggle"><span>Championship standings</span><input type="checkbox" data-show="standings"><i class="sw"></i></label>
+              <label class="toggle"><span>Fastest lap banner</span><input type="checkbox" data-show="fastlap"><i class="sw"></i></label>
+              <label class="toggle"><span>Sector times (focus driver)</span><input type="checkbox" data-show="sectors"><i class="sw"></i></label>
+              <label class="toggle"><span>Team radio card</span><input type="checkbox" data-show="radio"><i class="sw"></i></label>
+              <label class="toggle"><span>Sponsor rotator</span><input type="checkbox" data-show="sponsor"><i class="sw"></i></label>
+              <label class="toggle"><span>Countdown</span><input type="checkbox" data-show="countdown"><i class="sw"></i></label>
+              <label class="toggle"><span>Driver intro (focus driver)</span><input type="checkbox" data-show="intro"><i class="sw"></i></label>
+              <label class="toggle"><span>QR code (scan to follow &amp; vote)</span><input type="checkbox" data-show="qr"><i class="sw"></i></label>
+              <div class="grid2" style="margin-top:10px">
+                <label class="field"><span>Radio driver</span><select id="radioDriver"></select></label>
+                <label class="field"><span>Radio quote</span><input type="text" id="radioText" maxlength="120" placeholder="Box this lap, box box"></label>
+              </div>
+              <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+              <label class="toggle"><span>Auto-director <b style="color:var(--ink-mute)">fastest-lap banner + switch to Results scene</b></span><input type="checkbox" id="autoDirector"><i class="sw"></i></label>
+              <p class="hint" style="margin-top:6px">When on, the console flashes the fastest-lap banner for a few seconds each time the record falls, and switches to the <b>Results</b> scene (falling back to the results widget) when the chequered flag drops. It only does things you can also do by hand.</p>
+              <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+              <div class="clocklabel">Audience poll</div>
+              <label class="field" style="margin-top:6px"><span>Question</span><input type="text" id="pollQuestion" maxlength="60" placeholder="Who wins?"></label>
+              <div class="row" style="gap:6px;margin-top:8px">
+                <button class="btn ghost sm" id="btnPollPreAll" title="Fill options with every driver">All drivers</button>
+                <button class="btn ghost sm" id="btnPollPreTop" title="Fill options with the current top 3">Top 3</button>
+                <button class="btn ghost sm" id="btnPollPreYN" title="A simple yes / no poll">Yes / No</button>
+              </div>
+              <textarea id="pollOptions" rows="3" style="width:100%;margin-top:6px" placeholder="One option per line — Label | #color (color optional). Leave empty to use every driver."></textarea>
+              <div class="row" style="gap:8px;margin-top:8px">
+                <button class="btn primary sm" id="btnPollOpen">Open poll</button>
+                <button class="btn sm" id="btnPollClose">Close</button>
+                <span class="hint" id="pollStatus" style="margin-left:auto"></span>
+              </div>
+              <p class="hint" id="pollResult" style="margin-top:6px;color:var(--accent)"></p>
+              <p class="hint" style="margin-top:6px">Use a preset or type your own options (leave the box empty for every driver). Viewers vote on the public live page; the tally shows on the <b>Audience poll</b> overlay widget, and the winner is saved to the race recap when you close it. Needs the votes table (see Help / migration).</p>
+              <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+              <div class="clocklabel">Sponsors</div>
+              <textarea id="sponsorList" rows="3" style="width:100%;margin-top:6px" placeholder="One per line — Label | https://logo.png (URL optional)"></textarea>
+              <p class="hint" style="margin-top:6px">The rotator cycles these every few seconds on the <b>Sponsor</b> widget.</p>
+              <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+              <div class="clocklabel">Countdown</div>
+              <div class="row" style="gap:8px;margin-top:6px;align-items:center">
+                <input type="text" id="cdLabelIn" maxlength="20" placeholder="STARTS IN" style="flex:1">
+                <input type="number" id="cdMin" min="0" max="120" step="1" placeholder="min" style="width:70px">
+                <button class="btn primary sm" id="btnCdStart">Set</button>
+                <button class="btn sm" id="btnCdClear">Clear</button>
+              </div>
+              <p class="hint" style="margin-top:6px">Sets a target this many minutes from now; the <b>Countdown</b> widget ticks down to it. <b>Driver intro</b> shows whichever driver is set as Focus above.</p>
+              <div class="grid2" style="margin-top:10px">
+                <label class="field"><span>Head to head picks</span>
+                  <select id="hhMode"><option value="auto">Closest fight, automatically</option><option value="manual">These two drivers</option></select>
+                </label>
+                <div class="grid2">
+                  <label class="field"><span>Driver A</span><select id="hhA"></select></label>
+                  <label class="field"><span>Driver B</span><select id="hhB"></select></label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Motion check</h3>
+            <div class="body">
+              <button class="btn primary" id="btnDemoAnim">Play animation rehearsal</button>
+              <p class="hint" style="margin-top:10px">
+                Replays every overlay animation on all connected overlays — entrance, position
+                swap, lap pulse, best-lap sweep, flag wipe — without touching race data.
+                Use it to confirm motion is reaching OBS. Most overlay motion is
+                <b>event-driven</b>: with the race idle and no laps coming in, there is nothing
+                to animate.
+              </p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Spoken commentary <span class="right" id="comStatus">off</span></h3>
+            <div class="body">
+              <label class="toggle" style="margin-bottom:12px">
+                <span>Commentator on <b style="color:var(--ink-mute)">reads the race out loud</b></span>
+                <input type="checkbox" id="comOn"><i class="sw"></i>
+              </label>
+
+              <div class="urlrow" style="margin-bottom:12px">
+                <b>OBS source</b>
+                <code id="comUrl">/overlay/commentary.html</code>
+                <button class="btn sm" id="btnCopyCom">Copy</button>
+              </div>
+              <p class="hint" style="margin:0 0 14px">
+                Add this as <b>one</b> Browser Source, and only one. Every copy works the
+                same lines out from the same race and would speak them in chorus. Its audio
+                arrives in the OBS mixer, so put it under the game.
+              </p>
+
+              <div class="grid2">
+                <label class="field"><span>How much it talks</span>
+                  <select id="comVerbosity">
+                    <option value="calm">Calm — flags, penalties, the lead</option>
+                    <option value="normal">Normal — and overtakes, fastest laps, pit stops</option>
+                    <option value="busy">Busy — and the outlook, gaps, who is in trouble</option>
+                  </select>
+                </label>
+                <label class="field"><span>Voice language</span>
+                  <select id="comLang">
+                    <option value="id-ID">Indonesian</option>
+                    <option value="en-US">English</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="field" style="margin-top:10px"><span>Voice engine</span>
+                <select id="comEngine">
+                  <option value="browser">Browser — built-in, offline, robotic in OBS</option>
+                  <option value="piper">Piper — natural neural voice, runs on this machine</option>
+                </select>
+              </label>
+              <label class="field" id="comPiperRow" style="margin-top:10px;display:none"><span>Piper voice</span>
+                <select id="comPiperVoice"><option value="">—</option></select>
+              </label>
+              <p class="hint" id="comPiperNote" style="margin-top:6px;display:none"></p>
+
+              <div class="field" id="comPiperInstallRow" style="margin-top:8px;display:none">
+                <span>Add a voice (downloads on demand)</span>
+                <div class="row" style="gap:6px">
+                  <select id="comCatVoice" style="flex:1"><option value="">Loading catalog…</option></select>
+                  <button class="btn sm" id="btnComInstall">Install</button>
+                </div>
+                <span class="hint" id="comInstallNote"></span>
+              </div>
+
+              <label class="field" id="comVoiceRow" style="margin-top:10px"><span>Voice</span>
+                <select id="comVoice">
+                  <option value="">Best one for the language</option>
+                </select>
+              </label>
+              <div class="row" style="margin-top:8px">
+                <button class="btn" id="btnComTest">Hear this voice</button>
+                <span class="hint" id="comTestNote"></span>
+              </div>
+
+              <div class="grid2" style="margin-top:10px">
+                <label class="field"><span>Speed <b id="comRateVal">1.05</b></span>
+                  <input type="range" id="comRate" min="0.6" max="1.6" step="0.05">
+                </label>
+                <label class="field"><span>Volume <b id="comVolVal">100%</b></span>
+                  <input type="range" id="comVol" min="0" max="1" step="0.05">
+                </label>
+              </div>
+
+              <p class="hint" style="margin-top:8px">
+                The words follow the voice. Pick a language with no voice installed and it
+                is spoken <b>and written</b> in whatever voice the machine does have, rather
+                than one language read by the mouth of another.
+              </p>
+              <p class="hint" style="margin-top:6px">
+                This list is <b>this</b> machine's. If OBS runs somewhere else, that machine
+                needs the same voice installed — the overlay says so if it is missing, and
+                falls back to the best one it has for the language.
+              </p>
+
+              <label class="toggle" style="margin-top:12px">
+                <span>Show the caption on screen</span>
+                <input type="checkbox" id="comCaption"><i class="sw"></i>
+              </label>
+
+              <div style="margin-top:14px">
+                <div class="hint" style="margin-bottom:6px"><b>How to say a name</b></div>
+                <textarea id="comSaying" rows="3"
+                  placeholder="Kinkpedil = Kinkpedil Reysing&#10;One name per line, written = spoken"></textarea>
+                <p class="hint" style="margin-top:6px">
+                  Every speech engine mangles a racing name eventually. Write it the way it
+                  should sound and it applies everywhere it is spoken.
+                </p>
+                <button class="btn primary" id="btnComSaying" style="margin-top:8px">Save pronunciations</button>
+              </div>
+
+              <p class="hint" id="comVoiceNote" style="margin-top:14px"></p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Focus driver</h3>
+            <div class="body">
+              <select id="focusSelect"></select>
+              <p class="hint" style="margin-top:10px">Drives the lower third, the gap bar, and which driver un-assigned trigger zones fire laps for.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Ticker</h3>
+            <div class="body">
+              <textarea id="tickerText" rows="4" placeholder="One message per line"></textarea>
+              <label class="toggle" style="margin-bottom:10px"><span>Auto ticker from race events</span><input type="checkbox" id="autoTicker"><i class="sw"></i></label>
+              <div class="row" style="margin-top:10px">
+                <button class="btn primary" id="btnTicker">Update ticker</button>
+                <button class="btn" id="btnTickerAuto">Auto-fill from race</button>
+                <button class="btn ghost" id="btnTickerClear">Clear</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Live preview <span class="right">1920×1080</span></h3>
+          <div class="body">
+            <label class="toggle" style="margin-bottom:12px">
+              <span>Show live preview <b style="color:var(--ink-mute)">runs a second copy of the overlay</b></span>
+              <input type="checkbox" id="showOverlayPreview"><i class="sw"></i>
+            </label>
+            <iframe class="previewframe" id="overlayPreview" data-src="/overlay/all.html" style="display:none"></iframe>
+            <p class="hint" style="margin-top:10px">The real output is the Browser Source in OBS. This preview is only a convenience, and it costs a whole extra overlay instance to run.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ============ LAYOUT ============ -->
+    <section class="page" id="page-layout">
+      <h2>Layout editor</h2>
+      <p class="lede">Arrange every widget on one 1920×1080 canvas, then point OBS at a single Browser Source.</p>
+      <p class="lede" style="margin-top:-8px">Editing scene <b class="scenetag" id="layoutScene">--</b> — only the widgets that scene shows appear here. Other scenes keep their own arrangement.</p>
+
+      <div class="split">
+        <div>
+          <div class="card">
+            <h3>Canvas <span class="right">1920 × 1080</span></h3>
+            <div class="body">
+              <div class="row" style="margin-bottom:12px">
+                <button class="btn" id="btnBackdrop">Use game frame as backdrop</button>
+                <button class="btn ghost" id="btnClearBackdrop">Clear backdrop</button>
+                <span class="hint" style="margin-left:auto">Drag to move · corner handle resizes · arrows nudge · <b>Alt</b> ignores snapping</span>
+              </div>
+              <div class="editorwrap" id="editorWrap">
+                <iframe id="layoutFrame" data-src="/overlay/all.html?edit=1&amp;motion=calm"></iframe>
+              </div>
+              <p class="hint" style="margin-top:10px">
+                The dashed frame is the broadcast safe area. Widgets snap to it, to the canvas
+                centre, and to each other.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h3>Widget <span class="right" id="selName">none</span></h3>
+            <div class="body">
+              <p class="hint" style="margin:0 0 8px">Pick a widget to edit its size and position. Click one here or on the canvas.</p>
+              <div id="widgetPick" class="widgetpick"></div>
+              <p class="hint" id="selEmpty" style="margin:8px 0 0">No widget selected.</p>
+              <div id="selFields" style="display:none">
+                <div class="grid2">
+                  <label class="field"><span>X</span><input type="number" id="lyX"></label>
+                  <label class="field"><span>Y</span><input type="number" id="lyY"></label>
+                  <label class="field"><span>Width (0 = auto)</span><input type="number" id="lyW" min="0" max="1920"></label>
+                  <label class="field"><span>Scale %</span><input type="number" id="lyS" min="40" max="200" step="5"></label>
+                </div>
+                <div class="row" style="margin-top:12px">
+                  <button class="btn sm" data-align="left">⇤ Left</button>
+                  <button class="btn sm" data-align="hcenter">↔ Centre</button>
+                  <button class="btn sm" data-align="right">Right ⇥</button>
+                </div>
+                <div class="row" style="margin-top:8px">
+                  <button class="btn sm" data-align="top">⇡ Top</button>
+                  <button class="btn sm" data-align="vcenter">↕ Middle</button>
+                  <button class="btn sm" data-align="bottom">Bottom ⇣</button>
+                </div>
+                <label class="toggle" style="margin-top:12px"><span>Include in this layout</span><input type="checkbox" id="lyShown"><i class="sw"></i></label>
+                <button class="btn sm" id="btnResetOne" style="margin-top:12px">Reset this widget to default</button>
+              </div>
+              <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+              <button class="btn primary" id="btnApplyLayout" style="width:100%">Apply to OBS</button>
+              <p class="hint" style="margin-top:8px">Changes reach OBS live already. Use this to force every overlay to redraw the current layout — handy if a Browser Source looks out of date.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Broadcast skin</h3>
+            <div class="body">
+              <div class="segmented" id="skinPick">
+                <button class="seg-btn" data-skin="classic">Classic</button>
+                <button class="seg-btn" data-skin="motogp">MotoGP</button>
+                <button class="seg-btn" data-skin="wec">WEC</button>
+                <button class="seg-btn" data-skin="f1">F1</button>
+                <button class="seg-btn" data-skin="dtm">DTM</button>
+                <button class="seg-btn" data-skin="fe">Formula E</button>
+                <button class="seg-btn" data-skin="gtwc">GTWC</button>
+                <button class="seg-btn" data-skin="imsa">IMSA</button>
+                <button class="seg-btn" data-skin="indycar">IndyCar</button>
+                <button class="seg-btn" data-skin="nascar">NASCAR</button>
+                <button class="seg-btn" data-skin="porsche">Porsche</button>
+                <button class="seg-btn" data-skin="supergt">Super GT</button>
+              </div>
+              <p class="hint" style="margin-top:10px">
+                The skin reshapes the widgets; the template below still sets the colours, so
+                any combination works. Classic is the original look.
+              </p>
+              <label class="field" id="wecTitleField" style="margin-top:12px;display:none">
+                <span>Tower title</span>
+                <input type="text" id="wecTitle" maxlength="18" placeholder="WEC">
+              </label>
+              <p class="hint" id="wecTitleHint" style="margin-top:6px;display:none">
+                The wordmark shown above the countdown in the WEC skin. Put your series name here.
+              </p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Template</h3>
+            <div class="body">
+              <div id="themeGrid"></div>
+              <p class="hint" id="themeNote" style="margin-top:10px">--</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>League branding</h3>
+            <div class="body">
+              <div class="row" style="align-items:center;gap:12px">
+                <div id="brandPreview" class="brandprev">no logo</div>
+                <div style="flex:1">
+                  <input type="file" id="brandFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none">
+                  <button class="btn" id="btnBrandPick">Choose logo</button>
+                  <button class="btn ghost" id="btnBrandClear">Remove</button>
+                </div>
+              </div>
+              <label class="field" style="margin-top:12px"><span>League name, shown beside the logo</span>
+                <input type="text" id="brandName" placeholder="FR LEGENDS LEAGUE">
+              </label>
+              <label class="toggle" style="margin-top:12px">
+                <span>Show in the status bar</span>
+                <input type="checkbox" id="brandShow"><i class="sw"></i>
+              </label>
+              <label class="field" style="margin-top:12px"><span>Placement</span>
+                <select id="brandPlacement">
+                  <option value="beside">Beside the flag</option>
+                  <option value="alternate">Alternate with the flag</option>
+                </select>
+              </label>
+              <label class="field" style="margin-top:12px" id="brandRotateWrap"><span>Seconds on each</span>
+                <input type="range" id="brandRotate" min="2" max="20" step="1">
+              </label>
+              <p class="hint" id="brandRotateVal">--</p>
+              <p class="hint" style="margin-top:8px">
+                PNG, JPEG, WebP or SVG, under 2MB. A transparent PNG sits best on the bar.
+              </p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Overlay style</h3>
+            <div class="body">
+              <div class="grid2">
+                <label class="field"><span>Accent</span><input type="color" id="stAccent" style="width:100%"></label>
+                <label class="field"><span>Density</span>
+                  <select id="stDensity"><option value="normal">Normal</option><option value="compact">Compact</option></select>
+                </label>
+              </div>
+              <label class="field" style="margin-top:12px"><span>Panel opacity <b id="stOpacityVal">88%</b></span>
+                <input type="range" id="stOpacity" min="30" max="100" step="1" style="width:100%">
+              </label>
+              <label class="field" style="margin-top:12px"><span>Corner radius <b id="stRadiusVal">10px</b></span>
+                <input type="range" id="stRadius" min="0" max="24" step="1" style="width:100%">
+              </label>
+              <label class="toggle" style="margin-top:12px"><span>Drop shadow</span><input type="checkbox" id="stShadow"><i class="sw"></i></label>
+              <label class="toggle" style="margin-top:8px"><span>Lite mode <b style="color:var(--accent)">low-end GPU</b></span><input type="checkbox" id="stLite"><i class="sw"></i></label>
+              <p class="hint" style="margin-top:8px">Turns off the ambient animation and the shadows on the overlay. Event
+                animation — a position swap, a lap landing, a flag change — keeps running.</p>
+              <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+              <div class="clocklabel">Saved looks</div>
+              <p class="hint" style="margin:6px 0">Save the current skin + theme + colours as a preset, then bring it back with one click.</p>
+              <div id="lookList" class="widgetpick" style="margin-bottom:8px"></div>
+              <div class="row" style="gap:8px">
+                <input type="text" id="lookName" maxlength="24" placeholder="Preset name" style="flex:1">
+                <button class="btn primary sm" id="btnLookSave">Save</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Whole layout</h3>
+            <div class="body">
+              <button class="btn danger" id="btnResetLayout">Reset all positions</button>
+              <p class="hint" style="margin-top:10px">
+                Layout and style are saved with the event, so OBS picks them up on the next
+                frame — no need to refresh the Browser Source.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ OBS ============ -->
+
+    <section class="page" id="page-drift">
+      <h2>Drift battles</h2>
+      <p class="lede">Tandem knockout: judged qualifying runs seed the bracket, then two runs per battle with the lead swapped, and the judges call it.</p>
+
+      <div class="card">
+        <h3>Format</h3>
+        <div class="body">
+          <div class="grid2">
+            <label>Bracket size
+              <select id="dfSize">
+                <option value="4">Top 4</option>
+                <option value="8">Great 8</option>
+                <option value="16" selected>Top 16</option>
+                <option value="32">Top 32</option>
+              </select>
+            </label>
+            <label>Judges
+              <select id="dfJudges"><option>1</option><option>3</option><option>5</option></select>
+            </label>
+            <label>Qualifying runs
+              <select id="dfRuns"><option>1</option><option>2</option><option>3</option></select>
+            </label>
+            <label>Max One More Time
+              <select id="dfOmt"><option>0</option><option>1</option><option>2</option></select>
+            </label>
+          </div>
+          <p class="hint">Empty seats become byes, so an eleven-car entry fits a sixteen-car bracket without inventing drivers.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Qualifying <span class="right"><button class="btn" id="dfBuild">Build bracket</button></span></h3>
+        <div class="body">
+          <div id="dfQual"></div>
+          <p class="hint">Best run counts. Order here becomes the seeding.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Battle <span class="right" id="dfBattleRound"></span></h3>
+        <div class="body" id="dfBattle"></div>
+      </div>
+
+      <div class="card">
+        <h3>Bracket <span class="right"><button class="btn" id="dfReset">Clear bracket</button></span></h3>
+        <div class="body"><div id="dfBracket"></div></div>
+      </div>
+    </section>
+    <section class="page" id="page-obs">
+      <h2>OBS setup</h2>
+      <p class="lede">Add each of these as a <b>Browser Source</b>, 1920 × 1080, with a transparent background.</p>
+
+      <div class="card">
+        <h3>Recommended — one source</h3>
+        <div class="body">
+          <div class="urlrow">
+            <b>All-in-one</b>
+            <code id="obsMain">http://localhost:4700/overlay/all.html</code>
+            <button class="btn sm" id="btnCopyMain">Copy</button>
+          </div>
+          <p class="hint" style="margin-top:10px">
+            One Browser Source carries every widget. Arrange them on the <b>Layout</b> page
+            instead of adding a source per widget — each extra Browser Source is a whole
+            extra browser process for OBS to composite.
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Spoken commentary</h3>
+        <div class="body">
+          <div class="urlrow">
+            <b>Commentator</b>
+            <code id="obsCommentary">/overlay/commentary.html</code>
+            <button class="btn sm" id="btnCopyCommentary">Copy</button>
+          </div>
+          <p class="hint" style="margin-top:10px">
+            A Browser Source that makes sound rather than pictures. Its audio arrives in the
+            OBS mixer, so set its level under the game. Add it <b>once</b> — a second copy
+            would work out the same lines and speak them in chorus. Switch it on and choose
+            how much it talks on the <b>Overlays</b> page.
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Individual sources (only if you need per-widget fades in OBS)</h3>
+        <div class="body" id="obsUrls"></div>
+      </div>
+
+      <div class="card">
+        <h3>Recommended scene layout</h3>
+        <div class="body hint" style="line-height:2">
+          1. Source <b>Window Capture</b> → your Android emulator (this is the gameplay).<br>
+          2. Source <b>Browser</b> → <code>/overlay/all.html</code> (one source with everything), or add the
+             individual URLs above if you want to fade widgets separately in OBS.<br>
+          3. In the browser source properties tick <b>Shutdown source when not visible</b> off, and leave
+             <b>Refresh browser when scene becomes active</b> off — the overlay reconnects on its own.<br>
+          4. Custom CSS field in OBS: leave empty. The pages are already transparent.<br>
+          5. Keep this operator tab open on a second monitor. Capture and detection run in this tab.
+        </div>
+      </div>
+
+      <div class="card" id="cardNetwork">
+        <h3>Network <span class="right" id="netSubnet">--</span></h3>
+        <div class="body">
+          <p class="hint" style="margin-top:0">
+            Different IPs on WiFi and Ethernet are normal. What matters is that both devices
+            sit on the same subnet — then the second device just opens the address below.
+          </p>
+          <div id="netAddresses" style="margin-top:12px" data-i18n-skip></div>
+          <div style="margin-top:14px">
+            <div class="hint" style="margin-bottom:8px"><b>Connected right now</b></div>
+            <div id="netClients" data-i18n-skip></div>
+          </div>
+          <p class="hint" id="netFirewall" style="margin-top:14px"></p>
+        </div>
+      </div>
+
+      <div class="card" id="cardNode">
+        <h3>Multi-device setup</h3>
+        <div class="body">
+          <div class="urlrow">
+            <b>Capture node</b>
+            <code id="obsNode">http://localhost:4700/node.html</code>
+            <button class="btn sm" id="btnCopyNode">Copy</button>
+          </div>
+          <p class="hint" style="margin-top:10px">
+            Open this on the machine that shows the game. It runs capture and detection
+            and nothing else, and shares a preview so you can still draw regions from the
+            operator panel on another device. Everything else — race control, drivers,
+            overlays, layout — is done from this panel over the network.
+          </p>
+        </div>
+      </div>
+
+      <div class="card" id="cardLap">
+        <h3>Remote lap trigger</h3>
+        <div class="body hint">
+          Any device on your LAN can fire a lap with a plain GET request — handy for a phone or a Stream Deck:<br>
+          <code id="lapEndpoint">http://HOST:4700/api/lap/&lt;driverId&gt;</code><br>
+          Driver IDs are listed on the Drivers page.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Keyboard shortcuts <span class="right"><button class="btn sm" id="btnKbReset">Reset to defaults</button></span></h3>
+        <div class="body">
+          <p class="hint" style="margin-bottom:12px">Bind any control to a key. A Stream Deck's <b>Hotkey</b> action sends the same keystroke to this tab — so set a Stream Deck button to the key you pick here, no plugin needed. Click <b>Set</b>, then press the key (or key combo).</p>
+          <div id="kbList" class="kblist"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>OBS control (WebSocket) <span class="right"><i id="obsDot" class="conndot off"></i></span></h3>
+        <div class="body">
+          <p class="hint" style="margin-bottom:10px">Let the console drive OBS: cut cameras on a flag, and save a replay-buffer clip on a marker. Enable the WebSocket server in OBS (Tools → WebSocket Server Settings) and paste the address + password. Keep the address on <b>localhost</b> — a LAN address is blocked from the hosted console.</p>
+          <div class="grid2">
+            <label class="field"><span>Address</span><input type="text" id="obsAddr" placeholder="ws://localhost:4455"></label>
+            <label class="field"><span>Password</span><input type="password" id="obsPass" placeholder="from OBS settings"></label>
+          </div>
+          <div class="row" style="gap:8px;margin-top:10px">
+            <button class="btn primary sm" id="btnObsConnect">Connect</button>
+            <button class="btn sm" id="btnObsDisconnect">Disconnect</button>
+            <button class="btn sm" id="btnObsClip">Save clip now</button>
+            <span class="hint" id="obsStatus" style="margin-left:auto">Not connected</span>
+          </div>
+          <div id="obsMap" hidden style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+            <label class="toggle"><span>Auto-cut OBS scene on flag change</span><input type="checkbox" id="obsAutoCut"><i class="sw"></i></label>
+            <div class="grid2" style="margin-top:10px">
+              <label class="field"><span>Scene on Green</span><select id="obsSceneGreen"></select></label>
+              <label class="field"><span>Scene on Caution (yellow/SC/VSC/red)</span><select id="obsSceneCaution"></select></label>
+            </div>
+            <label class="toggle" style="margin-top:10px"><span>Save a replay clip when I drop a marker (M)</span><input type="checkbox" id="obsClipOnMark"><i class="sw"></i></label>
+            <label class="toggle" style="margin-top:10px"><span>Auto-clip key moments (overtakes, fastest lap, a stopped car)</span><input type="checkbox" id="obsAutoClip"><i class="sw"></i></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Discord (optional)</h3>
+        <div class="body">
+          <p class="hint" style="margin-bottom:10px">Post to your league's Discord automatically. In Discord: Channel → Edit → Integrations → Webhooks → New Webhook → Copy URL, then paste it here. Stored only in this browser.</p>
+          <label class="field"><span>Webhook URL</span><input type="text" id="dcUrl" placeholder="https://discord.com/api/webhooks/…"></label>
+          <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
+            <label class="toggle"><span>Post the result at the chequered flag</span><input type="checkbox" id="dcOnFinish"><i class="sw"></i></label>
+            <label class="toggle"><span>Post every flag change</span><input type="checkbox" id="dcOnFlag"><i class="sw"></i></label>
+          </div>
+          <div class="row" style="gap:8px;margin-top:10px">
+            <button class="btn sm" id="btnDcTest">Send a test message</button>
+            <span class="hint" id="dcStatus" style="margin-left:auto"></span>
+          </div>
+          <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+          <div class="clocklabel">Race recap</div>
+          <p class="hint" style="margin:6px 0">An auto-written summary of the finished race — winner, podium, fastest lap, most positions gained. Post it to Discord or copy it anywhere.</p>
+          <textarea id="recapText" rows="6" readonly style="width:100%;font-size:12px"></textarea>
+          <div class="row" style="gap:8px;margin-top:8px">
+            <button class="btn sm" id="btnRecapBuild">Build recap</button>
+            <button class="btn primary sm" id="btnRecapPost">Post to Discord</button>
+            <button class="btn sm" id="btnRecapCopy">Copy</button>
+            <label class="toggle" style="margin-left:auto"><span style="font-size:12px;color:var(--ink-mute);margin-right:8px">Auto at finish</span><input type="checkbox" id="dcRecapAuto"><i class="sw"></i></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HELP ============ -->
+    <!--
+      The manual is left in one language on purpose: eight hundred lines of Indonesian
+      prose, written for the moment something has gone wrong. A rushed English version of
+      that would be worse than one language, so the switch does not touch this page.
+    -->
+    <section class="page" id="page-help">
+      <h2>Manual</h2>
+      <!--
+        "Available offline" was true when every event lived on the operator's own machine.
+        A hosted event does not, and a manual page is the last place that should still be
+        claiming something the rest of the manual spends a section correcting.
+      -->
+      <p class="lede">Every page in this console, and how to use it. It switches language
+        with the rest of the app.</p>
+
+      <!--
+        The manual carries its own translations, so the dictionary must not touch it: its
+        blocks are paragraphs and table rows, and a sentence-keyed lookup is the wrong tool
+        for those. Only the body and the contents list are skipped — the heading above and
+        the search box are ordinary interface and translate normally.
+      -->
+      <div class="helpwrap">
+        <nav class="helptoc" id="helpToc" data-i18n-skip></nav>
+        <div>
+          <input type="text" id="helpSearch" placeholder="Search… try: sector, OBS, colour, throttle" style="margin-bottom:16px">
+          <div id="helpBody" data-i18n-skip></div>
+          <p class="hint" id="helpNoResult" style="display:none">Nothing matches.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="csvInput" accept=".csv,text/csv" hidden>
+<script src="/supabase-config.js"></script>
+<script src="js/i18n-core.js"></script>
+<script src="js/i18n-console.js?v=live40"></script>
+<script type="module" src="js/panel.js?v=live40"></script>
+</body>
+</html>
