@@ -556,7 +556,12 @@ function showDelta(el, moved) {
  *   yellow = neither, dim = not set yet this lap.
  */
 function sectorClasses(d) {
-  const nSectors = Math.max(1, (state.calibration?.lines || []).filter((l) => l.kind === 'sector').length + 1);
+  // Sector count comes from the calibrated sector lines when vision is driving, but also from
+  // the data itself: the timing API delivers N splits with no lines drawn, so fall back to the
+  // length of what we actually have (this driver's splits, its bests, or the session records).
+  const lineSectors = (state.calibration?.lines || []).filter((l) => l.kind === 'sector').length + 1;
+  const dataSectors = Math.max((d.sectors || []).length, (d.bestSectors || []).length, (state.records?.bestSectors || []).length);
+  const nSectors = Math.max(1, lineSectors, dataSectors);
   const live = d.sectors || [];
   const lastLap = (d.lapSectors || [])[(d.lapSectors || []).length - 1] || [];
   const records = state.records?.bestSectors || [];
@@ -1077,7 +1082,9 @@ function renderH2H(rows) {
   hhSeen.set(key, gapMs);
   if (hhSeen.size > 40) hhSeen = new Map([[key, gapMs]]);
 
-  const nSectors = Math.max(1, (state.calibration?.lines || []).filter((l) => l.kind === 'sector').length + 1);
+  const lineSectors = (state.calibration?.lines || []).filter((l) => l.kind === 'sector').length + 1;
+  const dataSectors = Math.max((a.bestSectors || []).length, (b.bestSectors || []).length, (state.records?.bestSectors || []).length);
+  const nSectors = Math.max(1, lineSectors, dataSectors);
   const cell = (ms) => (ms == null ? '--' : fmtGap(ms));
   const rowsHtml = [];
 
