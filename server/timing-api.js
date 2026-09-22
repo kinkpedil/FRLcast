@@ -135,7 +135,19 @@ export class TimingApi {
     if (p.bestMs != null) cur.bestMs = p.bestMs;
     if (p.laps != null) cur.laps = p.laps;
     const es = p.entries || [];
-    if (es.length) cur.lastMs = es[es.length - 1].ms;   // entries are ascending by seq
+    if (es.length) {
+      cur.lastMs = es[es.length - 1].ms;                 // entries are ascending by seq
+      const lastSecs = es[es.length - 1].sectors;
+      if (Array.isArray(lastSecs) && lastSecs.length) cur.sectors = lastSecs.slice();
+      // running best per sector across every lap this player has driven
+      cur.best = cur.best || [];
+      for (const e of es) {
+        const secs = e.sectors || [];
+        for (let i = 0; i < secs.length; i++) {
+          if (secs[i] > 0 && (cur.best[i] == null || secs[i] < cur.best[i])) cur.best[i] = secs[i];
+        }
+      }
+    }
     this.players.set(p.id, cur);
   }
 
@@ -179,11 +191,11 @@ export class TimingApi {
     const matched = [];
     for (const [pid, pl] of this.players) {
       const driverId = this.matchDriver(pid, pl.name);
-      if (driverId && pl.bestMs != null) matched.push({ driverId, bestMs: pl.bestMs, laps: pl.laps, lastMs: pl.lastMs });
+      if (driverId && pl.bestMs != null) matched.push({ driverId, bestMs: pl.bestMs, laps: pl.laps, lastMs: pl.lastMs, sectors: pl.sectors, bestSectors: pl.best });
     }
     // Contest mode: rank by best single lap, ascending.
     matched.sort((a, b) => a.bestMs - b.bestMs);
-    const rows = matched.map((m, i) => ({ driverId: m.driverId, rank: i + 1, laps: m.laps, bestMs: m.bestMs, lastMs: m.lastMs }));
+    const rows = matched.map((m, i) => ({ driverId: m.driverId, rank: i + 1, laps: m.laps, bestMs: m.bestMs, lastMs: m.lastMs, sectors: m.sectors, bestSectors: m.bestSectors }));
     this.matched = rows.length;
     this.race.apply({ type: 'timing.external', rows });
   }

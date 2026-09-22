@@ -883,6 +883,20 @@ export class RaceState {
         if (e.laps != null) d.lapsDone = e.laps;
         if (e.bestMs != null && e.bestMs > 0) d.bestLap = e.bestMs;
         if (e.lastMs != null && e.lastMs > 0) d.lastLap = e.lastMs;
+        // Sector splits from the feed: the last lap's splits for the tower, the per-sector
+        // personal bests for green, and the session best per sector for purple. Applying the
+        // same values every tick is harmless: the bests are minima and the display just
+        // reflects the last lap.
+        if (Array.isArray(e.sectors)) d.sectors = e.sectors;
+        if (Array.isArray(e.bestSectors)) {
+          d.bestSectors = e.bestSectors;
+          for (let i = 0; i < e.bestSectors.length; i++) {
+            const ms = e.bestSectors[i];
+            if (!(ms > 0)) continue;
+            const rec = this.state.records.bestSectors[i];
+            if (!rec || ms < rec.ms) this.state.records.bestSectors[i] = { ms, driverId: d.id };
+          }
+        }
         d.extRank = e.rank;
       }
       ranked.sort((a, b) => ((a.extRank ?? 1e9) - (b.extRank ?? 1e9)));
@@ -1534,7 +1548,9 @@ export class RaceState {
             rank: Number(r.rank) || null,
             laps: r.laps == null ? null : Number(r.laps),
             bestMs: r.bestMs == null ? null : Number(r.bestMs),
-            lastMs: r.lastMs == null ? null : Number(r.lastMs)
+            lastMs: r.lastMs == null ? null : Number(r.lastMs),
+            sectors: Array.isArray(r.sectors) ? r.sectors.map(Number) : null,
+            bestSectors: Array.isArray(r.bestSectors) ? r.bestSectors.map(Number) : null
           };
         }
         s.race.extAt = now;
