@@ -30,9 +30,12 @@ if not exist "%~dp0node_modules" (
 )
 
 echo.
-echo Starting FRLcast. The operator panel opens in your browser at http://localhost:4700
-echo Keep this window open during your event. Close it to stop.
+echo Starting FRLcast. The console opens in its own window in a moment.
+echo Keep THIS window open during your event. Close it to stop the server.
 echo.
-start "" "http://localhost:4700"
+rem Open the console as a chromeless app window (Edge/Chrome), a couple of seconds after the
+rem server is up. Detached, so this window stays as the running server. Overlays still go into
+rem OBS as Browser Sources at http://localhost:4700/overlay/...
+start "" powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\open-console.ps1"
 "%NODE%" "%~dp0server\index.js"
 pause
