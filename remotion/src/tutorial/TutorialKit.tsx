@@ -38,7 +38,9 @@ export const ScreenFrame: React.FC<{ src?: string | null }> = ({ src }) => {
   if (src) {
     return (
       <AbsoluteFill style={{ backgroundColor: '#000' }}>
-        <OffthreadVideo src={staticFile(src)} />
+        {/* The recording is silent (narration is carried by the captions), and its near-empty
+            audio track breaks Remotion's audio-mixing step, so mute it and render video only. */}
+        <OffthreadVideo src={staticFile(src)} muted />
       </AbsoluteFill>
     );
   }
