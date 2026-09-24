@@ -1,0 +1,288 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Season stats</title>
+<style>
+  /*
+   * The season stats page: one public page that turns a whole event's rounds into per-driver
+   * numbers the way a fan or a commentator wants them. It reads the same hosted event the
+   * overlays do (?event=CODE), needs no login, and is built entirely from the results table
+   * plus the live standings, so it stays current on its own.
+   *
+   * Everything here is derived from finishing positions and points, because that is all the
+   * results table stores (round, num, name, position, points). Poles and fastest laps are not
+   * columns, so the page does not claim them. Wins, podiums, best and average finish, points
+   * and a form strip are all honest reads of what is recorded.
+   */
+  :root {
+    --bg: #0b0d11; --panel: #12151b; --line: rgba(255,255,255,.08);
+    --ink: #f2f4f8; --ink-2: rgba(242,244,248,.72); --ink-3: rgba(242,244,248,.45);
+    --accent: #00e0a4; --gold: #ffd60a; --silver: #cfd6e4; --bronze: #d8935b;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 400 15px/1.5 Inter, -apple-system, "Segoe UI", system-ui, sans-serif; }
+  .shell { max-width: 960px; margin: 0 auto; padding: 22px 16px 70px; }
+
+  header.top { display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 18px; }
+  .kicker { font-family: var(--mono); font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+  h1 { font-size: 1.6rem; line-height: 1.15; margin: 4px 0 2px; letter-spacing: -.01em; }
+  .where { color: var(--ink-2); font-size: .9rem; }
+  .langbtns { margin-left: auto; display: flex; gap: 4px; }
+  .langbtns button { font: inherit; font-size: .8rem; padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink-2); cursor: pointer; }
+  .langbtns button.on { border-color: var(--accent); color: var(--accent); }
+
+  .links { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
+  .links a { text-decoration: none; font-size: .9rem; font-weight: 600; padding: 11px 18px; border-radius: 9px; border: 1px solid var(--line); color: var(--ink); background: var(--panel); display: inline-flex; align-items: center; gap: 8px; }
+  .links a.primary { background: var(--accent); color: #05221b; border-color: transparent; }
+  .links a .ic { font-size: 1.05rem; }
+
+  .leaders { display: grid; gap: 12px; grid-template-columns: 1fr; margin-bottom: 8px; }
+  @media (min-width: 620px) { .leaders { grid-template-columns: repeat(3, 1fr); } }
+  .lead { border: 1px solid var(--line); border-radius: 11px; background: var(--panel); padding: 14px 16px; }
+  .lead .lk { font-family: var(--mono); font-size: .6rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  .lead .lname { font-weight: 600; margin: 7px 0 2px; font-size: 1.02rem; display: flex; align-items: center; gap: 8px; }
+  .lead .lval { color: var(--accent); font-family: var(--mono); font-size: .84rem; }
+  .cbar { display: inline-block; width: 4px; height: 15px; border-radius: 2px; vertical-align: -2px; margin-right: 2px; flex: 0 0 auto; }
+
+  h2.sec { font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin: 30px 0 10px; font-weight: 700; }
+  .wrap-x { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th { text-align: left; font-family: var(--mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,.05); }
+  td.r, th.r { text-align: right; }
+  td.c, th.c { text-align: center; }
+  .mono { font-family: var(--mono); }
+  .pos { color: var(--ink-2); width: 40px; }
+  .nm { font-weight: 500; }
+  .num { color: var(--ink-3); font-size: .82rem; margin-left: 8px; }
+  .pts { color: var(--accent); font-weight: 600; }
+
+  /* the form strip: one pill per round, gold/silver/bronze for the podium, neutral otherwise */
+  .form { display: inline-flex; gap: 3px; }
+  .fp { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 5px; font-family: var(--mono); font-size: .62rem; background: rgba(255,255,255,.07); color: var(--ink-2); }
+  .fp.p1 { background: rgba(255,214,10,.18); color: var(--gold); }
+  .fp.p2 { background: rgba(207,214,228,.16); color: var(--silver); }
+  .fp.p3 { background: rgba(216,147,91,.18); color: var(--bronze); }
+
+  .empty { color: var(--ink-3); font-size: .88rem; padding: 8px 0; }
+  #loading { color: var(--ink-2); padding: 40px 0; text-align: center; }
+  .foot { color: var(--ink-3); font-size: .8rem; margin-top: 34px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .foot a { color: var(--accent); text-decoration: none; }
+</style>
+
+<div class="shell">
+  <header class="top">
+    <div>
+      <div class="kicker" id="round"></div>
+      <h1 id="evname">Season stats</h1>
+      <div class="where" id="where"></div>
+    </div>
+    <div class="langbtns">
+      <button data-lang="en" class="on">EN</button>
+      <button data-lang="id">ID</button>
+    </div>
+  </header>
+
+  <div id="loading" data-t="loading">Loading season...</div>
+
+  <div id="app" hidden>
+    <div class="links" id="links"></div>
+
+    <div class="leaders" id="leaders"></div>
+
+    <h2 class="sec" data-t="drivers">Driver stats</h2>
+    <div class="wrap-x"><table id="tbl"></table></div>
+    <div class="empty" id="tblEmpty" hidden data-t="noresults">No rounds have been scored yet.</div>
+
+    <p class="foot"><span data-t="foot">Season stats update automatically as rounds are scored.</span>
+      · <a href="https://frlcast.my.id">FRLcast by kinkpedil12</a></p>
+  </div>
+</div>
+
+<script src="/supabase-config.js?v=20260924141907"></script>
+<script type="module">
+  import { CloudBus, cloudOptions } from './js/cloudbus.js';
+
+  const $ = (s) => document.querySelector(s);
+  const params = new URLSearchParams(location.search);
+  const code = params.get('event') || '';
+
+  const STR = {
+    en: { loading: 'Loading season...', drivers: 'Driver stats',
+          noresults: 'No rounds have been scored yet.',
+          foot: 'Season stats update automatically as rounds are scored.',
+          event: 'Event hub', live: 'Live timing',
+          POS: 'POS', DRIVER: 'DRIVER', RND: 'RND', PTS: 'PTS', WINS: 'WINS',
+          PODIUMS: 'PODIUMS', BEST: 'BEST', AVG: 'AVG', FORM: 'FORM',
+          mostWins: 'Most wins', mostPodiums: 'Most podiums', bestAvg: 'Best average finish',
+          winsUnit: 'wins', podiumsUnit: 'podiums', avgUnit: 'avg finish' },
+    id: { loading: 'Memuat musim...', drivers: 'Statistik pembalap',
+          noresults: 'Belum ada round yang dinilai.',
+          foot: 'Statistik musim diperbarui otomatis saat round dinilai.',
+          event: 'Hub event', live: 'Timing langsung',
+          POS: 'POS', DRIVER: 'PEMBALAP', RND: 'RND', PTS: 'POIN', WINS: 'MENANG',
+          PODIUMS: 'PODIUM', BEST: 'TERBAIK', AVG: 'RATA', FORM: 'FORM',
+          mostWins: 'Menang terbanyak', mostPodiums: 'Podium terbanyak', bestAvg: 'Rata finis terbaik',
+          winsUnit: 'menang', podiumsUnit: 'podium', avgUnit: 'rata finis' }
+  };
+  let lang = (localStorage.getItem('frl.lang') === 'id') ? 'id' : 'en';
+  let liveState = null;   // latest cloud state (for names, colours, official standings order)
+  let results = null;     // rows from the results table
+
+  // A stable fallback palette so a driver who has left the live grid still gets a colour.
+  const PALETTE = ['#ff5c7a', '#38d996', '#4aa3ff', '#ffd60a', '#bf5af2', '#ff9f0a', '#5ce1e6', '#e0e0e0'];
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+  function applyLang() {
+    document.querySelectorAll('[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
+    document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = STR[lang][el.dataset.t] || el.textContent; });
+    renderLinks();
+    render();
+  }
+  document.querySelectorAll('[data-lang]').forEach((b) => {
+    b.onclick = () => { lang = b.dataset.lang; try { localStorage.setItem('frl.lang', lang); } catch (e) {} applyLang(); };
+  });
+
+  function renderLinks() {
+    const T = STR[lang];
+    const q = '?event=' + encodeURIComponent(code);
+    $('#links').innerHTML =
+      `<a class="primary" href="/live${q}"><span class="ic">&#9673;</span>${T.live}</a>` +
+      `<a href="/event${q}"><span class="ic">&#9636;</span>${T.event}</a>`;
+  }
+
+  /*
+   * Turn the flat results rows into one entry per driver, keyed by race number (the only
+   * stable key the results table carries within an event). Everything the page shows is
+   * computed here from finishing positions and points, in round order.
+   */
+  function aggregate() {
+    const by = new Map();
+    const rows = (results || []).slice().sort((a, b) =>
+      new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    for (const r of rows) {
+      const key = String(r.num);
+      let e = by.get(key);
+      if (!e) { e = { num: r.num, name: r.name, rounds: [] }; by.set(key, e); }
+      e.name = r.name;   // the most recent round wins for the displayed name
+      e.rounds.push({ round: r.round, position: r.position, points: r.points || 0 });
+    }
+
+    // Colours and the official standings order come from the live event when it is open.
+    const colorByNum = new Map();
+    const rankByNum = new Map();
+    const st = (liveState && liveState.standings) || [];
+    st.forEach((s) => { if (s.color) colorByNum.set(String(s.num), s.color); rankByNum.set(String(s.num), s.rank); });
+    for (const d of (liveState && liveState.drivers) || []) if (d.color) colorByNum.set(String(d.num), d.color);
+
+    const out = [...by.values()].map((e, i) => {
+      const positions = e.rounds.map((r) => r.position).filter((p) => p > 0);
+      const wins = positions.filter((p) => p === 1).length;
+      const podiums = positions.filter((p) => p <= 3).length;
+      const total = e.rounds.reduce((n, r) => n + (r.points || 0), 0);
+      const best = positions.length ? Math.min(...positions) : null;
+      const avg = positions.length ? positions.reduce((n, p) => n + p, 0) / positions.length : null;
+      return {
+        num: e.num, name: e.name,
+        color: colorByNum.get(String(e.num)) || PALETTE[i % PALETTE.length],
+        officialRank: rankByNum.get(String(e.num)) || null,
+        n: e.rounds.length, points: total, wins, podiums, best, avg,
+        form: e.rounds.map((r) => r.position)
+      };
+    });
+
+    // Prefer the live championship order (it respects drop-worst scoring); fall back to a
+    // self-contained sort by points, then a wins-and-places countback, so the page still ranks
+    // sensibly after an event is archived and the live state is gone.
+    out.sort((a, b) => {
+      if (a.officialRank && b.officialRank) return a.officialRank - b.officialRank;
+      if (a.officialRank) return -1;
+      if (b.officialRank) return 1;
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      return (a.best || 99) - (b.best || 99);
+    });
+    out.forEach((e, i) => { e.rank = i + 1; });
+    return out;
+  }
+
+  function fpClass(p) { return p === 1 ? 'fp p1' : p === 2 ? 'fp p2' : p === 3 ? 'fp p3' : 'fp'; }
+  function cbar(color) { return `<span class="cbar" style="background:${color || '#666'}"></span>`; }
+
+  function renderLeaders(rows, T) {
+    if (!rows.length) { $('#leaders').innerHTML = ''; return; }
+    const topBy = (val) => rows.slice().sort((a, b) => val(b) - val(a))[0];
+    const lowAvg = rows.filter((r) => r.avg != null).slice().sort((a, b) => a.avg - b.avg)[0];
+    const mw = topBy((r) => r.wins), mp = topBy((r) => r.podiums);
+    const card = (kick, r, valTxt) => !r ? '' :
+      `<div class="lead"><div class="lk">${kick}</div>` +
+      `<div class="lname">${cbar(r.color)}${esc(r.name)}</div>` +
+      `<div class="lval">${valTxt}</div></div>`;
+    $('#leaders').innerHTML =
+      card(T.mostWins, mw && mw.wins ? mw : null, mw ? `${mw.wins} ${T.winsUnit}` : '') +
+      card(T.mostPodiums, mp && mp.podiums ? mp : null, mp ? `${mp.podiums} ${T.podiumsUnit}` : '') +
+      card(T.bestAvg, lowAvg || null, lowAvg ? `P${lowAvg.avg.toFixed(1)} ${T.avgUnit}` : '');
+  }
+
+  function render() {
+    const T = STR[lang];
+    if (liveState) {
+      $('#round').textContent = liveState.event.round || '';
+      $('#evname').textContent = (liveState.event.name || 'Season') + '';
+      $('#where').textContent = liveState.event.track || '';
+    }
+    if (results == null) return;   // wait for the results query before drawing the table
+
+    $('#loading').hidden = true;
+    $('#app').hidden = false;
+
+    const rows = aggregate();
+    $('#tblEmpty').hidden = rows.length > 0;
+    renderLeaders(rows, T);
+
+    if (!rows.length) { $('#tbl').innerHTML = ''; return; }
+    let h = `<thead><tr><th>${T.POS}</th><th>${T.DRIVER}</th>` +
+      `<th class="c">${T.RND}</th><th class="r">${T.PTS}</th><th class="c">${T.WINS}</th>` +
+      `<th class="c">${T.PODIUMS}</th><th class="c">${T.BEST}</th><th class="c">${T.AVG}</th>` +
+      `<th>${T.FORM}</th></tr></thead><tbody>`;
+    for (const r of rows) {
+      const form = r.form.map((p) => `<span class="${fpClass(p)}">${p > 0 ? p : '-'}</span>`).join('');
+      h += `<tr><td class="pos">${r.rank}</td>` +
+        `<td>${cbar(r.color)}<span class="nm">${esc(r.name)}</span><span class="num mono">#${esc(r.num)}</span></td>` +
+        `<td class="c mono">${r.n}</td>` +
+        `<td class="r mono pts">${r.points}</td>` +
+        `<td class="c mono">${r.wins || '-'}</td>` +
+        `<td class="c mono">${r.podiums || '-'}</td>` +
+        `<td class="c mono">${r.best != null ? 'P' + r.best : '-'}</td>` +
+        `<td class="c mono">${r.avg != null ? 'P' + r.avg.toFixed(1) : '-'}</td>` +
+        `<td><span class="form">${form}</span></td></tr>`;
+    }
+    h += '</tbody>';
+    $('#tbl').innerHTML = h;
+  }
+
+  const cloud = cloudOptions();
+  if (!code) { $('#loading').textContent = 'Add ?event=CODE to the address to open a season.'; }
+  else if (!cloud) { $('#loading').textContent = 'This page needs Supabase configured.'; }
+  else {
+    const bus = new CloudBus('seasonstats', cloud);
+    bus.on('state', (s) => { liveState = s; render(); });
+    // The rounds come straight from the results table, using the bus's own client and the
+    // event id it resolves from the code. This is the one source the page cannot do without,
+    // so an empty or failed query still renders (as "no rounds yet") rather than hanging.
+    bus.on('open', async () => {
+      try {
+        const { data } = await bus.sb.from('results').select('round,num,name,position,points,created_at')
+          .eq('event_id', bus.event.id).order('created_at', { ascending: true });
+        results = data || [];
+      } catch (e) { results = []; }
+      render();
+    });
+    setTimeout(() => { if (results == null && !liveState) $('#loading').textContent = 'No event found for ' + code + '.'; }, 6000);
+  }
+  applyLang();
+</script>

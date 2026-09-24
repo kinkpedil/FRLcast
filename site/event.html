@@ -105,7 +105,7 @@
   </div>
 </div>
 
-<script src="/supabase-config.js?v=20260924133839"></script>
+<script src="/supabase-config.js?v=20260924141907"></script>
 <script type="module">
   import { classification, FLAG_LABEL } from './js/shared.js';
   import { CloudBus, cloudOptions } from './js/cloudbus.js';
@@ -118,12 +118,12 @@
     en: { loading: 'Loading event…', entries: 'Entry list', standings: 'Championship',
           results: 'Past rounds', noentries: 'No cars on the grid yet.',
           foot: 'Live event hub — updates automatically.',
-          live: 'Live timing', report: 'Race report', recap: 'Recap card',
+          live: 'Live timing', report: 'Race report', recap: 'Recap card', stats: 'Season stats',
           POS: 'POS', NO: 'NO', DRIVER: 'DRIVER', TEAM: 'TEAM', PTS: 'PTS' },
     id: { loading: 'Memuat event…', entries: 'Daftar peserta', standings: 'Klasemen juara',
           results: 'Round sebelumnya', noentries: 'Belum ada mobil di grid.',
           foot: 'Hub event langsung — diperbarui otomatis.',
-          live: 'Timing langsung', report: 'Laporan balapan', recap: 'Kartu recap',
+          live: 'Timing langsung', report: 'Laporan balapan', recap: 'Kartu recap', stats: 'Statistik musim',
           POS: 'POS', NO: 'NO', DRIVER: 'PEMBALAP', TEAM: 'TIM', PTS: 'POIN' }
   };
   let lang = (localStorage.getItem('frl.lang') === 'id') ? 'id' : 'en';
@@ -148,6 +148,7 @@
     $('#links').innerHTML =
       `<a class="primary" href="/live${q}"><span class="ic">◉</span>${T.live}</a>` +
       `<a href="/report${q}"><span class="ic">▤</span>${T.report}</a>` +
+      `<a href="/stats${q}"><span class="ic">▦</span>${T.stats}</a>` +
       `<a href="/recap${q}"><span class="ic">⤓</span>${T.recap}</a>`;
   }
 
