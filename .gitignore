@@ -30,6 +30,11 @@ tools/piper/
 # Desktop download build output (scripts/package-desktop.ps1): bundled Node + app + zip.
 dist/
 
+# Remotion render output (the recap-video PoC). The source under remotion/src is tracked;
+# the rendered mp4s and Remotion's bundle cache are not.
+remotion/out/
+remotion/.remotion/
+
 # Internal/private docs: kept on the operator's disk, never in the public repo.
 # (sesi-lama.md holds private third-party correspondence; CLAUDE.md / FRLCAST_CONTEXT.md
 # are internal project notes.)
