@@ -1,17 +1,19 @@
 # Assemble the FRLcast desktop download: the full local app, ready to unzip and run with no
-# install. It bundles a portable Node runtime and (optionally) the Piper commentary voice, so
-# an operator gets automatic timing, driver edits, the poll, and the natural Piper voice --
-# everything the hosted site cannot do -- by double-clicking start.cmd.
+# install. It bundles a portable Node runtime and the Piper commentary binary, so an operator
+# gets automatic timing, driver edits, the poll, the timing API, and the natural Piper voice,
+# everything the hosted site cannot do, by double-clicking start.cmd.
 #
 # Usage (from the repo root):
-#   powershell -File scripts\package-desktop.ps1                # lite: app + Node, no Piper
-#   powershell -File scripts\package-desktop.ps1 -Piper         # full: also bundle tools\piper
+#   powershell -File scripts\package-desktop.ps1                # core: app + Node + Piper binary
+#   powershell -File scripts\package-desktop.ps1 -WithVoices    # also bundle the starter voices
 #
-# The Piper binary + voices are big (a voice is 20-75 MB each), so the lite build stays small
-# and the operator installs voices from the console's Overlays page on first run instead.
+# The Piper binary is small and always bundled, so the commentary works out of the box. The
+# voice models are large (20 to 75 MB each), so by default they are NOT bundled: the operator
+# installs the voices they want from the console's Overlays page, on demand. -WithVoices ships
+# the starter set (the voices under tools\piper\voices) for a fully offline first run.
 
 param(
-  [switch]$Piper,
+  [switch]$WithVoices,
   [string]$NodeVersion = "24.19.0",
   [string]$Out = "dist"
 )
@@ -45,17 +47,25 @@ $runtime = Join-Path $stage "runtime"
 New-Item -ItemType Directory -Force -Path $runtime | Out-Null
 Copy-Item (Join-Path $nodeTmp "node-v$NodeVersion-win-x64\*") -Destination $runtime -Recurse -Force
 
-if ($Piper) {
-  if (Test-Path "tools\piper") {
-    Write-Host "==> bundling Piper (binary + installed voices)"
-    Copy-Item "tools" -Destination $stage -Recurse -Force
+# Piper: always ship the binary (small) so the commentary engine works; ship the big voice
+# models only with -WithVoices. The console installs any voice on demand into tools\piper\voices.
+if (Test-Path "tools\piper\piper.exe") {
+  $pdst = Join-Path $stage "tools\piper"
+  New-Item -ItemType Directory -Force -Path (Join-Path $pdst "voices") | Out-Null
+  Get-ChildItem "tools\piper" -Force | Where-Object { $_.Name -ne "voices" } |
+    Copy-Item -Destination $pdst -Recurse -Force
+  if ($WithVoices -and (Test-Path "tools\piper\voices")) {
+    Write-Host "==> bundling Piper binary + starter voices"
+    Copy-Item "tools\piper\voices\*" -Destination (Join-Path $pdst "voices") -Recurse -Force
   } else {
-    Write-Warning "tools\piper not found; skipping Piper. Operators can install voices from the console instead."
+    Write-Host "==> bundling Piper binary (voices install from the console on demand)"
   }
+} else {
+  Write-Warning "tools\piper\piper.exe not found; the download will have no commentary voice engine."
 }
 
 Write-Host "==> zipping"
-$zip = Join-Path $Out ("FRLcast-desktop" + ($(if ($Piper) { "-full" } else { "" })) + ".zip")
+$zip = Join-Path $Out ("FRLcast-desktop" + ($(if ($WithVoices) { "-full" } else { "" })) + ".zip")
 if (Test-Path $zip) { Remove-Item -LiteralPath $zip -Force }
 Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -Force
 
