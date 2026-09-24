@@ -132,7 +132,7 @@ export const Callout: React.FC<{
   y: number;
   w?: number;
   h?: number;
-  label: string;
+  label?: string;
   from?: 'left' | 'right' | 'top' | 'bottom';
 }> = ({ x, y, w = 260, h = 90, label, from = 'bottom' }) => {
   const frame = useCurrentFrame();
@@ -157,26 +157,28 @@ export const Callout: React.FC<{
           style={{ opacity: s, transformOrigin: `${x + w / 2}px ${y + h / 2}px`, transform: `scale(${pulse})` }}
         />
       </svg>
-      <div
-        style={{
-          position: 'absolute',
-          left: from === 'right' ? lx : lx,
-          top: ly,
-          transform: `translate(${from === 'left' ? '-100%' : from === 'right' ? '0' : '-50%'}, ${from === 'top' ? '-100%' : '0'})`,
-          background: C.accent,
-          color: '#05221b',
-          fontFamily: SANS,
-          fontWeight: 700,
-          fontSize: 34,
-          padding: '10px 20px',
-          borderRadius: 10,
-          opacity: s,
-          whiteSpace: 'nowrap',
-          boxShadow: '0 8px 30px rgba(0,224,164,0.35)',
-        }}
-      >
-        {label}
-      </div>
+      {label ? (
+        <div
+          style={{
+            position: 'absolute',
+            left: from === 'right' ? lx : lx,
+            top: ly,
+            transform: `translate(${from === 'left' ? '-100%' : from === 'right' ? '0' : '-50%'}, ${from === 'top' ? '-100%' : '0'})`,
+            background: C.accent,
+            color: '#05221b',
+            fontFamily: SANS,
+            fontWeight: 700,
+            fontSize: 34,
+            padding: '10px 20px',
+            borderRadius: 10,
+            opacity: s,
+            whiteSpace: 'nowrap',
+            boxShadow: '0 8px 30px rgba(0,224,164,0.35)',
+          }}
+        >
+          {label}
+        </div>
+      ) : null}
     </AbsoluteFill>
   );
 };
@@ -191,10 +193,10 @@ export const Caption: React.FC<{ text: string }> = ({ text }) => {
       style={{
         position: 'absolute',
         left: '50%',
-        bottom: 70,
+        bottom: 150,
         transform: 'translateX(-50%)',
         opacity: s,
-        maxWidth: 1400,
+        maxWidth: 1500,
         textAlign: 'center',
         background: 'rgba(10,12,16,0.82)',
         border: `1px solid ${C.line}`,

@@ -4,7 +4,7 @@ import { Recap } from './Recap';
 import { SAMPLE } from './data';
 import { Tutorial, tutorialDuration } from './tutorial/Tutorial';
 
-const TUTORIAL_VIDEO_SECONDS = 1132.02; // public/tutorial-edit.mp4 (18:52)
+const TUTORIAL_VIDEO_SECONDS = 961.08; // public/lv_0_20260925045413.mp4 (16:01, clean 1080p take)
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -30,9 +30,9 @@ export const RemotionRoot: React.FC = () => {
         height={1080}
         defaultProps={{
           kicker: 'Tutorial FRLcast',
-          title: 'Cara pemakaian',
-          subtitle: 'broadcast untuk FR Legends',
-          recordingSrc: 'tutorial-edit.mp4',
+          title: 'How to use it',
+          subtitle: 'broadcast for FR Legends',
+          recordingSrc: 'lv_0_20260925045413.mp4',
           videoSeconds: TUTORIAL_VIDEO_SECONDS,
         }}
       />
