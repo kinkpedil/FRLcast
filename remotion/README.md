@@ -27,6 +27,27 @@ what FRLcast already has, so wiring it to a real event later means filling `Reca
 hosted event (the `results` table + standings) or the local server's state, and passing it as
 the composition's `data` prop, no change to the composition itself.
 
+## Tutorial kit (compositions: `Tutorial`)
+
+A second use: wrapping a screen recording into a proper usage tutorial in the FRLcast look.
+`src/tutorial/TutorialKit.tsx` has the reusable pieces (intro card, step lower-third, callout
+arrow + highlight, caption band, progress bar, outro) and `src/tutorial/Tutorial.tsx` assembles
+a demo segment from them. The narration/steps follow `docs/TUTORIAL-SCRIPT.md` (the naskah).
+
+To use your own OBS recording:
+
+1. Record the screen with OBS at 1920x1080, 30fps.
+2. Put the file at `remotion/public/recording.mp4` (Remotion reads it with `staticFile`).
+3. In `src/Root.tsx`, set the `Tutorial` composition's `recordingSrc` to `'recording.mp4'`,
+   and adjust `durationInFrames` if your recording is longer (also bump `BODY` in `Tutorial.tsx`).
+4. Edit `STEPS` and `CALLOUTS` in `src/tutorial/Tutorial.tsx` to match the moments in your
+   recording (frame numbers are at 30fps, relative to when the screen section starts).
+5. `npx remotion studio` to scrub and line the labels up, then
+   `npx remotion render src/index.ts Tutorial out/tutorial.mp4`.
+
+Without a recording it renders a placeholder screen, so you can design the labels first. The
+demo is 16:9 for YouTube; for Shorts/Reels change the `Tutorial` composition to 1080x1920.
+
 ## Status
 
 PoC only. Not wired to live data, not part of the Vercel deploy, not bundled in the desktop
