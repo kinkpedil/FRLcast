@@ -41,13 +41,13 @@ if (params.get('motion') === 'full') document.documentElement.classList.add('mot
 const editing = params.get('edit') === '1';
 if (editing) document.documentElement.classList.add('edit');
 
-const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr'];
+const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr'];
 const LABELS = {
   status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower',
   lowerthird: 'Lower third', gap: 'Gap bar', results: 'Results',
   trackmap: 'Track map', battle: 'Tandem battle', bracket: 'Bracket',
   grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings', ticker: 'Ticker',
-  fastlap: 'Fastest lap', sectors: 'Sector times', radio: 'Team radio', poll: 'Audience poll',
+  fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta / time attack', radio: 'Team radio', poll: 'Audience poll',
   sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code'
 };
 const STAGE_W = 1920;
@@ -214,6 +214,13 @@ function build() {
         <div class="card sec-card">
           <div class="sec-head"><span class="sc-name" id="scName">--</span><span class="sc-lap" id="scLap">--</span></div>
           <div class="sec-cells" id="scCells"></div>
+        </div>
+      </div>`,
+    delta: `
+      <div class="widget" id="delta">
+        <div class="card sec-card">
+          <div class="sec-head"><span class="sc-name" id="dtName">--</span><span class="sc-lap" id="dtLap">--</span></div>
+          <div class="sec-cells" id="dtCells"></div>
         </div>
       </div>`,
     radio: `
@@ -1282,6 +1289,57 @@ function renderSectors(rows) {
   if (lapEl) setText(lapEl, d.lastLap != null ? fmtTime(d.lastLap) : '--:--.---', 'value');
 }
 
+/**
+ * The time-attack delta card: the focus driver's last lap against their own best, overall
+ * and per sector. Green means they improved that split, red means they lost time. This is
+ * the natural read for Contest mode, where the race is each driver chasing their best lap.
+ */
+function renderDelta(rows) {
+  const box = document.getElementById('delta');
+  const nameEl = document.getElementById('dtName');
+  const lapEl = document.getElementById('dtLap');
+  const cells = document.getElementById('dtCells');
+  if (!box || !cells) return;
+  const focus = state.overlay.focusDriverId;
+  const d = (focus && rows.find((r) => r.id === focus)) || rows[0];
+  if (!d) { if (nameEl) nameEl.textContent = '--'; if (lapEl) lapEl.textContent = ''; cells.innerHTML = ''; return; }
+  box.style.setProperty('--c', d.color || '#888');
+  setText(nameEl, rowName(d), null);
+
+  const green = '#38d996';
+  const red = '#ff5c7a';
+  const dim = 'var(--ink-mute, #8b9099)';
+  const signed = (ms) => (ms <= 0 ? '−' : '+') + fmtGap(Math.abs(ms));
+
+  // Header: last lap, and its delta to the driver's own best lap.
+  if (lapEl) {
+    if (d.lastLap == null) { setText(lapEl, '--:--.---', 'value'); }
+    else if (d.bestLap == null || d.lastLap === d.bestLap) { setText(lapEl, fmtTime(d.lastLap), 'value'); }
+    else {
+      const dl = d.lastLap - d.bestLap;
+      lapEl.innerHTML = `${fmtTime(d.lastLap)} <b style="color:${dl < 0 ? green : red}">${signed(dl)}</b>`;
+    }
+  }
+
+  // Per sector: the last lap's split against the driver's best split for that sector.
+  // Prefer the last completed lap's splits (local path resets d.sectors to [] after a lap);
+  // fall back to the in-progress sectors, which is what the external API feed populates.
+  const live = (d.lapSectors || [])[(d.lapSectors || []).length - 1] || d.sectors || [];
+  const pb = d.bestSectors || [];
+  const n = Math.max(live.length, pb.length, 3);
+  let html = '';
+  for (let i = 0; i < n; i++) {
+    const cur = live[i];
+    const best = pb[i];
+    let inner;
+    if (cur == null) inner = `<span class="sc-t" style="color:${dim}">--.---</span>`;
+    else if (best == null) inner = `<span class="sc-t">${fmtTime(cur)}</span>`;
+    else inner = `<span class="sc-t" style="color:${(cur - best) <= 0 ? green : red}">${signed(cur - best)}</span>`;
+    html += `<div class="sc-cell"><span class="sc-lab">S${i + 1}</span>${inner}</div>`;
+  }
+  cells.innerHTML = html;
+}
+
 /** A QR code linking to the public live page, so viewers can follow + vote from their seat. */
 function renderQR() {
   const img = document.getElementById('qrImg');
@@ -1530,7 +1588,7 @@ function renderSignature(rows) {
   const o = state.overlay, e = state.event, r = state.race;
   let sig = `${JSON.stringify(o.layout)}|${JSON.stringify(o.style)}|${o.theme}|${o.skin}|${o.towerTitle || ''}|${o.nonce || 0}|${o.editSelected}|` +
             `${r.status}|${r.totalLaps}|${o.accent}|${o.focusDriverId}|` +
-            `${o.show.leaderboard}${o.show.tower}${o.show.status}${o.show.lowerThird}${o.show.gap}${o.show.results}${o.show.fastlap}${o.show.sectors}${o.show.radio}|${JSON.stringify(o.radio||{})}|${(state.radio && state.radio[0] && state.radio[0].id) || 0}|${JSON.stringify(o.poll||{})}|${JSON.stringify(state.votes||{})}|${o.show.sponsor}${o.show.countdown}${o.show.intro}${o.show.qr}|${JSON.stringify(o.sponsors||[])}|${o.sponsorIndex}|${JSON.stringify(o.countdown||{})}|` +
+            `${o.show.leaderboard}${o.show.tower}${o.show.status}${o.show.lowerThird}${o.show.gap}${o.show.results}${o.show.fastlap}${o.show.sectors}${o.show.delta}${o.show.radio}|${JSON.stringify(o.radio||{})}|${(state.radio && state.radio[0] && state.radio[0].id) || 0}|${JSON.stringify(o.poll||{})}|${JSON.stringify(state.votes||{})}|${o.show.sponsor}${o.show.countdown}${o.show.intro}${o.show.qr}|${JSON.stringify(o.sponsors||[])}|${o.sponsorIndex}|${JSON.stringify(o.countdown||{})}|` +
             `${e.name}|${e.round}|${e.track}|${e.sessionType}|${e.sessionName}|${(o.ticker || []).join('~')}|` +
             `${o.autoTicker}|${(state.feed || [])[0]?.t || 0}|${JSON.stringify(state.records?.bestSectors || [])}|` +
             `${(state.calibration?.lines || []).length}|${state.overlay.show.trackmap ? ((state.calibration?.trackPath || []).length + (state.calibration?.learnedPath || []).length) : 0}|` +
@@ -1608,6 +1666,8 @@ function renderInner() {
   if (shown.fastlap) renderFastLap();
   show('sectors', vis.sectors);
   if (shown.sectors) renderSectors(rows);
+  show('delta', vis.delta);
+  if (shown.delta) renderDelta(rows);
   show('radio', vis.radio);
   if (shown.radio) renderRadio();
   show('poll', vis.poll && !!(state.overlay.poll && state.overlay.poll.open));
