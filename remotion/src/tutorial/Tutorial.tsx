@@ -1,84 +1,78 @@
 import React from 'react';
 import { AbsoluteFill, Sequence } from 'remotion';
-import {
-  ScreenFrame,
-  IntroCard,
-  LowerThird,
-  Callout,
-  Caption,
-  ProgressBar,
-  Outro,
-} from './TutorialKit';
+import { ScreenFrame, IntroCard, LowerThird, ProgressBar, Outro } from './TutorialKit';
 
 /*
- * A demo tutorial segment, assembled from the kit. It shows how a real module is built: an
- * intro card, then the screen recording with step lower-thirds, callouts and a caption layered
- * on top at the right frames, then an outro. Replace recordingSrc with your OBS capture (a file
- * in remotion/public) and edit STEPS/CALLOUTS to match the naskah in docs/TUTORIAL-SCRIPT.md.
+ * The tutorial wrap around the edited screen recording (public/tutorial-edit.mp4, 18:52 at
+ * 30fps output). An intro card, then the recording plays full frame with a step lower-third at
+ * the start of each section, a progress bar throughout, then an outro. Section times (STEPS)
+ * are in seconds within the recording; edit them to re-time a label, no other change needed.
  *
- * Frame math is at 30fps. The screen section runs from frame 90 to 540 (15s); the numbers below
- * are relative to that section via <Sequence from=...>.
+ * Callouts (arrow + highlight on a click) are intentionally left out here: on an 18 minute
+ * recording each one has to be hand-placed on a specific pixel and frame, so they are a second
+ * pass once the section labels are lined up.
  */
 
 export type TutorialProps = {
   kicker: string;
   title: string;
   subtitle?: string;
-  recordingSrc?: string | null;
+  recordingSrc: string;
+  videoSeconds: number;
 };
 
-const INTRO = 90; // frames
-const BODY = 450; // frames of screen time
-const OUTRO = 60; // frames
+export const FPS = 30;
+const INTRO = 90; // 3s
+const OUTRO = 90; // 3s
 
-// Lower-thirds shown during the screen section (frames relative to the body start).
-const STEPS: { from: number; duration: number; step: number; label: string }[] = [
-  { from: 0, duration: 120, step: 1, label: 'Buka frlcast.my.id, lalu Login' },
-  { from: 130, duration: 150, step: 2, label: 'Buat event, salin kode event' },
-  { from: 290, duration: 150, step: 3, label: 'Buka konsol operator' },
+// Section labels, timed to the edited recording (seconds from its start).
+const STEPS: { at: number; dur: number; label: string }[] = [
+  { at: 3, dur: 7, label: 'FRLcast, frlcast.my.id' },
+  { at: 118, dur: 7, label: 'Konsol: Race control' },
+  { at: 178, dur: 6, label: 'Event scenes' },
+  { at: 208, dur: 6, label: 'Championship' },
+  { at: 238, dur: 6, label: 'Drivers' },
+  { at: 256, dur: 7, label: 'Vision / AI (timing otomatis)' },
+  { at: 298, dur: 6, label: 'Overlays' },
+  { at: 358, dur: 6, label: 'Layout' },
+  { at: 388, dur: 6, label: 'OBS setup' },
+  { at: 418, dur: 6, label: 'Help / manual' },
+  { at: 448, dur: 6, label: 'Event hub (halaman penonton)' },
+  { at: 478, dur: 6, label: 'Live timing' },
+  { at: 508, dur: 6, label: 'Recap card' },
+  { at: 538, dur: 6, label: 'Race report' },
+  { at: 568, dur: 8, label: 'Desktop app: demo timing langsung' },
+  { at: 812, dur: 7, label: 'Overlay leaderboard di OBS' },
+  { at: 850, dur: 7, label: 'Multiview / control room' },
+  { at: 888, dur: 8, label: 'Highlights untuk VOD' },
 ];
 
-// Callouts that point at a spot on the recording (x,y,w,h in 1920x1080 space).
-const CALLOUTS: { from: number; duration: number; x: number; y: number; w: number; h: number; label: string; dir: 'top' | 'bottom' | 'left' | 'right' }[] = [
-  { from: 40, duration: 80, x: 1500, y: 120, w: 300, h: 90, label: 'Tombol Login', dir: 'bottom' },
-  { from: 300, duration: 120, x: 120, y: 160, w: 320, h: 520, label: 'Menu 10 halaman', dir: 'right' },
-];
+export const tutorialDuration = (videoSeconds: number) =>
+  INTRO + Math.round(videoSeconds * FPS) + OUTRO;
 
-export const Tutorial: React.FC<TutorialProps> = ({ kicker, title, subtitle, recordingSrc }) => {
+export const Tutorial: React.FC<TutorialProps> = ({ kicker, title, subtitle, recordingSrc, videoSeconds }) => {
+  const videoFrames = Math.round(videoSeconds * FPS);
   return (
     <AbsoluteFill>
-      {/* Intro */}
       <Sequence durationInFrames={INTRO}>
         <IntroCard kicker={kicker} title={title} subtitle={subtitle} durationInFrames={INTRO} />
       </Sequence>
 
-      {/* Screen recording + overlays */}
-      <Sequence from={INTRO} durationInFrames={BODY}>
+      <Sequence from={INTRO} durationInFrames={videoFrames}>
         <AbsoluteFill>
-          <ScreenFrame src={recordingSrc ?? null} />
+          <ScreenFrame src={recordingSrc} />
           {STEPS.map((s, i) => (
-            <Sequence key={`s${i}`} from={s.from} durationInFrames={s.duration}>
-              <LowerThird step={s.step} text={s.label} durationInFrames={s.duration} />
+            <Sequence key={i} from={Math.round(s.at * FPS)} durationInFrames={Math.round(s.dur * FPS)}>
+              <LowerThird step={i + 1} text={s.label} durationInFrames={Math.round(s.dur * FPS)} />
             </Sequence>
           ))}
-          {CALLOUTS.map((c, i) => (
-            <Sequence key={`c${i}`} from={c.from} durationInFrames={c.duration}>
-              <Callout x={c.x} y={c.y} w={c.w} h={c.h} label={c.label} from={c.dir} />
-            </Sequence>
-          ))}
-          <Sequence from={150} durationInFrames={110}>
-            <Caption text="Kode event ini dipakai konsol, overlay, dan halaman penonton." />
-          </Sequence>
           <ProgressBar />
         </AbsoluteFill>
       </Sequence>
 
-      {/* Outro */}
-      <Sequence from={INTRO + BODY} durationInFrames={OUTRO}>
+      <Sequence from={INTRO + videoFrames} durationInFrames={OUTRO}>
         <Outro line="Selamat mencoba FRLcast" durationInFrames={OUTRO} />
       </Sequence>
     </AbsoluteFill>
   );
 };
-
-export const TUTORIAL_DURATION = INTRO + BODY + OUTRO; // 600 frames = 20s at 30fps

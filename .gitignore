@@ -34,6 +34,11 @@ dist/
 # the rendered mp4s and Remotion's bundle cache are not.
 remotion/out/
 remotion/.remotion/
+# Screen recordings dropped in for the tutorial kit (large, personal). staticFile still
+# reads them at render time; they just are not committed.
+remotion/public/*.mp4
+remotion/public/*.mov
+remotion/public/*.mkv
 
 # Internal/private docs: kept on the operator's disk, never in the public repo.
 # (sesi-lama.md holds private third-party correspondence; CLAUDE.md / FRLCAST_CONTEXT.md
