@@ -1662,6 +1662,42 @@ $('#btnExpCsv').onclick = () => {
   toast(`${rows.length} markers exported`);
 };
 
+/** HH:MM:SS,mmm timecode (SRT uses a comma before the milliseconds). */
+function srtTime(ms) {
+  const t = Math.max(0, Math.round(ms));
+  const h = Math.floor(t / 3600000), m = Math.floor((t % 3600000) / 60000);
+  const s = Math.floor((t % 60000) / 1000), mmm = t % 1000;
+  const pad = (n, w = 2) => String(n).padStart(w, '0');
+  return `${pad(h)}:${pad(m)}:${pad(s)},${pad(mmm, 3)}`;
+}
+
+/*
+ * A subtitle track of the highlights: every marker becomes a caption at its timecode, so
+ * dropping this one file onto the video labels the whole broadcast. It is the one export an
+ * editor can import into any tool (and YouTube), and the only one that annotates the footage
+ * itself rather than just listing times.
+ */
+$('#btnExpSrt').onclick = () => {
+  const rows = markerRows().filter((m) => m.at + 3000 > 0);   // drop anything wholly before 0:00
+  if (!rows.length) return toast('No markers to export');
+  const HOLD = 3000, GAP = 100;   // each caption shows ~3s, but ends before the next one starts
+  const out = [];
+  rows.forEach((m, i) => {
+    const inMs = Math.max(0, m.at);
+    let outMs = inMs + HOLD;
+    // End before the next caption whenever there is room; only fall back to a short cue when
+    // two events nearly coincide (a multi-car incident), so cues do not overlap.
+    const next = rows[i + 1];
+    if (next) outMs = Math.min(outMs, next.at - GAP);
+    if (outMs <= inMs) outMs = inMs + 200;
+    const label = MARK_LABEL[m.kind] || m.kind;
+    const text = m.text ? `${label}: ${m.text}` : label;
+    out.push(String(i + 1), `${srtTime(inMs)} --> ${srtTime(outMs)}`, text, '');
+  });
+  downloadText('highlights.srt', out.join('\n') + '\n');
+  toast(`${rows.length} captions exported`);
+};
+
 // Highlight reel: a cut sheet of the best moments only — each becomes a clip with a few
 // seconds of lead-in and run-out, ready to drop on a timeline. Crashes and overtakes first.
 const REEL_KINDS = new Set(['overtake', 'stopped', 'fastest', 'battle', 'flag']);

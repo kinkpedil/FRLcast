@@ -150,6 +150,7 @@
     'Nudge, if you hit Record in OBS a moment earlier or later':
       'Geser, kalau kamu menekan Record di OBS sedikit lebih awal atau lebih lambat',
     'Marker CSV': 'CSV penanda',
+    'Subtitles (.srt)': 'Subtitle (.srt)',
     'Clear': 'Kosongkan',
     'Press': 'Tekan',
     'at the same moment you press Record in OBS. Every overtake, fastest lap, pit stop and battle result is timestamped against that moment, so the edit list is written while you broadcast.':
