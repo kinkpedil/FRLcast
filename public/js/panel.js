@@ -2786,28 +2786,40 @@ refreshTimingStatus();
 $('#btnComTest').onclick = async () => {
   const c = (state && state.commentary) || {};
   const note = $('#comTestNote');
-  const test = new Speaker({
-    lang: c.lang || 'id-ID',
-    voiceName: $('#comVoice').value,
-    rate: c.rate ?? 1.05,
-    volume: c.volume ?? 1,
-    saying: c.saying || {}
-  });
-
-  const report = await test.chooseVoice();
-  if (!report.ok) { note.textContent = report.error; return; }
-
-  // The sentence follows the voice, exactly as the commentary does.
+  // Test whichever engine is actually selected. The old version always used the browser
+  // voice, so testing a Piper voice failed with a "no voice installed" error even when a
+  // Piper voice was installed and chosen.
+  const engine = ($('#comEngine') && $('#comEngine').value) || c.engine || 'browser';
+  const lang = ($('#comLang') && $('#comLang').value) || c.lang || 'id-ID';
   const lead = state && state.drivers && state.drivers[0];
   const name = lead ? lead.name : 'AKI';
   const num = lead ? lead.num : '7';
-  const id = test.spokenLang() === 'id';
-  const line = id
+  const lineFor = (isId) => (isId
     ? `Bendera hijau. ${name}, nomor ${num}, memimpin dari barisan depan.`
-    : `Green flag. ${name}, number ${num}, leads them off the line.`;
+    : `Green flag. ${name}, number ${num}, leads them off the line.`);
 
+  if (engine === 'piper') {
+    const voice = ($('#comPiperVoice') && $('#comPiperVoice').value) || '';
+    if (!voice) { note.textContent = 'Pick or install a Piper voice first.'; return; }
+    const test = new Speaker({
+      engine: 'piper', voiceName: voice, lang,
+      rate: c.rate ?? 1.05, volume: c.volume ?? 1, saying: c.saying || {}
+    });
+    note.textContent = `piper: ${voice}`;
+    // Piper voices are per language, so the test line follows the language setting.
+    test.offer([{ key: 'test' + Date.now(), text: lineFor(String(lang).slice(0, 2).toLowerCase() === 'id'), priority: 1, staleMs: 15000 }]);
+    return;
+  }
+
+  // Browser engine: the sentence follows whichever voice actually resolved.
+  const test = new Speaker({
+    lang, voiceName: $('#comVoice').value,
+    rate: c.rate ?? 1.05, volume: c.volume ?? 1, saying: c.saying || {}
+  });
+  const report = await test.chooseVoice();
+  if (!report.ok) { note.textContent = report.error; return; }
   note.textContent = `${report.voice}${report.missing ? ' (fell back)' : ''}`;
-  test.offer([{ key: 'test' + Date.now(), text: line, priority: 1, staleMs: 15000 }]);
+  test.offer([{ key: 'test' + Date.now(), text: lineFor(test.spokenLang() === 'id'), priority: 1, staleMs: 15000 }]);
 };
 $('#comRate').oninput = (e) => { $('#comRateVal').textContent = Number(e.target.value).toFixed(2); };
 $('#comRate').onchange = (e) => com({ rate: Number(e.target.value) });
