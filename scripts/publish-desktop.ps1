@@ -29,7 +29,12 @@ if (-not $gh) { $gh = "C:\Program Files\GitHub CLI\gh.exe" }
 
 Write-Host "==> uploading $zip to release $Tag"
 # Keep exactly one asset: drop the other variant if it is on the release, then upload this one.
-& $gh release delete-asset $Tag $other --yes 2>$null
+# The delete is best-effort: when the other variant is not on the release there is nothing to
+# remove, and gh writing that to stderr must not abort the publish (it did under -Stop).
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
+& $gh release delete-asset $Tag $other --yes 2>$null | Out-Null
+$ErrorActionPreference = $prevEap
 & $gh release upload $Tag $zip --clobber
 if ($LASTEXITCODE -ne 0) { throw "gh release upload failed" }
 
