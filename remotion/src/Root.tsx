@@ -1,5 +1,6 @@
 import React from 'react';
-import { Composition } from 'remotion';
+import { Composition, Still } from 'remotion';
+import { Thumbnail } from './tutorial/Thumbnail';
 import { Recap } from './Recap';
 import { SAMPLE } from './data';
 import { Tutorial, tutorialDuration } from './tutorial/Tutorial';
@@ -9,6 +10,8 @@ const TUTORIAL_VIDEO_SECONDS = 961.08; // public/lv_0_20260925045413.mp4 (16:01,
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {/* YouTube thumbnail for the tutorial. Render as JPEG: YouTube caps thumbnails at 2 MB. */}
+      <Still id="Thumbnail" component={Thumbnail} width={1920} height={1080} />
       {/* Race recap, rendered from event data. 20s, 1080p. */}
       <Composition
         id="Recap"
