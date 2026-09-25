@@ -8,10 +8,12 @@
 //    downloaded sound packs, nothing to license.
 // 3. Voices every caption and narration line with the local Piper voice. A line that would run
 //    into the next one is re-spoken faster (Piper's length_scale) until it fits its slot.
-// 4. Mixes everything into one 48 kHz track and muxes it onto the video (video stream copied,
+// 4. Adds a soft synthesised ambient music bed that ducks under the voice.
+// 5. Mixes everything into one 48 kHz track and muxes it onto the video (video stream copied,
 //    so the picture is not re-encoded).
 //
-// Voice: set VOICE=en_US-hfc_female-medium to switch. Results are cached in .audio/.
+// Voice: set VOICE=en_US-hfc_female-medium to switch. Music: MUSIC=0 to drop it, MUSIC_GAIN
+// to scale it. Results are cached in .audio/.
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -286,6 +288,120 @@ const add = (clip, startSec, gain) => {
   for (let i = 0; i < clip.length && s + i < LEN; i++) mix[s + i] += clip[i] * gain;
 };
 for (const v of voiced) add(v.clip, v.start, 1);
+
+// ---------------------------------------------------------------- background music
+//
+// A soft ambient bed, synthesised here like the effects: pad chords (Am F C G, 96 BPM, two
+// bars each), a gentle bass, a thin arpeggio that drops out every fourth pass so the loop
+// breathes, and a very soft kick. It ducks under the voice with a smooth envelope.
+// MUSIC=0 turns it off, MUSIC_GAIN scales it (default 1).
+
+const TAB = new Float32Array(4096);
+for (let i = 0; i < TAB.length; i++) TAB[i] = Math.sin((2 * Math.PI * i) / TAB.length);
+const osc = (ph) => TAB[(ph * TAB.length) & (TAB.length - 1)];
+
+function music(len) {
+  const m = new Float32Array(len);
+  const BPM = 96;
+  const beat = 60 / BPM;
+  const chordLen = beat * 8; // two bars
+  const CHORDS = [
+    { root: 110.0, notes: [220.0, 261.63, 329.63, 440.0] }, // Am
+    { root: 87.31, notes: [174.61, 220.0, 261.63, 349.23] }, // F
+    { root: 130.81, notes: [196.0, 261.63, 329.63, 392.0] }, // C
+    { root: 98.0, notes: [196.0, 246.94, 293.66, 392.0] }, // G
+  ];
+  const secs = len / SR;
+  const nChords = Math.ceil(secs / chordLen) + 1;
+  for (let c = 0; c < nChords; c++) {
+    const ch = CHORDS[c % 4];
+    const t0 = c * chordLen;
+    const s0 = Math.floor(t0 * SR);
+    // pad: two detuned voices per note, soft attack, overlapping release into the next chord
+    const padEnd = Math.min(len, Math.floor((t0 + chordLen + 1.4) * SR));
+    ch.notes.forEach((f, ni) => {
+      const g = ni === 3 ? 0.45 : 1;
+      for (const det of [0.9975, 1.0025]) {
+        let ph = Math.random();
+        const inc = (f * det) / SR;
+        for (let i = s0; i < padEnd; i++) {
+          const t = (i - s0) / SR;
+          const env = Math.min(1, t / 1.1) * (t > chordLen ? Math.max(0, 1 - (t - chordLen) / 1.4) : 1);
+          ph += inc;
+          const p = ph - Math.floor(ph);
+          m[i] += 0.07 * g * env * (osc(p) + 0.3 * osc((p * 2) % 1) + 0.12 * osc((p * 3) % 1));
+        }
+      }
+    });
+    // bass: a soft pluck on beats 1 and 3 of each bar
+    for (let b = 0; b < 8; b += 2) {
+      const bs = Math.floor((t0 + b * beat) * SR);
+      let ph = 0;
+      for (let i = bs; i < Math.min(len, bs + Math.floor(1.3 * SR)); i++) {
+        const t = (i - bs) / SR;
+        ph += ch.root / SR;
+        m[i] += 0.22 * (1 - Math.exp(-t / 0.01)) * Math.exp(-t / 0.55) * (osc(ph % 1) + 0.25 * osc((ph * 2) % 1));
+      }
+    }
+    // kick, very soft, beats 1 and 3
+    for (let b = 0; b < 8; b += 2) {
+      const ks = Math.floor((t0 + b * beat) * SR);
+      let ph = 0;
+      for (let i = ks; i < Math.min(len, ks + Math.floor(0.25 * SR)); i++) {
+        const t = (i - ks) / SR;
+        ph += (48 + 70 * Math.exp(-t * 28)) / SR;
+        m[i] += 0.16 * Math.exp(-t / 0.08) * osc(ph % 1);
+      }
+    }
+    // arpeggio in eighths, an octave up; rests on every fourth pass of the loop and at the start
+    const pass = Math.floor(c / 4);
+    if (c >= 4 && pass % 4 !== 3) {
+      const order = [0, 1, 2, 3, 2, 1, 2, 3, 0, 1, 2, 3, 2, 1, 3, 2];
+      order.forEach((ni, k) => {
+        const as = Math.floor((t0 + (k * beat) / 2) * SR);
+        const f = ch.notes[ni] * 2;
+        let ph = 0;
+        for (let i = as; i < Math.min(len, as + Math.floor(0.6 * SR)); i++) {
+          const t = (i - as) / SR;
+          ph += f / SR;
+          m[i] += 0.05 * (1 - Math.exp(-t / 0.004)) * Math.exp(-t / 0.2) * (osc(ph % 1) + 0.2 * osc((ph * 2) % 1));
+        }
+      });
+    }
+  }
+  norm(m, 0.9);
+  // fade in over 2 s, out over the last 3.5 s of the programme
+  const endS = Math.floor((total / fps) * SR);
+  for (let i = 0; i < len; i++) {
+    const t = i / SR;
+    let g = Math.min(1, t / 2);
+    if (i > endS - 3.5 * SR) g *= Math.max(0, (endS - i) / (3.5 * SR));
+    m[i] *= g;
+  }
+  return m;
+}
+
+if (process.env.MUSIC !== '0') {
+  const bed = music(LEN);
+  // ducking envelope, computed per 10 ms block: 1 in the gaps, 0.45 under the voice,
+  // attack 0.15 s / release 0.6 s so it never pumps
+  const BLOCK = SR / 100;
+  const nb = Math.ceil(LEN / BLOCK);
+  const target = new Float32Array(nb).fill(1);
+  for (const v of voiced) {
+    for (let b = Math.floor((v.start - 0.1) * 100); b < Math.ceil((v.end + 0.2) * 100) && b < nb; b++) if (b >= 0) target[b] = 0.45;
+  }
+  const duck = new Float32Array(nb);
+  let g = 1;
+  for (let b = 0; b < nb; b++) {
+    const k = target[b] < g ? 1 - Math.exp(-0.01 / 0.15) : 1 - Math.exp(-0.01 / 0.6);
+    g += (target[b] - g) * k;
+    duck[b] = g;
+  }
+  const level = 0.2 * Number(process.env.MUSIC_GAIN || 1);
+  for (let i = 0; i < LEN; i++) mix[i] += bed[i] * level * duck[Math.floor(i / BLOCK)];
+  console.log(`music: ambient bed at ${(20 * Math.log10(level)).toFixed(1)} dB, ducked to ${(20 * Math.log10(level * 0.45)).toFixed(1)} dB under the voice`);
+}
 
 // sound effects dip a little under the voice so the narration always reads first
 const voiceAt = (sec) => voiced.some((v) => sec >= v.start && sec < v.end);
