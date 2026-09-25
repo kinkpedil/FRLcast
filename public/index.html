@@ -161,6 +161,7 @@
             <div class="body">
               <div id="regList"></div>
               <p class="hint" style="margin-top:8px">
+                <span id="regCloud" class="regcloud" hidden data-i18n-skip></span>
                 <span id="regHow">Drivers sign in on their phone at <code id="regUrl">/driver.html</code>.</span>
                 Accepting one puts them on the grid and starts sending them flags.
               </p>
@@ -401,6 +402,10 @@
     <section class="page" id="page-drivers">
       <h2>Drivers</h2>
       <p class="lede">Colour matters: the vision engine tracks each car by its minimap colour, so use the exact in-game colour.</p>
+      <div class="card" id="cloudCard" style="margin-bottom:16px">
+        <h3>Drivers from anywhere (online link) <span class="right" id="cloudPill"></span></h3>
+        <div class="body" id="cloudBody" data-i18n-skip></div>
+      </div>
       <div class="card">
         <h3>Roster <span class="right" id="driverCount">0 cars</span></h3>
         <div class="body">
@@ -1338,5 +1343,6 @@
 <script src="js/i18n-console.js?v=live40"></script>
 <script type="module" src="js/panel.js?v=live40"></script>
 <script type="module" src="js/update-panel.js?v=live40"></script>
+<script type="module" src="js/cloud-link-panel.js?v=live40"></script>
 </body>
 </html>

@@ -30,6 +30,11 @@ foreach ($item in @("public", "server", "scripts", "package.json", "package-lock
   if (Test-Path $item) { Copy-Item $item -Destination $stage -Recurse -Force }
 }
 
+# The online link (server/cloud-link.js) reads the Supabase project from the website's own
+# config: the project URL and the public anon key, the same values every visitor's browser gets.
+New-Item -ItemType Directory -Force -Path (Join-Path $stage "site") | Out-Null
+Copy-Item "site\supabase-config.js" -Destination (Join-Path $stage "site\supabase-config.js") -Force
+
 Write-Host "==> production dependencies"
 # A clean production install into the staged copy, so node_modules matches what ships.
 Push-Location $stage

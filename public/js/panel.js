@@ -150,6 +150,9 @@ $$('.navbtn').forEach((btn) => {
     if (currentPage === 'event') renderScenes();
     if (currentPage === 'champ') renderChampionship();
     if (currentPage === 'layout') renderThemes();
+    // Same for the sign-in queue: one that arrived while the operator was on another page
+    // (an online sign-in comes in at any moment) must be there when they come back.
+    if (currentPage === 'race') { renderRegistrations(); renderRaceControl(); }
   };
 });
 

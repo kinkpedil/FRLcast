@@ -773,6 +773,48 @@
     'FRLcast restarts (about a minute). Your event, drivers, API key, voices and logo are kept, and your data is backed up first.':
       'FRLcast akan restart (sekitar satu menit). Event, pembalap, API key, voice, dan logo tetap aman, dan datamu di-backup dulu.',
 
+    // ---------------------------------------------------------------- online link
+    'Drivers from anywhere (online link)': 'Pembalap dari mana saja (link online)',
+    'off': 'mati',
+    'not linked': 'belum terhubung',
+    'online': 'online',
+    'waiting': 'menunggu',
+    'not yet': 'belum',
+    'just now': 'barusan',
+    'ago': 'lalu',
+    'Online: drivers anywhere type the event code': 'Online: pembalap dari mana saja mengetik kode event',
+    'in the driver app.': 'di aplikasi driver.',
+    'This copy has no online project configured, so the online link is not available.':
+      'Salinan ini tidak punya proyek online, jadi link online tidak tersedia.',
+    'For an online league: drivers join from anywhere with the driver app and an event code, while race control runs here with everything the desktop app has.':
+      'Untuk liga online: pembalap bergabung dari mana saja lewat aplikasi driver dan kode event, sementara race control tetap berjalan di sini dengan semua fitur aplikasi desktop.',
+    'Sign in with your FRLcast website account (the one for the dashboard). Only a sign-in token is kept on this PC, never your password.':
+      'Masuk dengan akun website FRLcast kamu (yang dipakai untuk dashboard). Yang disimpan di PC ini hanya token login, bukan password-mu.',
+    'Email': 'Email',
+    'Password': 'Password',
+    'Signed in as': 'Masuk sebagai',
+    'Pick the event your drivers will join.': 'Pilih event yang akan diikuti pembalapmu.',
+    'Link': 'Hubungkan',
+    'You have no events on the website yet.': 'Kamu belum punya event di website.',
+    'Create one on the dashboard': 'Buat satu di dashboard',
+    'then come back here.': 'lalu kembali ke sini.',
+    'Linking makes this PC the timing computer for that event: its grid, flags and penalties are replaced by the ones here. Do not also run the web console for it.':
+      'Menghubungkan menjadikan PC ini komputer timing untuk event itu: grid, bendera, dan penaltinya diganti dengan yang ada di sini. Jangan jalankan console web untuk event yang sama.',
+    'Refresh list': 'Muat ulang daftar',
+    'Sign in': 'Masuk',
+    'Sign out': 'Keluar',
+    'Event code': 'Kode event',
+    'Drivers type this code in the driver app, from anywhere. Their sign-ins appear on the Race page to accept, and flags, positions and penalties reach their phones.':
+      'Pembalap mengetik kode ini di aplikasi driver, dari mana saja. Pendaftaran mereka muncul di halaman Race untuk diterima, dan bendera, posisi, serta penalti sampai ke HP mereka.',
+    'Last sent': 'Terakhir dikirim',
+    'last checked': 'terakhir dicek',
+    'Keep FRLcast running during the event.': 'Biarkan FRLcast tetap jalan selama event.',
+    'Unlink': 'Putuskan',
+    'Unlink? Drivers using the event code stop receiving flags until you link again.':
+      'Putuskan link? Pembalap yang memakai kode event berhenti menerima bendera sampai kamu menghubungkan lagi.',
+    'Sign out and unlink? Drivers using the event code stop receiving flags.':
+      'Keluar dan putuskan link? Pembalap yang memakai kode event berhenti menerima bendera.',
+
     'pending': 'menunggu',
     'approved': 'diterima',
     'rejected': 'ditolak'

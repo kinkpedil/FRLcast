@@ -17,6 +17,7 @@ import { ensureCert } from './tls.js';
 import { DriverAuth } from './drivers-auth.js';
 import { TimingApi } from './timing-api.js';
 import { Updates } from './updates.js';
+import { CloudLink } from './cloud-link.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -77,6 +78,17 @@ const race = new RaceState(new FileStore());
 const auth = new DriverAuth();
 const timing = new TimingApi(race, ROOT);
 const LIVE = ['formation', 'green', 'yellow', 'safety', 'red'];
+const cloud = new CloudLink(ROOT, race);
+
+/*
+ * Every action from a console goes through here. A sign-in that came from the online event
+ * is answered in that event's database as well, so it is handed to the link instead.
+ */
+function applyAction(a) {
+  if (cloud.intercept(a)) return true;
+  return race.apply(a);
+}
+
 const updates = new Updates(ROOT, {
   isRacing: () => !!race.state.race.startedAt && LIVE.includes(race.state.race.status)
 });
@@ -131,7 +143,7 @@ app.get('/api/net', (_req, res) => res.json({
 }));
 
 app.post('/api/action', (req, res) => {
-  const ok = race.apply(req.body);
+  const ok = applyAction(req.body);
   res.json({ ok, state: race.state });
 });
 
@@ -541,6 +553,50 @@ app.post('/api/update/apply', async (req, res) => {
   res.json({ ok: true });
 });
 
+/*
+ * The online link (server/cloud-link.js): keep a hosted event in step with this server so
+ * drivers anywhere reach race control through the driver app and an event code. Status is
+ * open to the LAN like the rest; signing in and linking only from this machine, because
+ * they carry the operator's account.
+ */
+app.get('/api/cloud/status', (_req, res) => res.json(cloud.status()));
+
+app.post('/api/cloud/login', async (req, res) => {
+  if (!fromThisMachine(req)) return res.status(403).json({ ok: false, error: 'Sign in on the machine running FRLcast.' });
+  try {
+    await cloud.login((req.body || {}).email, (req.body || {}).password);
+    res.json({ ok: true, ...cloud.status() });
+  } catch (e) {
+    res.status(400).json({ ...cloud.status(), ok: false, error: e.message });
+  }
+});
+
+app.post('/api/cloud/logout', (req, res) => {
+  if (!fromThisMachine(req)) return res.status(403).json({ ok: false, error: 'Only on the machine running FRLcast.' });
+  cloud.logout();
+  res.json({ ok: true, ...cloud.status() });
+});
+
+app.get('/api/cloud/events', async (req, res) => {
+  if (!fromThisMachine(req)) return res.status(403).json({ ok: false, error: 'Only on the machine running FRLcast.' });
+  try { res.json({ ok: true, events: await cloud.events() }); } catch (e) { res.status(400).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/cloud/link', async (req, res) => {
+  if (!fromThisMachine(req)) return res.status(403).json({ ok: false, error: 'Only on the machine running FRLcast.' });
+  try {
+    res.json({ ok: true, ...(await cloud.link((req.body || {}).code)) });
+  } catch (e) {
+    res.status(400).json({ ...cloud.status(), ok: false, error: e.message });
+  }
+});
+
+app.post('/api/cloud/unlink', (req, res) => {
+  if (!fromThisMachine(req)) return res.status(403).json({ ok: false, error: 'Only on the machine running FRLcast.' });
+  cloud.unlink();
+  res.json({ ok: true, ...cloud.status() });
+});
+
 const server = http.createServer(app);
 
 /*
@@ -605,7 +661,7 @@ wss.on('connection', (ws, req) => {
     try { msg = JSON.parse(raw.toString()); } catch { return; }
 
     if (msg.type === 'action') {
-      race.apply(msg.action);
+      applyAction(msg.action);
       return;
     }
     // low-latency passthrough: live preview frames, detection boxes, tally
@@ -686,6 +742,8 @@ setInterval(() => {
 server.listen(PORT, () => {
   // Look for a newer version shortly after start, then a few times a day.
   setTimeout(() => updates.check(), 5000);
+  // Reconnect the online event the operator had linked last time.
+  cloud.resume();
   setInterval(() => updates.check(), 6 * 60 * 60 * 1000).unref();
   console.log('');
   console.log(`  FRLcast v${updates.version}`);

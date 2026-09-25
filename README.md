@@ -51,7 +51,9 @@ Three ways to run it:
 - **Audience poll.** Custom or preset polls, voted from the public live page, tallied on the
   overlay, and saved to the race recap.
 - **Driver phone app.** Android app: drivers sign in, see their flags and penalties in a
-  floating window over the game, and send team radio.
+  floating window over the game, and send team radio. With the desktop app, link your event
+  on the Drivers page ("Drivers from anywhere") and drivers join from home with the event
+  code, no shared WiFi needed.
 - **Vision tracking.** Optional computer vision on the in-game minimap for live positions and
   overtakes when the official API is not in use. No ML model required.
 
@@ -60,6 +62,8 @@ Three ways to run it:
 **Operators:** download the [desktop app](https://github.com/kinkpedil/FRLcast/releases/latest),
 unzip anywhere, and double-click `start.cmd`. The console opens in its own window. Add the
 overlay as an OBS Browser Source at `http://localhost:4700/overlay/all.html` (1920x1080).
+For an online league, create the event on the website dashboard, then sign in and link it on
+the console's Drivers page: drivers type its code in the driver app from anywhere.
 
 **Developers:**
 

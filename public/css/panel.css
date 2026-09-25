@@ -101,7 +101,7 @@ label.field span {
   text-transform: uppercase; color: var(--ink-mute); margin-bottom: 6px;
 }
 
-input[type=text], input[type=number], select, textarea {
+input[type=text], input[type=number], input[type=email], input[type=password], select, textarea {
   width: 100%; padding: 9px 11px; border-radius: 8px;
   border: 1px solid var(--line-2); background: var(--bg-3); outline: none;
 }
@@ -671,3 +671,15 @@ mark { background: rgba(0,224,164,.28); color: var(--ink); border-radius: 3px; p
 .updatebar .ub-notes code { font-family: var(--mono); font-size: 11px; padding: 1px 4px; border-radius: 4px; background: rgba(255,255,255,.08); }
 .updatebar .ub-notes a { color: var(--accent); }
 .updatebar .ub-notes blockquote { margin: 6px 0; padding-left: 10px; border-left: 2px solid var(--line); }
+
+/* ---------- online link card (js/cloud-link-panel.js) ---------- */
+
+.cloudform { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
+@media (max-width: 760px) { .cloudform { grid-template-columns: 1fr; } }
+.cloudlinked { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+.cloudcode { font-family: var(--mono); font-size: 34px; font-weight: 800; letter-spacing: .12em; color: var(--accent); }
+.cloudinfo { display: flex; flex-direction: column; gap: 3px; flex: 1 1 280px; color: var(--ink-dim); font-size: 13px; }
+.cloudinfo b { color: var(--ink); font-size: 14px; }
+.cloud-err { color: #ff6b61; margin-top: 10px; }
+.regcloud { display: block; margin-bottom: 6px; color: var(--ink); }
+.cloudcode-sm { font-family: var(--mono); color: var(--accent); letter-spacing: .08em; }

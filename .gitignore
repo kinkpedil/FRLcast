@@ -5,6 +5,7 @@ data/backups/
 data/*.log
 data/timing.json
 data/update.json
+data/cloud.json
 data/updates/
 # in-app updater (scripts/update.ps1): data backups and its unpack folder
 backups/
