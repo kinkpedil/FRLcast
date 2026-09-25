@@ -2717,3 +2717,8 @@ html[data-skin="supergt"] .tw-row .t.best { color: var(--sgt-yellow); }
 }
 .stinger.play .stinger-word { animation: stingWord .9s var(--ease-out) forwards; }
 @keyframes stingWord { 0%, 25% { opacity: 0; transform: translateX(-30px); } 45%, 55% { opacity: 1; transform: none; } 78%, 100% { opacity: 0; transform: translateX(30px); } }
+
+/* Knockout qualifying: cars already knocked out, and the elimination line under the last car
+   through to the next part. */
+.ko-out { opacity: .42; filter: saturate(.4); }
+.ko-cut { box-shadow: inset 0 -3px 0 #ff3b30; }

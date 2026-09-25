@@ -131,6 +131,24 @@
                 <label class="field"><span>Accent colour</span><input type="color" id="cfgAccent" style="width:100%"></label>
               </div>
               <p class="hint" id="sessionHint" style="margin-top:6px;display:none"></p>
+              <div id="koBox" hidden style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+                <label class="toggle">
+                  <span>Knockout qualifying <b style="color:var(--ink-mute)">Q1, Q2, Q3 (optional)</b></span>
+                  <input type="checkbox" id="koOn"><i class="sw"></i>
+                </label>
+                <div id="koCfg" hidden>
+                  <div class="grid2" style="margin-top:10px">
+                    <label class="field"><span>Cars through to Q2</span><input type="number" id="koToQ2" min="1" max="99"></label>
+                    <label class="field"><span>Cars through to Q3</span><input type="number" id="koToQ3" min="1" max="99"></label>
+                  </div>
+                  <div class="row" style="gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+                    <span class="kopart" id="koPart" data-i18n-skip>Q1</span>
+                    <button class="btn primary sm" id="koNext" data-i18n-skip>End Q1, start Q2</button>
+                    <button class="btn ghost sm" id="koReset">Restart from Q1</button>
+                  </div>
+                  <p class="hint" style="margin-top:8px">Run each part like a session: Start, then End. Cars below the red line when a part ends are knocked out and keep their place and time; the rest start the next part from zero. After Q3 the order is final: use Grid from current order to set the race grid.</p>
+                </div>
+              </div>
               <label class="toggle" style="margin-top:12px">
                 <span>Predicted running order <b style="color:var(--ink-mute)">the ~ mark on the overlay</b></span>
                 <input type="checkbox" id="cfgPredict"><i class="sw"></i>

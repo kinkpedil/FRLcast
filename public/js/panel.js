@@ -446,6 +446,37 @@ bindInput('#evRound', (v) => bus.action('event.update', { patch: { round: v } })
 bindInput('#evTrack', (v) => bus.action('event.update', { patch: { track: v } }));
 bindInput('#evSession', (v) => bus.action('event.update', { patch: { sessionName: v } }));
 $('#evType').onchange = (e) => bus.action('event.update', { patch: { sessionType: e.target.value } });
+
+// ---------------------------------------------------------------- knockout qualifying
+$('#koOn').onchange = (e) => bus.action('knockout.config', { patch: { on: e.target.checked } });
+$('#koToQ2').onchange = (e) => bus.action('knockout.config', { patch: { toQ2: e.target.value } });
+$('#koToQ3').onchange = (e) => bus.action('knockout.config', { patch: { toQ3: e.target.value } });
+$('#koReset').onclick = () => { if (confirm(t('Restart the knockout from Q1? Knocked-out cars come back.'))) bus.action('knockout.reset'); };
+$('#koNext').onclick = () => {
+  const k = state && state.race.knockout;
+  if (!k) return;
+  const msg = k.part >= 3 ? t('End Q3? The order becomes the final qualifying result.')
+    : `${t('End')} Q${k.part}? ${t('Cars below the red line are knocked out.')}`;
+  if (confirm(msg)) bus.action('knockout.next');
+};
+
+function renderKnockout() {
+  if (!state) return;
+  const quali = state.event.sessionType === 'qualifying';
+  const k = state.race.knockout || { on: false, part: 1 };
+  $('#koBox').hidden = !quali;
+  if (!quali) return;
+  if (document.activeElement !== $('#koOn')) $('#koOn').checked = !!k.on;
+  $('#koCfg').hidden = !k.on;
+  syncIfIdle('#koToQ2', k.toQ2 || '');
+  syncIfIdle('#koToQ3', k.toQ3 || '');
+  $('#koPart').textContent = k.done ? t('FINAL') : `Q${k.part}`;
+  $('#koPart').classList.toggle('done', !!k.done);
+  $('#koNext').hidden = !!k.done;
+  $('#koNext').textContent = k.part >= 3 ? t('End Q3, final result') : `${t('End')} Q${k.part}, ${t('start')} Q${k.part + 1}`;
+}
+bus.on('state', renderKnockout);
+document.addEventListener('frl:lang', renderKnockout);
 $('#cfgLaps').onchange = (e) => bus.action('race.config', { patch: { totalLaps: Number(e.target.value) } });
 if ($('#cfgMins')) $('#cfgMins').onchange = (e) => bus.action('race.config', { patch: { timeLimitSec: Math.max(0, Number(e.target.value) || 0) * 60 } });
 

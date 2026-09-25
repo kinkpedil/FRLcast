@@ -659,6 +659,9 @@ function updateLbRow(el, d, was) {
   el.style.setProperty('--c', d.color);
   el.classList.toggle('dnf', !!d.dnf);
   el.classList.toggle('p1', d.position === 1);
+  // Knockout qualifying: out of the running (dimmed), and the last car through (the line).
+  el.classList.toggle('ko-out', !!d.koOut);
+  el.classList.toggle('ko-cut', !!d.koCut);
   el.classList.toggle('focus', state.overlay.focusDriverId === d.id);
 
   setText(el.querySelector('.posnum'), d.position, 'pop');
@@ -703,6 +706,9 @@ function updateTwRow(el, d, was) {
   el.style.setProperty('--c', d.color);
   el.classList.toggle('dnf', !!d.dnf);
   el.classList.toggle('p1', d.position === 1);
+  // Knockout qualifying: out of the running (dimmed), and the last car through (the line).
+  el.classList.toggle('ko-out', !!d.koOut);
+  el.classList.toggle('ko-cut', !!d.koCut);
 
   setText(el.querySelector('.posnum'), d.position, 'pop');
   setText(el.querySelector('.logo span'), teamBadge(d), null);
@@ -1598,7 +1604,7 @@ ${d.id}|${d.position}|${d.lapsDone}|${d.lastLap}|${d.bestLap}|${d.totalMs}` +
            // its gap and its closing arrow come from exactly this number, and leaving
            // it out froze the widget on whatever it showed first.
            `|${(state.overlay.show.trackmap || state.overlay.show.h2h) ? Math.round((d.livePos || 0) * 400) : 0}` +
-           `|${d.penaltyPending ? 1 : 0}|${d.penaltyServed || 0}|${d.blueFlag ? 1 : 0}|${d.blackFlag ? 1 : 0}`;
+           `|${d.penaltyPending ? 1 : 0}|${d.penaltyServed || 0}|${d.blueFlag ? 1 : 0}|${d.blackFlag ? 1 : 0}|${d.koOut || 0}${d.koCut ? 'c' : ''}`;
   }
   return sig;
 }

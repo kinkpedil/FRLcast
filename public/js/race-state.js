@@ -47,6 +47,9 @@ function defaultState() {
       // by hand. When on, recompute arranges the field by manualOrder instead of by pace.
       manual: false,
       manualOrder: [],     // driver ids, position 1 first, while manual mode is on
+      // Knockout qualifying: off unless chosen. part 1..3; toQ2/toQ3 = cars that go through;
+      // out = { driverId: { part, pos, bestMs, laps } } for cars already knocked out.
+      knockout: { on: false, part: 1, toQ2: 0, toQ3: 0, out: {}, done: false },
       // With one timing point, order can only be confirmed once a lap. Real timing
       // fills the gap the same way: carry each car forward at its own pace and show
       // where it should be now. Marked as predicted so nobody mistakes it for measured.
@@ -936,10 +939,42 @@ export class RaceState {
       ranked.sort((a, b) => ((a.extRank ?? 1e9) - (b.extRank ?? 1e9)));
     }
 
+    /*
+     * Knockout qualifying (optional, race.knockout.on). Cars knocked out in an earlier part
+     * keep the place and the time they were knocked out with, below everybody still running,
+     * later knock-outs first (out in Q2 ranks above out in Q1). The live part is ranked as
+     * usual above them.
+     */
+    const ko = race.knockout;
+    const koLive = isQuali && event.sessionType === 'qualifying' && ko && ko.on;
+    for (const d of drivers) { d.koOut = 0; d.koCut = false; }
+    if (koLive && ko.out && Object.keys(ko.out).length) {
+      const outOf = (d) => ko.out[d.id];
+      for (const d of drivers) {
+        const o = outOf(d);
+        if (!o) continue;
+        d.koOut = o.part < 3 ? o.part : 0;   // a Q3 finisher is the result, not knocked out
+        d.bestLap = o.bestMs ?? null;
+        d.lapsDone = o.laps || 0;
+      }
+      const active = ranked.filter((d) => !outOf(d));
+      const gone = ranked.filter((d) => outOf(d))
+        .sort((a, b) => outOf(b).part - outOf(a).part || outOf(a).pos - outOf(b).pos);
+      ranked.splice(0, ranked.length, ...active, ...gone);
+    }
+
     // Shared with the hosted event rather than written twice: see public/js/timing.js.
     // A best-lap feed (qualifying, practice, the in-game board) is labelled best-lap style,
     // like qualifying. A race-mode feed brings its own gaps, measured at the line.
     labelGaps(ranked, { drift: isDrift, quali: isQuali || (extActive && !extRace) });
+    if (koLive) {
+      // The last car through to the next part: the overlay draws the elimination line under it.
+      const cut = ko.done ? 0 : ko.part === 1 ? ko.toQ2 : ko.part === 2 ? ko.toQ3 : 0;
+      const live = ranked.filter((d) => !d.koOut);
+      if (cut > 0 && cut < live.length) live[cut - 1].koCut = true;
+      // Q3 finishers are the result, not knocked out: they keep their gaps to pole.
+      for (const d of ranked) if (d.koOut && d.koOut < 3) { d.gap = `OUT Q${d.koOut}`; d.interval = ''; }
+    }
     const leader = ranked[0];
 
     // Overtakes: compare against the previous classification and log real swaps only
@@ -1390,7 +1425,12 @@ export class RaceState {
       case 'event.update': {
         const wasType = s.event.sessionType;
         Object.assign(s.event, a.patch || {});
-        if (a.patch && a.patch.sessionType && a.patch.sessionType !== wasType) this.newSession(now);
+        if (a.patch && a.patch.sessionType && a.patch.sessionType !== wasType) {
+          this.newSession(now);
+          if (a.patch.sessionType === 'qualifying' && s.race.knockout) {
+            Object.assign(s.race.knockout, { part: 1, out: {}, done: false });
+          }
+        }
         // Practice and qualifying run to a clock. Give them a sensible default length the
         // moment they are chosen, so the tower shows a real countdown instead of counting
         // up from zero with no target. The operator can still change it.
@@ -1398,6 +1438,64 @@ export class RaceState {
             && !(s.race.timeLimitSec > 0)) {
           s.race.timeLimitSec = a.patch.sessionType === 'endurance' ? 3600 : 900;
         }
+        break;
+      }
+
+      /*
+       * Knockout qualifying. Settings first; nextPart ends the running part: every car below
+       * the cut is frozen with its place and time, the timing starts again from zero for the
+       * cars still in (a new session, so the timing API only counts laps from here), and the
+       * session label becomes Q2 or Q3. Ending Q3 freezes the whole order as the result.
+       */
+      case 'knockout.config': {
+        const k = s.race.knockout || (s.race.knockout = { on: false, part: 1, toQ2: 0, toQ3: 0, out: {}, done: false });
+        const pa = a.patch || {};
+        if (pa.on != null) k.on = !!pa.on;
+        if (pa.toQ2 != null) k.toQ2 = Math.max(0, Math.min(99, Number(pa.toQ2) || 0));
+        if (pa.toQ3 != null) k.toQ3 = Math.max(0, Math.min(99, Number(pa.toQ3) || 0));
+        if (k.on && !k.toQ2) {
+          // A sensible default for the grid on hand: roughly two thirds into Q2, a third into Q3.
+          const n = s.drivers.filter((d) => !d.dnf).length;
+          k.toQ2 = Math.max(2, Math.ceil(n * 2 / 3));
+          k.toQ3 = Math.max(1, Math.ceil(n / 3));
+        }
+        if (k.on && k.part === 1 && !Object.keys(k.out || {}).length) s.event.sessionName = 'Q1';
+        break;
+      }
+
+      case 'knockout.next': {
+        const k = s.race.knockout;
+        if (!k || !k.on || k.done) break;
+        k.out = k.out || {};
+        const live = [...s.drivers].filter((d) => !k.out[d.id]).sort((x, y) => x.position - y.position);
+        const cut = k.part === 1 ? k.toQ2 : k.part === 2 ? k.toQ3 : 0;
+        // Q3 is the last part: everyone still running is frozen in their finishing order.
+        const frozen = k.part >= 3 ? live : live.slice(cut > 0 ? cut : live.length);
+        frozen.forEach((d, i) => {
+          k.out[d.id] = { part: k.part, pos: (k.part >= 3 ? i : (cut + i)) + 1, bestMs: d.bestLap ?? null, laps: d.lapsDone || 0 };
+        });
+        if (k.part >= 3) {
+          k.done = true;
+          this.pushFeed('flag', 'QUALIFYING COMPLETE');
+          break;
+        }
+        const from = k.part;
+        k.part += 1;
+        // Everyone who is still in starts the next part from nothing, like a reset.
+        s.race.startedAt = null; s.race.finishedAt = null; s.race.pausedAt = null; s.race.pausedTotal = 0;
+        s.race.status = 'idle';
+        for (const d of s.drivers) if (!k.out[d.id]) resetDriverTiming(d, null);
+        this.newSession(now);
+        s.event.sessionName = `Q${k.part}`;
+        this.pushFeed('flag', `END OF Q${from}: ${frozen.map((d) => d.name).join(', ') || 'NOBODY'} KNOCKED OUT`);
+        break;
+      }
+
+      case 'knockout.reset': {
+        const k = s.race.knockout;
+        if (!k) break;
+        k.part = 1; k.out = {}; k.done = false;
+        if (k.on) s.event.sessionName = 'Q1';
         break;
       }
 
