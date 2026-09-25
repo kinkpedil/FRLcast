@@ -396,7 +396,7 @@ export const SpeedBadge: React.FC<{ rate: number }> = ({ rate }) => {
 
 // ---------------------------------------------------------------- Part: timing API setup
 
-const API_B = [0, 270, 600, 1020, 1380, 1800];
+export const API_B = [0, 270, 600, 1020, 1380, 1800];
 export const API_DUR = API_B[API_B.length - 1];
 
 const KeyIcon: React.FC<{ size: number }> = ({ size }) => (
@@ -734,7 +734,7 @@ export const ApiKeyScene: React.FC = () => (
 
 // ---------------------------------------------------------------- Part: the driver app
 
-const DRV_B = [0, 300, 630, 930, 1290, 1650];
+export const DRV_B = [0, 300, 630, 930, 1290, 1650];
 export const DRIVER_DUR = DRV_B[DRV_B.length - 1];
 
 const Phone: React.FC<{ x: number; y: number; w: number; h: number; landscape?: boolean; children: React.ReactNode; style?: React.CSSProperties }> = ({ x, y, w, h, landscape, children, style }) => (
@@ -1022,7 +1022,7 @@ export const DriverAppScene: React.FC = () => (
 
 // ---------------------------------------------------------------- Part: good to know
 
-const GTK_B = [0, 450, 900, 1350];
+export const GTK_B = [0, 450, 900, 1350];
 export const GOOD_DUR = GTK_B[GTK_B.length - 1];
 
 const Row: React.FC<{ text: string; at: number; plus?: boolean }> = ({ text, at, plus }) => {

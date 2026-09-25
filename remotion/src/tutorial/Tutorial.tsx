@@ -345,3 +345,25 @@ export const Tutorial: React.FC<TutorialProps> = ({ kicker, title, subtitle, rec
 // Handy for picking still frames: programme frame of a source second.
 export const programmeFrame = at;
 export const itemStarts = PLACED.map((p) => ({ kind: p.kind, start: p.start, dur: p.dur }));
+
+/**
+ * Everything the audio build (scripts/audio) needs to line sound up with the picture, read
+ * from the same data the video uses so the two can never drift apart.
+ */
+export const AUDIO_TIMELINE = {
+  fps: FPS,
+  total: TOTAL_FRAMES,
+  items: PLACED.map((p) => ({
+    kind: p.kind,
+    start: p.start,
+    dur: p.dur,
+    part: p.kind === 'card' ? p.part : undefined,
+    title: p.kind === 'card' ? p.title : undefined,
+    id: p.kind === 'scene' ? p.id : undefined,
+    rate: p.kind === 'clip' ? p.rate : undefined,
+  })),
+  captions: CAPTION_TRACK,
+  steps: STEP_TRACK.map((s) => s.f),
+  callouts: CALLOUTS.map((c) => at(c.at)).filter((f): f is number => f != null),
+  zooms: ZOOMS.map((z) => at(z.at)).filter((f): f is number => f != null),
+};

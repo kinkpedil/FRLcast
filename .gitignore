@@ -34,6 +34,8 @@ dist/
 # the rendered mp4s and Remotion's bundle cache are not.
 remotion/out/
 remotion/.remotion/
+# scripts/audio cache: generated voice lines, the cue sheet and the final mix
+remotion/.audio/
 # Screen recordings dropped in for the tutorial kit (large, personal). staticFile still
 # reads them at render time; they just are not committed.
 remotion/public/*.mp4
