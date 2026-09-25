@@ -32,6 +32,7 @@ public class FlagView extends View {
   private String flag = "idle";
   private String who = "";
   private String personal = "";     // a black or blue flag outranks the session's
+  private String board = "";        // the pit board strip along the bottom, or ""
   private boolean showSub = true;
 
   /*
@@ -61,6 +62,14 @@ public class FlagView extends View {
   }
 
   public String flag() { return flag; }
+
+  /** The pit board line: place, gap to the car ahead and behind, laps left. "" hides it. */
+  public void setBoard(String line) {
+    String next = line == null ? "" : line;
+    if (next.equals(board)) return;
+    board = next;
+    invalidate();
+  }
 
   /** Take the window for a moment to announce a penalty. */
   public void showPenalty(String head, String reason) {
@@ -124,7 +133,13 @@ public class FlagView extends View {
     boolean drawWho = !who.isEmpty() && h >= 130;
     if (drawWho) topH = Math.max(9f, Math.min(h * 0.11f, 26f));
 
-    float avail = h - topH - pad;
+    // The pit board takes a strip at the bottom, only when the window is big enough to keep
+    // the flag itself readable above it. The flag always wins the space.
+    float botH = 0;
+    boolean drawBoard = !board.isEmpty() && !penalty && h >= 120 && w >= 140;
+    if (drawBoard) botH = Math.max(10f, Math.min(h * 0.14f, 30f));
+
+    float avail = h - topH - botH - pad;
     boolean wantSub = (showSub || penalty) && !body.isEmpty() && avail > 70;
 
     TextFit.Block name = TextFit.fit(head, maxW, wantSub ? avail * 0.6f : avail, true, paintM);
@@ -170,6 +185,19 @@ public class FlagView extends View {
       text.setFakeBoldText(true);
       text.setAlpha(160);
       cv.drawText(who, w / 2f, pad * 0.4f + topH * 0.78f, text);
+      text.setAlpha(255);
+    }
+
+    if (drawBoard) {
+      float size = botH * 0.7f;
+      text.setFakeBoldText(true);
+      text.setTextSize(size);
+      // Shrink to fit rather than cut: every part of the line is a number the driver wants.
+      float need = text.measureText(board);
+      float room = w - pad * 2 - gripSize();
+      if (need > room && need > 0) { size = size * room / need; text.setTextSize(size); }
+      text.setAlpha(235);
+      cv.drawText(board, (w - gripSize() * 0.5f) / 2f, h - botH * 0.3f, text);
       text.setAlpha(255);
     }
 

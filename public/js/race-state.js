@@ -405,6 +405,10 @@ function defaultState() {
     standings: [],               // championship table, recomputed with the rest
     feed: [],                    // newest-first log of notable race events
     radio: [],                   // newest-first team-radio messages from the driver app
+    // Incident reports drivers sent from the app, newest first:
+    // { id, at, fromNum, fromName, againstNum, againstName, lap, text, status, cloud }
+    // status: open | reviewed | dismissed. Race control decides; a report is never a penalty.
+    incidents: [],
     updatedAt: Date.now()
   };
 }
@@ -2090,6 +2094,44 @@ export class RaceState {
         break;
       }
 
+      /*
+       * Incident reports from the driver app. A report is information for race control, not
+       * a decision: it waits in the queue until the operator marks it reviewed (usually after
+       * opening an investigation on the reported car) or dismisses it.
+       */
+      case 'incident.add': {
+        const text = String(a.text || '').trim().slice(0, 280);
+        if (!text) break;
+        const against = String(a.againstNum || '').trim().slice(0, 6);
+        const car = against ? s.drivers.find((d) => String(d.num) === against) : null;
+        s.incidents = [{
+          id: a.id || uid(), at: a.at || now,
+          fromNum: String(a.fromNum || ''), fromName: String(a.fromName || '').slice(0, 40),
+          againstNum: against, againstName: car ? car.name : String(a.againstName || ''),
+          lap: a.lap ?? null, text, status: 'open', cloud: !!a.cloud
+        }, ...(s.incidents || [])].slice(0, 100);
+        this.pushFeed('penalty', `REPORT FROM ${a.fromName || '#' + a.fromNum}${against ? ' ABOUT #' + against : ''}`);
+        break;
+      }
+
+      case 'incident.set': {
+        const r = (s.incidents || []).find((x) => x.id === a.id);
+        if (r && ['open', 'reviewed', 'dismissed'].includes(a.status)) r.status = a.status;
+        break;
+      }
+
+      // Reports held by the online event, as it has them now. Local ones are kept.
+      case 'incident.sync': {
+        if (!Array.isArray(a.rows)) break;
+        const local = (s.incidents || []).filter((x) => !x.cloud);
+        const rows = a.rows.map((r) => {
+          const car = r.againstNum ? s.drivers.find((d) => String(d.num) === String(r.againstNum)) : null;
+          return { ...r, againstName: car ? car.name : (r.againstName || ''), cloud: true };
+        });
+        s.incidents = [...rows, ...local].sort((x, y) => y.at - x.at).slice(0, 100);
+        break;
+      }
+
       case 'registration.approve': {
         const r = s.registrations.find((x) => x.id === a.id);
         if (!r || r.status === 'approved') break;
@@ -2154,7 +2196,9 @@ export class RaceState {
             team: row.team ?? was.team ?? '',
             at: row.at ?? was.at ?? now,
             status: row.status ?? was.status ?? 'pending',
-            driverId: row.driverId ?? was.driverId ?? null
+            driverId: row.driverId ?? was.driverId ?? null,
+            // When the driver last signed in (the online event's check-in), if known.
+            checkedInAt: row.checkedInAt ?? was.checkedInAt ?? null
           };
         });
         break;

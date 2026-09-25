@@ -79,6 +79,11 @@ export class CloudPanelBus {
       this.sb.realtime.setAuth(session.access_token);
       await this.pullRegistrations();
       this.watchRegistrations();
+      // Incident reports from the driver app. Polled rather than subscribed: they are rare,
+      // and a missed Realtime message would leave one waiting unseen.
+      await this.pullIncidents();
+      clearInterval(this.incTimer);
+      this.incTimer = setInterval(() => this.pullIncidents(), 5000);
 
       document.documentElement.classList.remove('disconnected');
       this.handlers.open.forEach((f) => f());
@@ -155,7 +160,9 @@ export class CloudPanelBus {
         team: r.team || '',
         at: new Date(r.created_at).getTime(),
         status: held ? held.status : r.status,
-        driverId: held ? held.driverId : r.driver_id
+        driverId: held ? held.driverId : r.driver_id,
+        // Present once the league migration has run; absent (undefined) before it.
+        checkedInAt: r.checked_in_at ? new Date(r.checked_in_at).getTime() : null
       };
     });
     // Rows this console removed but has not finished deleting stay off the list either way:
@@ -218,9 +225,45 @@ export class CloudPanelBus {
     }
   }
 
+  /*
+   * The incident queue. The table arrives with the league migration; before it has been run
+   * the read fails, and the queue simply stays empty rather than showing an error on every
+   * poll.
+   */
+  async pullIncidents() {
+    if (!this.sb || !this.event || this.noIncidents) return;
+    const { data, error } = await this.sb.from('incident_reports')
+      .select('id,from_nick,from_num,against_num,lap,text,status,created_at')
+      .eq('event_id', this.event.id).order('created_at', { ascending: false }).limit(100);
+    if (error) {
+      if (/incident_reports|does not exist|schema cache|42P01|PGRST20/i.test(error.message || '')) this.noIncidents = true;
+      else console.error('[race control] reports:', error.message);
+      return;
+    }
+    this.heldIncidents = this.heldIncidents || new Map();
+    this.race.apply({ type: 'incident.sync', rows: (data || []).map((r) => ({
+      id: r.id, at: new Date(r.created_at).getTime(), fromNum: r.from_num, fromName: r.from_nick,
+      againstNum: r.against_num, lap: r.lap, text: r.text,
+      status: this.heldIncidents.get(r.id) || r.status
+    })) });
+  }
+
+  async writeIncident(id, status) {
+    this.heldIncidents = this.heldIncidents || new Map();
+    this.heldIncidents.set(id, status);
+    this.race.apply({ type: 'incident.set', id, status });
+    const { error } = await this.sb.from('incident_reports').update({ status }).eq('id', id);
+    this.heldIncidents.delete(id);
+    if (error) {
+      this.handlers.signal.forEach((f) => f('toast', { text: `Could not save that report: ${error.message}` }));
+      this.pullIncidents();
+    }
+  }
+
   /** Every action the console already sends, applied to the state that understands them. */
   action(type, extra = {}) {
     if (!this.race) return;
+    if (type === 'incident.set') { this.writeIncident(extra.id, extra.status); return; }
     // Three of the fifty six do not belong to the timing state: they are the operator
     // answering a request that lives in its own table.
     if (type === 'registration.approve' || type === 'registration.reject'

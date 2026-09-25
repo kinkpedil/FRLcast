@@ -152,7 +152,7 @@ $$('.navbtn').forEach((btn) => {
     if (currentPage === 'layout') renderThemes();
     // Same for the sign-in queue: one that arrived while the operator was on another page
     // (an online sign-in comes in at any moment) must be there when they come back.
-    if (currentPage === 'race') { renderRegistrations(); renderRaceControl(); }
+    if (currentPage === 'race') { renderRegistrations(); renderRaceControl(); renderIncidents(); }
   };
 });
 
@@ -1433,7 +1433,7 @@ function renderRegistrations() {
   box.innerHTML = list.length ? '<div class="reglist">' + list.slice(0, 20).map((r) => {
     const when = new Date(r.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     return `<div class="regrow ${r.status}">
-      <div><b>${esc(r.nick)}</b> <span class="rnum">#${esc(r.num)}</span>${r.team ? `<span class="rteam">${esc(r.team)}</span>` : ''}<small>${when}</small></div>
+      <div><b>${esc(r.nick)}</b> <span class="rnum">#${esc(r.num)}</span>${r.team ? `<span class="rteam">${esc(r.team)}</span>` : ''}${r.checkedInAt && Date.now() - r.checkedInAt < 18 * 3600000 ? `<span class="rcheck">${t('checked in')}</span>` : ''}<small>${when}</small></div>
       <span class="row" style="gap:4px">
         ${r.status === 'pending'
           ? `<button class="btn primary" data-acc="${r.id}">Accept</button><button class="btn ghost" data-rej="${r.id}">No</button>`
@@ -1460,6 +1460,78 @@ function renderRegistrations() {
  * an operator most needs to know at any moment is what is still undecided.
  */
 const PEN_KIND = { time: 'Time', warning: 'Warning', drivethrough: 'Drive through', blackflag: 'Black flag', dq: 'DQ', note: 'Note' };
+
+/*
+ * Incident reports from the driver app: the steward's inbox. Open ones first, with the
+ * reported car's current name; the last few decided ones stay below, dimmed, so the
+ * operator can see what was already handled.
+ */
+let incSeen = null;
+function renderIncidents() {
+  if (!state) return;
+  const all = state.incidents || [];
+  const open = all.filter((r) => r.status === 'open');
+
+  // A new report while the operator is anywhere in the console: say so once.
+  if (incSeen) {
+    const fresh = open.filter((r) => !incSeen.has(r.id));
+    if (fresh.length) toast(`${t('New incident report')}: ${fresh[0].fromName || '#' + fresh[0].fromNum}`);
+  }
+  incSeen = new Set(all.map((r) => r.id));
+
+  if (currentPage !== 'race') return;
+  const count = $('#incCount');
+  if (count) {
+    count.textContent = open.length ? `${open.length} ${t('open')}` : t('none open');
+    count.style.color = open.length ? 'var(--red)' : '';
+  }
+  const box = $('#incList');
+  if (!box) return;
+  const done = all.filter((r) => r.status !== 'open').slice(0, 6);
+  const rows = [...open, ...done];
+  const carOf = (num) => state.drivers.find((d) => String(d.num) === String(num));
+  const sig = JSON.stringify(rows.map((r) => [r.id, r.status, r.againstName])) + (window.FRL_I18N ? window.FRL_I18N.lang : '');
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  box.innerHTML = rows.length ? '<div class="inclist">' + rows.map((r) => {
+    const car = r.againstNum ? carOf(r.againstNum) : null;
+    const when = new Date(r.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `<div class="incrow ${r.status}">
+      <div class="inchead"><b>${esc(r.fromName || '?')}</b> <span class="rnum">#${esc(r.fromNum)}</span>
+        ${r.againstNum ? `<span class="incvs">${esc(t('about'))}</span> <b>${esc(car ? car.name : r.againstName || '?')}</b> <span class="rnum">#${esc(r.againstNum)}</span>` : ''}
+        <small>${r.lap != null ? `${esc(t('lap'))} ${r.lap} · ` : ''}${when}</small></div>
+      <div class="inctext">${esc(r.text)}</div>
+      <div class="row" style="gap:4px;margin-top:6px">
+        ${r.status === 'open'
+          ? `<button class="btn sm primary" data-inv="${r.id}" ${car ? '' : 'disabled title="' + esc(t('No car with that number on the grid')) + '"'}>${esc(t('Investigate'))}</button>
+             <button class="btn sm" data-rev="${r.id}">${esc(t('Mark reviewed'))}</button>
+             <button class="btn sm ghost" data-dis="${r.id}">${esc(t('Dismiss'))}</button>`
+          : `<span class="pstatus">${esc(t(r.status))}</span>
+             <button class="btn sm ghost" data-reopen="${r.id}">${esc(t('Reopen'))}</button>`}
+      </div>
+    </div>`;
+  }).join('') + '</div>' : `<p class="hint">${esc(t('No reports.'))}</p>`;
+
+  const set = (id, status) => bus.action('incident.set', { id, status });
+  $$('#incList [data-inv]').forEach((b) => {
+    b.onclick = () => {
+      const r = all.find((x) => x.id === b.dataset.inv);
+      const car = r && carOf(r.againstNum);
+      if (!car) return;
+      // A neutral reason: the report's own words stay in the console and never go on air.
+      bus.action('penalty.add', {
+        driverId: car.id, status: 'investigating',
+        kind: $('#penKind').value, seconds: Number($('#penSecs').value) || 0,
+        reason: `Reported by #${r.fromNum}${r.lap != null ? ', lap ' + r.lap : ''}`
+      });
+      set(r.id, 'reviewed');
+      toast(t('Investigation opened in Race control'));
+    };
+  });
+  $$('#incList [data-rev]').forEach((b) => { b.onclick = () => set(b.dataset.rev, 'reviewed'); });
+  $$('#incList [data-dis]').forEach((b) => { b.onclick = () => set(b.dataset.dis, 'dismissed'); });
+  $$('#incList [data-reopen]').forEach((b) => { b.onclick = () => set(b.dataset.reopen, 'open'); });
+}
 
 function renderRaceControl() {
   if (!state || currentPage !== 'race') return;
@@ -3832,6 +3904,7 @@ bus.on('state', (s) => {
   renderManual();
   renderMarkers();
   renderRaceControl();
+  renderIncidents();
   renderRegistrations();
   renderCommentary();
   renderChampionship();

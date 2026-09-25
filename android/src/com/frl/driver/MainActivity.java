@@ -37,11 +37,11 @@ import org.json.JSONObject;
  */
 public class MainActivity extends Activity {
 
-  private EditText fHost, fNick, fNum, fTeam, fPlayerId, fPass, fRadio;
+  private EditText fHost, fNick, fNum, fTeam, fPlayerId, fPass, fRadio, fAgainst, fReport;
   private TextView status, hint, formLede, nickLabel, radioLabel;
-  private Button go, swap, floatBtn, permBtn, signOut, radioSend;
-  private LinearLayout sizeRow, settings, form, radioBox;
-  private CheckBox subBox;
+  private Button go, swap, floatBtn, permBtn, signOut, radioSend, reportSend;
+  private LinearLayout sizeRow, settings, form, radioBox, reportBox;
+  private CheckBox subBox, boardBox;
   private SeekBar alpha;
 
   /** The team the server last reported for this driver — team radio only shows with one. */
@@ -58,6 +58,8 @@ public class MainActivity extends Activity {
 
   /** What race control has decided about this driver: pending, approved or rejected. */
   private String approval = "";
+  /** Signed in on race day (a hosted event with the league update): the check-in. */
+  private boolean checkedIn = false;
 
   @Override protected void onCreate(Bundle b) {
     super.onCreate(b);
@@ -189,6 +191,31 @@ public class MainActivity extends Activity {
     radioRow.addView(radioSend);
     radioBox.addView(radioRow);
 
+    // Report an incident: which car, and what happened. It goes to race control's queue only,
+    // not to the other driver and not on air.
+    reportBox = new LinearLayout(this);
+    reportBox.setOrientation(LinearLayout.VERTICAL);
+    root.addView(reportBox);
+    reportBox.addView(label("REPORT AN INCIDENT"));
+    LinearLayout reportRow = new LinearLayout(this);
+    reportRow.setOrientation(LinearLayout.HORIZONTAL);
+    fAgainst = field("Car #", InputType.TYPE_CLASS_NUMBER);
+    reportRow.addView(fAgainst, new LinearLayout.LayoutParams(78 * dp,
+        ViewGroup.LayoutParams.WRAP_CONTENT));
+    fReport = field("Pushed me wide at turn 3", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+    reportRow.addView(fReport, new LinearLayout.LayoutParams(0,
+        ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+    reportSend = new Button(this);
+    reportSend.setText("Report");
+    reportSend.setAllCaps(false);
+    reportSend.setTextSize(15);
+    reportSend.setTextColor(Color.WHITE);
+    reportSend.setBackgroundColor(0xFFFF453A);
+    reportSend.setOnClickListener(v -> sendReport());
+    reportRow.addView(reportSend);
+    reportBox.addView(reportRow);
+    reportBox.addView(fine("Only race control sees this. They decide what happens: a report is not a penalty."));
+
     permBtn = button("Allow drawing over other apps", 0xFFFFD60A, Color.parseColor("#05070a"));
     permBtn.setOnClickListener(v -> askOverlay());
     root.addView(permBtn);
@@ -241,6 +268,16 @@ public class MainActivity extends Activity {
       restartOverlayIfOn();
     });
     settings.addView(subBox);
+
+    boardBox = new CheckBox(this);
+    boardBox.setText("Show the pit board (gaps, laps left)");
+    boardBox.setTextColor(Color.WHITE);
+    boardBox.setChecked(Api.prefs(this).getBoolean(Api.K_BOARD, true));
+    boardBox.setOnCheckedChangeListener((v, on) -> {
+      Api.prefs(this).edit().putBoolean(Api.K_BOARD, on).apply();
+      restartOverlayIfOn();
+    });
+    settings.addView(boardBox);
 
     signOut = button("Sign out", 0xFF1C2027, Color.WHITE);
     signOut.setOnClickListener(v -> doSignOut());
@@ -371,6 +408,8 @@ public class MainActivity extends Activity {
     String myTeam = team.isEmpty() ? p.getString(Api.K_TEAM, "") : team;
     boolean canRadio = in && "approved".equals(approval) && !myTeam.isEmpty();
     radioBox.setVisibility(canRadio ? View.VISIBLE : View.GONE);
+    // Reports are for drivers in the event, team or not.
+    reportBox.setVisibility(in && "approved".equals(approval) ? View.VISIBLE : View.GONE);
 
     if (!in) { status.setText(""); return; }
 
@@ -388,6 +427,7 @@ public class MainActivity extends Activity {
     } else {
       sb.append(" — signed in");
     }
+    if (checkedIn) sb.append("\nChecked in for today.");
     if (!canDraw) sb.append("\n\nAndroid still needs permission to draw the window.");
     status.setText(sb.toString());
   }
@@ -411,6 +451,7 @@ public class MainActivity extends Activity {
       String next;
       String teamSeen = "";
       JSONObject radioSeen = null;
+      boolean inSeen = false;
       try {
         JSONObject o = backend.state(token);
         if (!o.optBoolean("ok")) {
@@ -424,14 +465,17 @@ public class MainActivity extends Activity {
         next = o.optString("status", "");
         teamSeen = o.optString("team", "");
         radioSeen = o.optJSONObject("radio");
+        inSeen = o.optBoolean("checkedIn", false);
       } catch (Exception ignored) {
         return;                 // out of range; the next resume will ask again
       }
       final String seen = next;
       final String gotTeam = teamSeen;
       final JSONObject radio = radioSeen;
+      final boolean gotIn = inSeen;
       ui.post(() -> {
-        boolean teamChanged = !gotTeam.equals(team);
+        boolean teamChanged = !gotTeam.equals(team) || gotIn != checkedIn;
+        checkedIn = gotIn;
         if (teamChanged) { team = gotTeam; if (!gotTeam.isEmpty()) Api.prefs(this).edit().putString(Api.K_TEAM, gotTeam).apply(); }
         showIncomingRadio(radio);
         if (!seen.equals(approval) || teamChanged) { approval = seen; refresh(); }
@@ -593,6 +637,34 @@ public class MainActivity extends Activity {
       ui.post(() -> {
         radioSend.setEnabled(true);
         if (good) fRadio.setText("");
+        toast(m);
+      });
+    }).start();
+  }
+
+  private void sendReport() {
+    final String text = fReport.getText().toString().trim();
+    final String against = fAgainst.getText().toString().trim();
+    if (text.isEmpty()) { toast("Say what happened"); return; }
+    final String host = Api.host(this);
+    final String token = Api.token(this);
+    if (host.isEmpty() || token.isEmpty()) return;
+    reportSend.setEnabled(false);
+    new Thread(() -> {
+      String msg;
+      boolean ok = false;
+      try {
+        JSONObject o = Backend.forTarget(host).report(token, against, text);
+        ok = o.optBoolean("ok");
+        msg = ok ? "Sent to race control" : o.optString("error", "Could not send");
+      } catch (Exception e) {
+        msg = "Cannot reach the server";
+      }
+      final String m = msg;
+      final boolean good = ok;
+      ui.post(() -> {
+        reportSend.setEnabled(true);
+        if (good) { fReport.setText(""); fAgainst.setText(""); }
         toast(m);
       });
     }).start();

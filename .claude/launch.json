@@ -1,0 +1,9 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "frlcast", "runtimeExecutable": "D:/Program Files/nodejs/node.exe", "runtimeArgs": ["server/index.js"], "port": 4700 },
+    { "name": "frlcast-test", "runtimeExecutable": "D:/Program Files/nodejs/node.exe", "runtimeArgs": ["server/index.js"], "port": 4790, "autoPort": false,
+      "env": { "PORT": "4790", "FRL_SUPABASE_URL": "http://localhost:4798", "FRL_SUPABASE_ANON_KEY": "test-anon", "FRL_STATE_FILE": "C:/Users/ADMINI~1/AppData/Local/Temp/claude/D--New-folder--2-/6a19cd0b-f499-4ec8-8bb1-517be4fc107e/scratchpad/test-state.json" } }
+    ,{ "name": "site-test", "runtimeExecutable": "D:/Program Files/nodejs/node.exe", "runtimeArgs": ["C:/Users/ADMINI~1/AppData/Local/Temp/claude/D--New-folder--2-/6a19cd0b-f499-4ec8-8bb1-517be4fc107e/scratchpad/site-serve.mjs"], "port": 4799, "autoPort": false }
+  ]
+}
