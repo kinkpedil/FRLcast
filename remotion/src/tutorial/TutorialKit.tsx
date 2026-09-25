@@ -34,13 +34,18 @@ export const MONO = 'ui-monospace, "SF Mono", Consolas, "Liberation Mono", monos
  * The screen recording layer. Pass a file placed in remotion/public (staticFile), or leave it
  * empty to show a placeholder so the kit renders before you have a recording.
  */
-export const ScreenFrame: React.FC<{ src?: string | null }> = ({ src }) => {
+export const ScreenFrame: React.FC<{ src?: string | null; startFrom?: number; endAt?: number; playbackRate?: number }> = ({
+  src,
+  startFrom,
+  endAt,
+  playbackRate,
+}) => {
   if (src) {
     return (
       <AbsoluteFill style={{ backgroundColor: '#000' }}>
         {/* The recording is silent (narration is carried by the captions), and its near-empty
             audio track breaks Remotion's audio-mixing step, so mute it and render video only. */}
-        <OffthreadVideo src={staticFile(src)} muted />
+        <OffthreadVideo src={staticFile(src)} muted startFrom={startFrom} endAt={endAt} playbackRate={playbackRate} />
       </AbsoluteFill>
     );
   }
@@ -113,14 +118,14 @@ export const LowerThird: React.FC<{ step?: string | number; text: string; durati
   const out = spring({ frame: frame - (durationInFrames - 12), fps, config: { damping: 200 } });
   const x = interpolate(inS, [0, 1], [-500, 0]) + interpolate(out, [0, 1], [0, -500]);
   return (
-    <div style={{ position: 'absolute', left: 80, bottom: 90, transform: `translateX(${x}px)`, fontFamily: SANS }}>
+    <div style={{ position: 'absolute', left: 80, bottom: 156, transform: `translateX(${x}px)`, fontFamily: SANS }}>
       <div style={{ display: 'flex', alignItems: 'stretch', borderRadius: 12, overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }}>
         {step != null && (
-          <div style={{ background: C.accent, color: '#05221b', fontFamily: MONO, fontWeight: 800, fontSize: 34, padding: '0 26px', display: 'flex', alignItems: 'center' }}>
+          <div style={{ background: C.accent, color: '#05221b', fontFamily: MONO, fontWeight: 800, fontSize: 30, padding: '0 22px', display: 'flex', alignItems: 'center' }}>
             {typeof step === 'number' ? String(step).padStart(2, '0') : step}
           </div>
         )}
-        <div style={{ background: C.panel, borderTop: `1px solid ${C.line}`, borderRight: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}`, color: C.ink, fontSize: 40, fontWeight: 600, padding: '18px 30px' }}>
+        <div style={{ background: C.panel, borderTop: `1px solid ${C.line}`, borderRight: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}`, color: C.ink, fontSize: 36, fontWeight: 600, padding: '14px 26px' }}>
           {text}
         </div>
       </div>
@@ -185,29 +190,38 @@ export const Callout: React.FC<{
   );
 };
 
-/** Bottom-center caption band, for narration text or notes. */
-export const Caption: React.FC<{ text: string }> = ({ text }) => {
+/**
+ * Bottom-center caption, subtitle style: compact, centred just above the progress bar, lifts in
+ * and fades out so consecutive lines hand over cleanly. It carries the narration, since the
+ * recording has no voiceover.
+ */
+export const Caption: React.FC<{ text: string; durationInFrames?: number }> = ({ text, durationInFrames }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const s = spring({ frame, fps, config: { damping: 200 } });
+  const out = durationInFrames
+    ? interpolate(frame, [durationInFrames - 8, durationInFrames], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+    : 1;
   return (
     <div
       style={{
         position: 'absolute',
         left: '50%',
-        bottom: 150,
-        transform: 'translateX(-50%)',
-        opacity: s,
-        maxWidth: 1500,
+        bottom: 40,
+        transform: `translate(-50%, ${interpolate(s, [0, 1], [14, 0])}px)`,
+        opacity: Math.min(s, out),
+        maxWidth: 1180,
+        width: 'max-content',
         textAlign: 'center',
-        background: 'rgba(10,12,16,0.82)',
+        background: 'rgba(8,10,14,0.86)',
         border: `1px solid ${C.line}`,
         color: C.ink,
         fontFamily: SANS,
-        fontSize: 40,
+        fontSize: 28,
+        fontWeight: 500,
         lineHeight: 1.3,
-        padding: '16px 30px',
-        borderRadius: 12,
+        padding: '10px 22px',
+        borderRadius: 10,
       }}
     >
       {text}

@@ -19,19 +19,20 @@ export const RemotionRoot: React.FC = () => {
         height={1080}
         defaultProps={{ data: SAMPLE }}
       />
-      {/* Tutorial: intro + the edited screen recording (public/tutorial-edit.mp4) with section
-          lower-thirds and a progress bar, then an outro. 1080p/30fps for YouTube. */}
+      {/* Tutorial: chapters of the screen recording (trimmed, sped up where it drags, camera
+          zooms, callouts, narration captions) plus fully animated chapters for the timing API,
+          the driver app and good-to-know. Length comes from the programme in Tutorial.tsx. */}
       <Composition
         id="Tutorial"
         component={Tutorial}
-        durationInFrames={tutorialDuration(TUTORIAL_VIDEO_SECONDS)}
+        durationInFrames={tutorialDuration()}
         fps={30}
         width={1920}
         height={1080}
         defaultProps={{
           kicker: 'Tutorial FRLcast',
-          title: 'How to use it',
-          subtitle: 'broadcast for FR Legends',
+          title: 'The complete guide',
+          subtitle: 'Race control for FR Legends leagues',
           recordingSrc: 'lv_0_20260925045413.mp4',
           videoSeconds: TUTORIAL_VIDEO_SECONDS,
         }}
