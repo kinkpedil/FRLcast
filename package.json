@@ -1,6 +1,6 @@
 {
   "name": "frl-broadcast",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "private": true,
   "description": "FR Legends broadcast operator - auto timing, leaderboard and OBS overlays",
   "type": "module",
