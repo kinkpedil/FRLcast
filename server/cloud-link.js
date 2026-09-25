@@ -24,7 +24,6 @@ import { SupabaseStore } from '../public/js/supabase-store.js';
  * never in the race state that is broadcast to every overlay, same rule as the timing key.
  */
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PULL_MS = 3000;
 const PUSH_GAP_MS = 1000;
 
@@ -220,14 +219,17 @@ export class CloudLink {
   // ---------------------------------------------------------------- ids
 
   /*
-   * Supabase keys cars and penalties by uuid. Everything made since the move to shared
-   * timing already is one, but an event file from before that can carry short ids, and one
-   * such row fails the whole write. Those get a stable uuid derived from the event and the
-   * local id, so the same car always lands on the same row.
+   * The id a local car or penalty has in the linked event.
+   *
+   * Row ids in Supabase are unique across the whole database, not per event. Sending the
+   * local id as it is worked for the first event linked, and then failed on every later one
+   * (drivers_pkey): the same cars were already rows of the first event. So every id is
+   * derived from the event and the local id: stable (the same car always lands on the same
+   * row of one event, across restarts) and different in every event. It also turns the
+   * short ids of an event file from before shared timing into valid uuids.
    */
   uid(localId) {
     if (!localId) return null;
-    if (UUID.test(localId)) return localId;
     const h = crypto.createHash('sha1').update(`${this.event.id}:${localId}`).digest('hex');
     return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-${((parseInt(h[16], 16) & 3) | 8).toString(16)}${h.slice(17, 20)}-${h.slice(20, 32)}`;
   }
@@ -247,11 +249,12 @@ export class CloudLink {
     }));
     const race = {
       ...s.race,
-      penalties: (s.race.penalties || []).map((p) => ({ ...p, driverId: U(p.driverId) })),
+      penalties: (s.race.penalties || []).map((p) => ({ ...p, id: U(p.id), driverId: U(p.driverId) })),
       grid: Array.isArray(s.race.grid) ? s.race.grid.map((g) => (typeof g === 'string' ? U(g) : g)) : s.race.grid
     };
     const feed = (s.feed || []).map((f) => ({ ...f, driverId: f.driverId ? U(f.driverId) : null }));
-    return { ...s, drivers, race, feed };
+    const overlay = s.overlay && s.overlay.focusDriverId ? { ...s.overlay, focusDriverId: U(s.overlay.focusDriverId) } : s.overlay;
+    return { ...s, drivers, race, feed, overlay };
   }
 
   // ---------------------------------------------------------------- link
@@ -295,15 +298,26 @@ export class CloudLink {
    * than inserting duplicates. Called again after a failed write to resync from the truth.
    */
   async baseline() {
-    const [drv, pen] = await Promise.all([
-      this.from('drivers').select('id').eq('event_id', this.event.id),
-      this.from('penalties').select('id').eq('event_id', this.event.id)
-    ]);
+    const drv = await this.from('drivers').select('id').eq('event_id', this.event.id);
     if (drv.error) throw drv.error;
+    /*
+     * Cars on the event that are not this grid's go first, in their own statement. The store
+     * would delete them too, but only after its inserts, and a leftover row holding #7 (from
+     * the web console, or from before ids were made per event) blocks inserting this grid's
+     * #7: one number per event. Deleting nulls their sign-ins' car link, which reconcile()
+     * then re-points by number.
+     */
+    const mine = new Set(this.race.state.drivers.map((d) => this.uid(d.id)));
+    const stale = (drv.data || []).map((r) => r.id).filter((id) => !mine.has(id));
+    if (stale.length) {
+      const { error } = await this.from('drivers').delete().in('id', stale);
+      if (error) throw error;
+    }
+    const pen = await this.from('penalties').select('id').eq('event_id', this.event.id);
     if (pen.error) throw pen.error;
     this.store = new SupabaseStore(this, this.event, null);
-    // Every existing car is "known but different": ours are updated, the rest deleted.
-    this.store.lastDrivers = new Map((drv.data || []).map((r) => [r.id, {}]));
+    // The cars that are ours are "known but different", so the first write updates them.
+    this.store.lastDrivers = new Map((drv.data || []).filter((r) => mine.has(r.id)).map((r) => [r.id, {}]));
     this.store.sentPenalties = new Set((pen.data || []).map((r) => r.id));
     // The local log's history is not replayed into the hosted one; only what happens next.
     this.store.sentFeed = new Set((this.race.state.feed || []).map((f) => f.t + '|' + f.text));
@@ -355,7 +369,9 @@ export class CloudLink {
       if (this.store.failures > before) {
         // The store remembers a change before sending it, so after a failure the next diff
         // would skip what was lost. Rebuild the baseline and send everything once more.
-        this.lastError = `A write to the online event failed (${this.lastRestError || 'unknown error'}); resending. Two cars with one number is the usual cause.`;
+        const why = this.lastRestError || 'unknown error';
+        const hint = /event_id.*num|num.*event_id|drivers_event_id_num/i.test(why) ? ' Two cars share one number: give each car its own.' : '';
+        this.lastError = `A write to the online event failed (${why}); resending.${hint}`;
         await this.baseline();
         this.dirty = true;
       } else {
