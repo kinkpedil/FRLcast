@@ -591,6 +591,15 @@ app.post('/api/cloud/link', async (req, res) => {
   }
 });
 
+app.post('/api/cloud/create', async (req, res) => {
+  if (!fromThisMachine(req)) return res.status(403).json({ ok: false, error: 'Only on the machine running FRLcast.' });
+  try {
+    res.json({ ok: true, ...(await cloud.create((req.body || {}).code, (req.body || {}).name)) });
+  } catch (e) {
+    res.status(400).json({ ...cloud.status(), ok: false, error: e.message });
+  }
+});
+
 app.post('/api/cloud/unlink', (req, res) => {
   if (!fromThisMachine(req)) return res.status(403).json({ ok: false, error: 'Only on the machine running FRLcast.' });
   cloud.unlink();

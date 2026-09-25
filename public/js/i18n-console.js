@@ -800,6 +800,18 @@
     'then come back here.': 'lalu kembali ke sini.',
     'Linking makes this PC the timing computer for that event: its grid, flags and penalties are replaced by the ones here. Do not also run the web console for it.':
       'Menghubungkan menjadikan PC ini komputer timing untuk event itu: grid, bendera, dan penaltinya diganti dengan yang ada di sini. Jangan jalankan console web untuk event yang sama.',
+    'Online league, drivers at home?': 'Liga online, pembalap di rumah?',
+    'Set up the online link': 'Atur link online',
+    'No account yet?': 'Belum punya akun?',
+    'Create one on the website': 'Buat di website',
+    '(free, once), then sign in here.': '(gratis, cukup sekali), lalu masuk di sini.',
+    'Use an event you already have': 'Pakai event yang sudah ada',
+    'Or make a new one': 'Atau buat yang baru',
+    'Make your event': 'Buat event-mu',
+    'Code drivers type': 'Kode yang diketik pembalap',
+    'Create and link': 'Buat dan hubungkan',
+    '4 to 12 letters or digits, unique across every league on FRLcast. Avoid O next to 0.':
+      '4 sampai 12 huruf atau angka, unik di semua liga FRLcast. Hindari huruf O di sebelah angka 0.',
     'Refresh list': 'Muat ulang daftar',
     'Sign in': 'Masuk',
     'Sign out': 'Keluar',

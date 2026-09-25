@@ -13,7 +13,8 @@ import { cloudOptions } from './cloudbus.js';
 const t = (en) => (window.FRL_I18N ? window.FRL_I18N.t(en) : en);
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const DASHBOARD = 'https://www.frlcast.my.id/dashboard';
+// The Vercel address rather than the custom domain: it answers even when the domain does not.
+const SITE = 'https://frl-broadcast.vercel.app';
 
 let st = null;
 let events = null;
@@ -59,10 +60,14 @@ function render() {
   if (!body) return;
   if (pill) pill.style.color = '';
 
+  // The Race page is where the operator lives, so the way to the online link starts there.
   if (how) {
-    how.hidden = !(st && st.linked);
+    how.hidden = !(st && st.configured);
     if (st && st.linked) {
       how.innerHTML = `${esc(t('Online: drivers anywhere type the event code'))} <b class="cloudcode-sm">${esc(st.code)}</b> ${esc(t('in the driver app.'))}`;
+    } else if (st && st.configured) {
+      how.innerHTML = `${esc(t('Online league, drivers at home?'))} <a href="#" id="regCloudGo">${esc(t('Set up the online link'))}</a>`;
+      $('regCloudGo').onclick = (e) => { e.preventDefault(); goToCard(); };
     }
   }
 
@@ -84,7 +89,8 @@ function render() {
         <label class="field"><span>${esc(t('Email'))}</span><input type="email" id="cloudEmail" autocomplete="username" required></label>
         <label class="field"><span>${esc(t('Password'))}</span><input type="password" id="cloudPass" autocomplete="current-password" required></label>
         <button class="btn primary" type="submit" ${busy ? 'disabled' : ''}>${esc(t('Sign in'))}</button>
-      </form>${err}`)) return;
+      </form>
+      <p class="hint" style="margin:10px 0 0">${esc(t('No account yet?'))} <a href="${SITE}/login" target="_blank" rel="noopener">${esc(t('Create one on the website'))}</a> ${esc(t('(free, once), then sign in here.'))}</p>${err}`)) return;
     $('cloudLogin').onsubmit = async (e) => {
       e.preventDefault();
       // Read before repainting: the busy state redraws the form and empties it.
@@ -104,11 +110,19 @@ function render() {
     pill.textContent = t('not linked');
     const list = events || [];
     if (!paint(body, `
-      <p style="margin:0 0 12px">${esc(t('Signed in as'))} <b>${esc(st.email)}</b>. ${esc(t('Pick the event your drivers will join.'))}</p>
-      ${list.length ? `<div class="row" style="gap:8px;margin-bottom:10px">
+      <p style="margin:0 0 12px">${esc(t('Signed in as'))} <b>${esc(st.email)}</b>.</p>
+      ${list.length ? `<div class="clocklabel" style="margin-bottom:6px">${esc(t('Use an event you already have'))}</div>
+      <div class="row" style="gap:8px;margin-bottom:14px">
         <select id="cloudEvent" style="flex:1">${list.map((e) => `<option value="${esc(e.code)}"${e.code === st.code ? ' selected' : ''}>${esc(e.code)}  ${esc(e.name)}${e.round ? ' · ' + esc(e.round) : ''}</option>`).join('')}</select>
         <button class="btn primary" id="cloudLink" ${busy ? 'disabled' : ''}>${esc(t('Link'))}</button>
-      </div>` : `<p class="hint">${esc(t('You have no events on the website yet.'))} <a href="${DASHBOARD}" target="_blank" rel="noopener">${esc(t('Create one on the dashboard'))}</a>, ${esc(t('then come back here.'))}</p>`}
+      </div>` : ''}
+      <div class="clocklabel" style="margin-bottom:6px">${esc(list.length ? t('Or make a new one') : t('Make your event'))}</div>
+      <form id="cloudNew" class="cloudform" style="margin-bottom:6px">
+        <label class="field"><span>${esc(t('Event name'))}</span><input type="text" id="cloudNewName" maxlength="60" placeholder="NUSANTARA DRIFT LEAGUE" required></label>
+        <label class="field"><span>${esc(t('Code drivers type'))}</span><input type="text" id="cloudNewCode" maxlength="12" placeholder="NDL3" pattern="[A-Za-z0-9]{4,12}" title="4-12" required style="text-transform:uppercase"></label>
+        <button class="btn ${list.length ? '' : 'primary'}" type="submit" ${busy ? 'disabled' : ''}>${esc(t('Create and link'))}</button>
+      </form>
+      <p class="hint" style="margin:0 0 12px">${esc(t('4 to 12 letters or digits, unique across every league on FRLcast. Avoid O next to 0.'))}</p>
       <p class="hint" style="margin:0 0 10px">${esc(t('Linking makes this PC the timing computer for that event: its grid, flags and penalties are replaced by the ones here. Do not also run the web console for it.'))}</p>
       <div class="row" style="gap:8px"><button class="btn ghost sm" id="cloudReload">${esc(t('Refresh list'))}</button>
       <button class="btn ghost sm" id="cloudOut">${esc(t('Sign out'))}</button></div>${err}`)) return;
@@ -118,6 +132,15 @@ function render() {
       busy = true; note = ''; render();
       try { await api('/api/cloud/link', { code }); } catch (x) { note = x.message; }
       busy = false;
+      refresh();
+    };
+    $('cloudNew').onsubmit = async (e) => {
+      e.preventDefault();
+      const body = { name: $('cloudNewName').value, code: $('cloudNewCode').value };
+      busy = true; note = ''; render();
+      try { await api('/api/cloud/create', body); } catch (x) { note = x.message; }
+      busy = false;
+      events = null;
       refresh();
     };
     $('cloudReload').onclick = () => { events = null; note = ''; refresh(); };
@@ -155,6 +178,13 @@ function render() {
     events = null;
     refresh();
   };
+}
+
+/** Open the Drivers page at this card (from the hint on the Race page). */
+function goToCard() {
+  const btn = document.querySelector('.navbtn[data-page="drivers"]');
+  if (btn) btn.click();
+  setTimeout(() => { const c = $('cloudCard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
 }
 
 if (cloudOptions()) {

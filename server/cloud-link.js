@@ -197,6 +197,26 @@ export class CloudLink {
     return data || [];
   }
 
+  /**
+   * Make a new event on the website and link it, so an operator never has to leave the
+   * desktop app to start an online league. Same insert the website dashboard does.
+   */
+  async create(code, name) {
+    code = String(code || '').trim().toUpperCase();
+    name = String(name || '').trim().slice(0, 60) || 'UNTITLED EVENT';
+    if (!/^[A-Z0-9]{4,12}$/.test(code)) throw new Error('An event code is 4 to 12 letters or digits.');
+    await this.token();
+    const { error } = await this.from('events').insert({ owner: this.saved.userId, code, name });
+    if (error) {
+      // Codes are unique across every league on the site, so a common one may be taken.
+      throw new Error(/duplicate|unique|409/i.test(error.message) ? `The code ${code} is already taken. Pick another.` : error.message);
+    }
+    // The link mirrors this console's event name onto the new event, so give this console the
+    // name that was just typed; otherwise the new event would be renamed to the old one.
+    this.race.apply({ type: 'event.update', patch: { name } });
+    return this.link(code);
+  }
+
   // ---------------------------------------------------------------- ids
 
   /*
