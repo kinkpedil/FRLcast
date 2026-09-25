@@ -36,7 +36,8 @@ const tag = args.tag;
 const zip = path.resolve(args.zip);
 const pre = tag.includes('-');
 
-const run = (cmd, argv, opts = {}) => execFileSync(cmd, argv, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], ...opts }).trim();
+// With stdio 'inherit' execFileSync returns null (the output went to the log), hence the ?? ''.
+const run = (cmd, argv, opts = {}) => (execFileSync(cmd, argv, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], ...opts }) ?? '').trim();
 
 // ---------------------------------------------------------------- notes + checksum
 let notes = run('git', ['tag', '-l', '--format=%(contents)', tag]);
