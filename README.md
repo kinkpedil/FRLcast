@@ -6,8 +6,17 @@ poll, a spoken commentator, and the official FR Legends timing API. Overlays are
 Browser Sources, and every flag reaches the drivers' phones.
 
 - Website: [frlcast.my.id](https://www.frlcast.my.id)
+- Video tutorial: [watch on YouTube](https://youtu.be/9SToAYhZ0zY) (13 min, English)
 - Desktop app (full features): [download the latest release](https://github.com/kinkpedil/FRLcast/releases/latest)
 - Built by kinkpedil12 (Fadly Alfarizy)
+
+## Video tutorial
+
+The complete guide, from creating your first event to going live: the operator console,
+OBS overlays, the audience pages, live timing on the desktop app, the official timing API,
+and the driver app. Click the thumbnail to watch.
+
+[![FRLcast: The Complete Guide to FR Legends Race Control, Live Timing and OBS Overlays](docs/images/tutorial-thumbnail.jpg)](https://youtu.be/9SToAYhZ0zY)
 
 ![FRLcast broadcast overlay](site/shots/overlay.png)
 
@@ -70,6 +79,7 @@ npm run fetch-tessdata    # once, for fully offline OCR
 | `android/` | The driver phone app, built with the raw Android SDK tools. |
 | `supabase/` | Database schema and migrations for the hosted mode. |
 | `scripts/` | Packaging (`package-desktop.ps1`), the launcher helper, and setup scripts. |
+| `remotion/` | The video tutorial and its thumbnail, built with Remotion (narration and sound in `remotion/scripts/audio`). |
 
 ## Documentation
 
