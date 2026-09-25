@@ -735,6 +735,44 @@
       'Skin mengubah bentuk widget; template di bawah tetap mengatur warnanya, jadi kombinasi apa pun bisa. Klasik adalah tampilan asli.',
     'Loading the manual…': 'Memuat panduan…',
 
+    // ---------------------------------------------------------------- version + updates
+    'Version and updates': 'Versi dan update',
+    'You are running': 'Kamu memakai',
+    'Check for updates': 'Cek update',
+    "What's new in each version": 'Apa yang baru di tiap versi',
+    'Tell me about beta versions': 'Beri tahu saya soal versi beta',
+    'Betas get new features first, so you can try them before race day. Do not run a beta at a real event. The normal download never becomes a beta.':
+      'Versi beta mendapat fitur baru lebih dulu, jadi bisa kamu coba sebelum hari race. Jangan pakai versi beta di event sungguhan. Download biasa tidak pernah berubah jadi beta.',
+    'Update available': 'Ada update',
+    'The website always runs the newest version. The desktop app tells you itself when it has an update.':
+      'Website selalu memakai versi terbaru. Aplikasi desktop akan memberi tahu sendiri kalau ada update.',
+    'Could not reach the FRLcast server.': 'Tidak bisa menghubungi server FRLcast.',
+    'A newer version is available:': 'Ada versi yang lebih baru:',
+    'Could not check for updates (offline?).': 'Tidak bisa mengecek update (sedang offline?).',
+    'This is the newest version.': 'Ini versi terbaru.',
+    'This copy runs from source, so it updates with git rather than by itself.':
+      'Salinan ini berjalan dari source code, jadi update-nya lewat git, bukan otomatis.',
+    'Installing the update and restarting. This window reloads by itself.':
+      'Memasang update dan me-restart. Jendela ini akan memuat ulang sendiri.',
+    'Downloading the update:': 'Mengunduh update:',
+    'Checking the download...': 'Memeriksa hasil unduhan...',
+    'is available.': 'sudah tersedia.',
+    'You have': 'Versimu sekarang',
+    'Hide': 'Tutup',
+    "What's new": 'Apa yang baru',
+    'Update now': 'Update sekarang',
+    'Download': 'Unduh',
+    'Hide until the next version': 'Sembunyikan sampai versi berikutnya',
+    'Later': 'Nanti',
+    'A race is running. Finish it first: updating restarts the server.':
+      'Race sedang berjalan. Selesaikan dulu: update akan me-restart server.',
+    'The update did not finish:': 'Update tidak selesai:',
+    'Full changelog': 'Changelog lengkap',
+    'Update to': 'Update ke',
+    'now?': 'sekarang?',
+    'FRLcast restarts (about a minute). Your event, drivers, API key, voices and logo are kept, and your data is backed up first.':
+      'FRLcast akan restart (sekitar satu menit). Event, pembalap, API key, voice, dan logo tetap aman, dan datamu di-backup dulu.',
+
     'pending': 'menunggu',
     'approved': 'diterima',
     'rejected': 'ditolak'

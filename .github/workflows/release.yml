@@ -1,0 +1,73 @@
+# Build and publish the desktop download for every version tag.
+#
+# scripts/publish-desktop.ps1 bumps the version, writes the release notes into an annotated
+# tag and pushes it; this does the rest on a clean Windows machine: install, bundle Node and
+# the Piper binary, zip, and publish the GitHub release (scripts/release-publish.mjs).
+#
+# Why here and not on the operator's PC: that PC has been wiped once already and every tool
+# had to be reinstalled. A release should not depend on one machine surviving.
+#
+# Re-run a failed build from the Actions tab with "Run workflow" and the tag name.
+#
+# Optional repository secret DISCORD_WEBHOOK_URL: when set, each release is announced there.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to (re)build, for example v0.3.0'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+
+      # actions/checkout can leave an annotated tag as a lightweight ref, which loses the
+      # message that holds the release notes. Fetch the tag object itself.
+      - name: Fetch the annotated tag
+        shell: pwsh
+        run: git fetch --force origin "refs/tags/${env:TAG}:refs/tags/${env:TAG}"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Piper binary
+        shell: pwsh
+        run: |
+          # The commentary voice engine. Voices are not bundled; the console installs them.
+          $url = 'https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip'
+          Invoke-WebRequest $url -OutFile piper.zip
+          Expand-Archive piper.zip -DestinationPath piper-tmp -Force
+          $exe = Get-ChildItem piper-tmp -Recurse -Filter piper.exe | Select-Object -First 1
+          if (-not $exe) { throw 'piper.exe not found in the Piper download' }
+          New-Item -ItemType Directory -Force tools | Out-Null
+          Move-Item $exe.DirectoryName tools/piper
+
+      - name: Package
+        shell: pwsh
+        run: ./scripts/package-desktop.ps1
+
+      - name: Publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: node scripts/release-publish.mjs --tag $env:TAG --zip dist/FRLcast-desktop.zip

@@ -29,6 +29,9 @@
     // ---------------------------------------------------------------- notice
     'Want the commentator and fully automatic timing?': 'Mau pakai komentator dan timing otomatis penuh?',
     'Download the desktop app': 'Unduh aplikasi desktop',
+    "What's new": 'Apa yang baru',
+    'Changelog': 'Changelog',
+    'Every desktop version, with what changed': 'Semua versi desktop, lengkap dengan perubahannya',
     'The website runs your event, the audience poll and the driver app. But the spoken commentator, the natural voice, and fully automatic live timing read straight from the game only run in the free desktop app. That part needs a program on your own machine, not this website.': 'Website menjalankan event, voting penonton, dan aplikasi driver. Tapi komentator suara, suara natural, dan timing otomatis penuh yang dibaca langsung dari game hanya jalan di aplikasi desktop gratis. Bagian itu butuh program di mesin kamu sendiri, bukan di website ini.',
 
     // ---------------------------------------------------------------- hero

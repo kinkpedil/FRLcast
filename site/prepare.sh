@@ -31,6 +31,9 @@ cp "$ROOT/public/report.html" "$HERE/report.html"
 cp "$ROOT/public/live.html" "$HERE/live.html"
 # The operator control-room / multiview page.
 cp "$ROOT/public/multiview.html" "$HERE/multiview.html"
+# The version the hosted console shows in its sidebar (js/update-panel.js). Run from the
+# root so node gets a relative path: a Git Bash /d/... path means nothing to Windows node.
+( cd "$ROOT" && printf '%s' "$(node -p "require('./package.json').version")" ) > "$HERE/app-version.txt"
 rm -rf "$HERE/css"
 cp -r "$ROOT/public/css" "$HERE/css"
 

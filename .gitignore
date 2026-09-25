@@ -4,6 +4,11 @@ data/drivers-auth.json
 data/backups/
 data/*.log
 data/timing.json
+data/update.json
+data/updates/
+# in-app updater (scripts/update.ps1): data backups and its unpack folder
+backups/
+.update-staging/
 public/models/*.onnx
 public/vendor/tessdata/*.gz
 .DS_Store
@@ -62,3 +67,4 @@ site/live.html
 site/multiview.html
 site/dl/
 site/version.txt
+site/app-version.txt

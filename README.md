@@ -7,7 +7,7 @@ Browser Sources, and every flag reaches the drivers' phones.
 
 - Website: [frlcast.my.id](https://www.frlcast.my.id)
 - Video tutorial: [watch on YouTube](https://youtu.be/9SToAYhZ0zY) (13 min, English)
-- Desktop app (full features): [download the latest release](https://github.com/kinkpedil/FRLcast/releases/latest)
+- Desktop app (full features): [download the latest release](https://github.com/kinkpedil/FRLcast/releases/latest) · [what's new in each version](https://frlcast.my.id/changelog)
 - Built by kinkpedil12 (Fadly Alfarizy)
 
 ## Video tutorial

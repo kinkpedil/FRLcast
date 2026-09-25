@@ -16,6 +16,7 @@ import { FileStore } from './file-store.js';
 import { ensureCert } from './tls.js';
 import { DriverAuth } from './drivers-auth.js';
 import { TimingApi } from './timing-api.js';
+import { Updates } from './updates.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -75,6 +76,10 @@ function cleanIp(ip) {
 const race = new RaceState(new FileStore());
 const auth = new DriverAuth();
 const timing = new TimingApi(race, ROOT);
+const LIVE = ['formation', 'green', 'yellow', 'safety', 'red'];
+const updates = new Updates(ROOT, {
+  isRacing: () => !!race.state.race.startedAt && LIVE.includes(race.state.race.status)
+});
 const app = express();
 app.use(express.json({ limit: '8mb' }));
 
@@ -502,6 +507,40 @@ app.post('/api/timing/stop', (_req, res) => {
   res.json({ ok: true, ...timing.status() });
 });
 
+/*
+ * Version and updates. Reading is open to the LAN (it is only a version number and public
+ * release notes); installing is limited to this machine, because the server has no auth and
+ * an update restarts it: another device on the network must not be able to do that mid-event.
+ */
+const fromThisMachine = (req) => /^(::1|127\.0\.0\.1|::ffff:127\.0\.0\.1)$/.test(req.socket.remoteAddress || '');
+
+app.get('/api/version', async (req, res) => {
+  await updates.check(req.query.refresh === '1');
+  res.json(updates.status());
+});
+
+app.post('/api/update/channel', (req, res) => {
+  updates.setChannel((req.body || {}).channel);
+  res.json(updates.status());
+});
+
+app.post('/api/update/apply', async (req, res) => {
+  if (!fromThisMachine(req)) {
+    return res.status(403).json({ ok: false, error: 'Updates can only be installed on the machine running FRLcast.' });
+  }
+  const tag = String((req.body || {}).tag || '');
+  const opts = { force: !!(req.body || {}).force };
+  await updates.check();
+  try { updates.precheck(tag, opts); } catch (e) { return res.status(400).json({ ok: false, error: e.message }); }
+  // Answer now and let the console follow progress on /api/version: the download takes a
+  // while, and the request would otherwise sit open until this process exits under it.
+  updates.apply(tag, opts).then(() => {
+    console.log(`\n  Updating to ${tag}. FRLcast restarts in its own window in a moment.\n`);
+    setTimeout(() => process.exit(0), 1500);
+  }, (e) => console.error('[update]', e.message));
+  res.json({ ok: true });
+});
+
 const server = http.createServer(app);
 
 /*
@@ -645,8 +684,11 @@ setInterval(() => {
 }
 
 server.listen(PORT, () => {
+  // Look for a newer version shortly after start, then a few times a day.
+  setTimeout(() => updates.check(), 5000);
+  setInterval(() => updates.check(), 6 * 60 * 60 * 1000).unref();
   console.log('');
-  console.log('  FR LEGENDS BROADCAST');
+  console.log(`  FRLcast v${updates.version}`);
   console.log('  ---------------------------------------------');
   console.log(`  Operator panel : http://localhost:${PORT}/`);
 

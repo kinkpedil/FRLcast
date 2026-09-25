@@ -26,6 +26,7 @@
     <button class="navbtn" data-page="obs">OBS setup <span class="kbd">9</span></button>
     <button class="navbtn" data-page="help">Help</button>
     <div class="side-foot">
+      <div class="appver" id="appVersion" data-i18n-skip>FRLcast</div>
       <div class="conn"><i></i><b></b></div>
       <div style="margin-top:8px">Lap hotkeys <span class="hot">Q W E R T Y U I</span> fire a lap for drivers 1-8.<br>
       <span class="hot">Space</span> start / green flag.</div>
@@ -34,6 +35,7 @@
 
   <main class="main">
 
+    <div class="updatebar" id="updateBar" hidden data-i18n-skip></div>
     <div class="warnbar" id="visionWarn" hidden></div>
 
     <!-- ============ RACE ============ -->
@@ -1298,6 +1300,24 @@
         for those. Only the body and the contents list are skipped — the heading above and
         the search box are ordinary interface and translate normally.
       -->
+      <div class="card" id="aboutCard" style="margin-bottom:22px">
+        <h3>Version and updates</h3>
+        <div class="body">
+          <p style="margin:0 0 12px">You are running <b id="aboutVer" data-i18n-skip>FRLcast</b>. <span id="aboutState" data-i18n-skip></span></p>
+          <div class="row" style="gap:8px;margin-bottom:12px">
+            <button class="btn" id="btnCheckUpdate">Check for updates</button>
+            <a class="btn ghost" href="https://frlcast.my.id/changelog" target="_blank" rel="noopener">What's new in each version</a>
+          </div>
+          <div id="betaWrap">
+            <label class="toggle">
+              <span>Tell me about beta versions</span>
+              <input type="checkbox" id="betaToggle"><i class="sw"></i>
+            </label>
+            <p class="hint" style="margin:8px 0 0">Betas get new features first, so you can try them before race day. Do not run a beta at a real event. The normal download never becomes a beta.</p>
+          </div>
+        </div>
+      </div>
+
       <div class="helpwrap">
         <nav class="helptoc" id="helpToc" data-i18n-skip></nav>
         <div>
@@ -1317,5 +1337,6 @@
 <script src="js/i18n-core.js"></script>
 <script src="js/i18n-console.js?v=live40"></script>
 <script type="module" src="js/panel.js?v=live40"></script>
+<script type="module" src="js/update-panel.js?v=live40"></script>
 </body>
 </html>

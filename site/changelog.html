@@ -1,0 +1,205 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>What's new in FRLcast</title>
+<meta name="description" content="Every version of the FRLcast desktop app, newest first, with what changed.">
+<style>
+  /*
+   * The changelog: every desktop release, newest first, read straight from GitHub's release
+   * list so it can never drift from what was actually published. The notes carry an English
+   * and an Indonesian summary (see scripts/release-notes.mjs); this shows the reader's one,
+   * with the full change list folded underneath. No login, no Supabase: it is public anyway.
+   */
+  :root {
+    --bg: #0b0d11; --panel: #12151b; --line: rgba(255,255,255,.08);
+    --ink: #f2f4f8; --ink-2: rgba(242,244,248,.72); --ink-3: rgba(242,244,248,.45);
+    --accent: #00e0a4; --beta: #ffd60a;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 400 15px/1.55 Inter, -apple-system, "Segoe UI", system-ui, sans-serif; }
+  .shell { max-width: 820px; margin: 0 auto; padding: 22px 16px 70px; }
+
+  header.top { display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 22px; }
+  .kicker { font-family: var(--mono); font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+  .kicker a { color: inherit; text-decoration: none; }
+  h1 { font-size: 1.7rem; line-height: 1.15; margin: 4px 0 4px; letter-spacing: -.01em; }
+  .where { color: var(--ink-2); font-size: .92rem; }
+  .langbtns { margin-left: auto; display: flex; gap: 4px; }
+  .langbtns button { font: inherit; font-size: .8rem; padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink-2); cursor: pointer; }
+  .langbtns button.on { border-color: var(--accent); color: var(--accent); }
+
+  .hero { border: 1px solid rgba(0,224,164,.35); background: linear-gradient(180deg, rgba(0,224,164,.08), rgba(0,224,164,.02)); border-radius: 14px; padding: 18px 18px; margin-bottom: 30px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .hero .hv { font-family: var(--mono); font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  .hero .hn { font-size: 1.35rem; font-weight: 700; margin-top: 2px; }
+  .hero .hd { color: var(--ink-2); font-size: .85rem; }
+  .hero .acts { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn { text-decoration: none; font-size: .9rem; font-weight: 600; padding: 10px 16px; border-radius: 9px; border: 1px solid var(--line); color: var(--ink); background: var(--panel); display: inline-flex; align-items: center; gap: 8px; }
+  .btn.primary { background: var(--accent); color: #05221b; border-color: transparent; }
+
+  .rel { position: relative; padding: 0 0 26px 26px; }
+  .rel::before { content: ''; position: absolute; left: 5px; top: 8px; bottom: 0; width: 2px; background: var(--line); }
+  .rel:last-child::before { bottom: auto; height: 0; }
+  .rel::after { content: ''; position: absolute; left: 0; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg); border: 2px solid var(--ink-3); }
+  .rel.latest::after { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .rel.beta::after { border-color: var(--beta); }
+  .rh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .rh h2 { margin: 0; font-size: 1.2rem; }
+  .rh h2 a { color: inherit; text-decoration: none; }
+  .tag { font-family: var(--mono); font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; }
+  .tag.latest { background: rgba(0,224,164,.16); color: var(--accent); }
+  .tag.beta { background: rgba(255,214,10,.16); color: var(--beta); }
+  .date { color: var(--ink-3); font-size: .85rem; }
+  .card { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 14px 16px; }
+  .notes { color: var(--ink-2); overflow-wrap: anywhere; }
+  .notes ul { margin: 4px 0; padding-left: 20px; }
+  .notes li { margin: 5px 0; }
+  .notes b { color: var(--ink); }
+  .notes p { margin: 6px 0; }
+  .notes code { font-family: var(--mono); font-size: .82em; padding: 1px 5px; border-radius: 5px; background: rgba(255,255,255,.08); }
+  .notes a { color: var(--accent); }
+  .notes h4, .notes h5 { margin: 14px 0 4px; color: var(--ink); font-size: .9rem; }
+  .notes blockquote { margin: 8px 0; padding-left: 10px; border-left: 2px solid var(--line); }
+  details { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+  summary { cursor: pointer; color: var(--ink-2); font-size: .88rem; font-weight: 600; }
+  summary:hover { color: var(--ink); }
+  .rlinks { margin-top: 10px; font-size: .85rem; }
+  .rlinks a { color: var(--accent); text-decoration: none; margin-right: 14px; }
+
+  #loading, #failed { color: var(--ink-2); padding: 40px 0; text-align: center; }
+  #failed a { color: var(--accent); }
+  .foot { color: var(--ink-3); font-size: .8rem; margin-top: 30px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .foot a { color: var(--accent); text-decoration: none; }
+</style>
+
+<div class="shell">
+  <header class="top">
+    <div>
+      <div class="kicker"><a href="/">FRLcast</a> · <span data-t="kicker">Desktop app</span></div>
+      <h1 data-t="title">What's new</h1>
+      <div class="where" data-t="sub">Every version of the desktop app, newest first. The console tells you itself when there is a new one.</div>
+    </div>
+    <div class="langbtns">
+      <button data-lang="en" class="on">EN</button>
+      <button data-lang="id">ID</button>
+    </div>
+  </header>
+
+  <div id="loading" data-t="loading">Loading versions...</div>
+  <div id="failed" hidden><span data-t="failed">Could not load the version list right now.</span>
+    <a href="https://github.com/kinkpedil/FRLcast/releases" data-t="onGithub">See all versions on GitHub</a></div>
+
+  <div id="app" hidden>
+    <div class="hero" id="hero"></div>
+    <div id="list"></div>
+  </div>
+
+  <p class="foot"><span data-t="foot">Release notes come straight from GitHub.</span>
+    · <a href="https://frlcast.my.id">FRLcast by kinkpedil12</a></p>
+</div>
+
+<script type="module">
+  import { readNotes, mdToHtml } from './js/release-notes.js';
+
+  const REPO = 'kinkpedil/FRLcast';
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const STR = {
+    en: { kicker: 'Desktop app', title: "What's new",
+          sub: 'Every version of the desktop app, newest first. The console tells you itself when there is a new one.',
+          loading: 'Loading versions...', failed: 'Could not load the version list right now.',
+          onGithub: 'See all versions on GitHub', foot: 'Release notes come straight from GitHub.',
+          newest: 'Newest version', download: 'Download for Windows', allOnGithub: 'All versions on GitHub',
+          latest: 'Latest', beta: 'Beta', allChanges: 'All changes in this version', release: 'Release page',
+          betaNote: 'Beta: for trying new features before race day. Not for a real event.',
+          released: 'Released' },
+    id: { kicker: 'Aplikasi desktop', title: 'Apa yang baru',
+          sub: 'Semua versi aplikasi desktop, dari yang terbaru. Console akan memberi tahu sendiri kalau ada versi baru.',
+          loading: 'Memuat versi...', failed: 'Daftar versi tidak bisa dimuat sekarang.',
+          onGithub: 'Lihat semua versi di GitHub', foot: 'Catatan rilis diambil langsung dari GitHub.',
+          newest: 'Versi terbaru', download: 'Download untuk Windows', allOnGithub: 'Semua versi di GitHub',
+          latest: 'Terbaru', beta: 'Beta', allChanges: 'Semua perubahan di versi ini', release: 'Halaman rilis',
+          betaNote: 'Beta: untuk mencoba fitur baru sebelum hari race. Bukan untuk event sungguhan.',
+          released: 'Rilis' }
+  };
+  let lang = 'en';
+  try { lang = localStorage.getItem('frl.lang') === 'id' ? 'id' : 'en'; } catch (e) { /* private window */ }
+  let releases = null;
+
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
+    document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = STR[lang][el.dataset.t] || el.textContent; });
+    document.title = lang === 'id' ? 'Apa yang baru di FRLcast' : "What's new in FRLcast";
+    if (releases) render();
+  }
+  document.querySelectorAll('[data-lang]').forEach((b) => {
+    b.onclick = () => { lang = b.dataset.lang; try { localStorage.setItem('frl.lang', lang); } catch (e) {} applyLang(); };
+  });
+
+  const when = (iso) => new Date(iso).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  function render() {
+    const T = STR[lang];
+    const stable = releases.filter((r) => !r.prerelease);
+    const top = stable[0] || releases[0];
+    $('#hero').innerHTML = `
+      <div><div class="hv">${esc(T.newest)}</div>
+        <div class="hn">FRLcast ${esc(top.tag_name)}</div>
+        <div class="hd">${esc(T.released)} ${esc(when(top.published_at))}</div></div>
+      <div class="acts">
+        <a class="btn primary" href="https://github.com/${REPO}/releases/latest">${esc(T.download)}</a>
+        <a class="btn" href="https://github.com/${REPO}/releases">${esc(T.allOnGithub)}</a>
+      </div>`;
+    $('#list').innerHTML = releases.map((r) => {
+      const n = readNotes(r.body || '', lang);
+      const isLatest = top && r.id === top.id;
+      const cls = isLatest ? 'latest' : r.prerelease ? 'beta' : '';
+      const main = n.highlights || n.changes;
+      const fold = n.highlights && n.changes
+        ? `<details><summary>${esc(T.allChanges)}</summary><div class="notes">${mdToHtml(n.changes, { shift: 1 })}</div></details>` : '';
+      return `<section class="rel ${cls}" id="${esc(r.tag_name)}">
+        <div class="rh"><h2><a href="#${esc(r.tag_name)}">${esc(r.tag_name)}</a></h2>
+          ${isLatest ? `<span class="tag latest">${esc(T.latest)}</span>` : ''}
+          ${r.prerelease ? `<span class="tag beta">${esc(T.beta)}</span>` : ''}
+          <span class="date">${esc(when(r.published_at))}</span></div>
+        <div class="card">
+          ${r.prerelease ? `<p class="date" style="margin:0 0 8px">${esc(T.betaNote)}</p>` : ''}
+          <div class="notes">${mdToHtml(main, { shift: 1 })}</div>
+          ${fold}
+          <div class="rlinks"><a href="${esc(r.html_url)}">${esc(T.release)}</a></div>
+        </div>
+      </section>`;
+    }).join('');
+    $('#app').hidden = false;
+    $('#loading').hidden = true;
+  }
+
+  async function load() {
+    // A short session cache: GitHub allows 60 unauthenticated requests an hour per visitor.
+    const KEY = 'frl.changelog';
+    try {
+      const c = JSON.parse(sessionStorage.getItem(KEY) || 'null');
+      if (c && Date.now() - c.at < 10 * 60 * 1000) return c.list;
+    } catch (e) { /* no storage */ }
+    const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=30`, { headers: { accept: 'application/vnd.github+json' } });
+    if (!res.ok) throw new Error(res.status);
+    const list = (await res.json()).filter((r) => !r.draft);
+    try { sessionStorage.setItem(KEY, JSON.stringify({ at: Date.now(), list })); } catch (e) { /* full or blocked */ }
+    return list;
+  }
+
+  applyLang();
+  load().then((list) => {
+    if (!list.length) throw new Error('empty');
+    releases = list;
+    render();
+    if (location.hash) { const el = document.getElementById(location.hash.slice(1)); if (el) el.scrollIntoView(); }
+  }).catch(() => {
+    $('#loading').hidden = true;
+    $('#failed').hidden = false;
+  });
+</script>

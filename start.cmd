@@ -24,6 +24,12 @@ if errorlevel 1 (
   exit /b 1
 )
 
+rem The version in the window title, so it is visible on every machine at a glance.
+set "FRLVER="
+"%NODE%" -p "require('./package.json').version" > "%TEMP%\frlcast-version.txt" 2>nul
+set /p FRLVER=<"%TEMP%\frlcast-version.txt"
+title FRLcast v%FRLVER%
+
 if not exist "%~dp0node_modules" (
   echo First run: installing dependencies, this happens only once...
   call "%NODE%" "%~dp0node_modules\npm\bin\npm-cli.js" install --omit=dev 2>nul || call npm install --omit=dev
@@ -36,6 +42,8 @@ echo.
 rem Open the console as a chromeless app window (Edge/Chrome), a couple of seconds after the
 rem server is up. Detached, so this window stays as the running server. Overlays still go into
 rem OBS as Browser Sources at http://localhost:4700/overlay/...
-start "" powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\open-console.ps1"
+rem After an in-app update (scripts\update.ps1 sets FRL_NO_OPEN) the console that asked for it
+rem is still open and reloads itself, so do not open a second one.
+if not defined FRL_NO_OPEN start "" powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\open-console.ps1"
 "%NODE%" "%~dp0server\index.js"
 pause
