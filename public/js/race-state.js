@@ -878,10 +878,18 @@ export class RaceState {
      */
     const ext = race.ext;
     const extActive = ext && race.extAt && (now - race.extAt) < 15000 && Object.keys(ext).length > 0;
+    const extRace = extActive && race.extMode === 'race';
+    // Gaps measured at the line by the feed (race mode only). Cleared otherwise, so a stale
+    // value can never outlive the feed that produced it.
+    for (const d of drivers) d.extLine = null;
     if (extActive) {
       for (const d of drivers) {
         const e = ext[d.id];
         if (!e) { d.extRank = null; continue; }
+        if (extRace) {
+          d.extLine = { gapMs: e.gapMs, gapLaps: e.gapLaps, intMs: e.intMs, intLaps: e.intLaps };
+          if (e.totalMs != null) d.totalMs = e.totalMs;
+        }
         if (e.laps != null) d.lapsDone = e.laps;
         if (e.bestMs != null && e.bestMs > 0) d.bestLap = e.bestMs;
         if (e.lastMs != null && e.lastMs > 0) d.lastLap = e.lastMs;
@@ -905,9 +913,9 @@ export class RaceState {
     }
 
     // Shared with the hosted event rather than written twice: see public/js/timing.js.
-    // An external feed ranks by best lap (the in-game leaderboard is a best-lap board), so gaps
-    // are labelled best-lap style, like qualifying.
-    labelGaps(ranked, { drift: isDrift, quali: isQuali || extActive });
+    // A best-lap feed (qualifying, practice, the in-game board) is labelled best-lap style,
+    // like qualifying. A race-mode feed brings its own gaps, measured at the line.
+    labelGaps(ranked, { drift: isDrift, quali: isQuali || (extActive && !extRace) });
     const leader = ranked[0];
 
     // Overtakes: compare against the previous classification and log real swaps only
@@ -1543,16 +1551,23 @@ export class RaceState {
         // leaderboard, or the official timing API). rows: [{driverId, rank, laps, bestMs, lastMs}].
         // recompute() reads race.ext while it is fresh and lets it own the order.
         const rows = Array.isArray(a.rows) ? a.rows : [];
+        const num = (v) => (v == null ? null : Number(v));
+        // 'race' when the feed ordered the field by laps and line crossings (the timing API
+        // during a race session); 'best' for a best-lap board (qualifying, practice, OCR).
+        s.race.extMode = a.mode === 'race' ? 'race' : 'best';
         s.race.ext = {};
         for (const r of rows) {
           if (!r || !r.driverId) continue;
           s.race.ext[r.driverId] = {
             rank: Number(r.rank) || null,
-            laps: r.laps == null ? null : Number(r.laps),
-            bestMs: r.bestMs == null ? null : Number(r.bestMs),
-            lastMs: r.lastMs == null ? null : Number(r.lastMs),
+            laps: num(r.laps),
+            bestMs: num(r.bestMs),
+            lastMs: num(r.lastMs),
             sectors: Array.isArray(r.sectors) ? r.sectors.map(Number) : null,
-            bestSectors: Array.isArray(r.bestSectors) ? r.bestSectors.map(Number) : null
+            bestSectors: Array.isArray(r.bestSectors) ? r.bestSectors.map(Number) : null,
+            totalMs: num(r.totalMs),
+            gapMs: num(r.gapMs), gapLaps: Number(r.gapLaps) || 0,
+            intMs: num(r.intMs), intLaps: Number(r.intLaps) || 0
           };
         }
         s.race.extAt = now;

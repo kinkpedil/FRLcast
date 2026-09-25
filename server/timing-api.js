@@ -125,6 +125,9 @@ export class TimingApi {
   async get(url) {
     const r = await fetch(url, { headers: { 'X-Api-Key': this.key } });
     const body = await r.json().catch(() => ({}));
+    // Server clock minus ours. Lap times are stamped by the game server, the race start by
+    // this machine; race mode needs both on one clock.
+    if (body && body.serverTime) this.skew = body.serverTime - Date.now();
     return { status: r.status, body, retryAfter: Number(r.headers.get('retry-after')) || 0 };
   }
 
@@ -135,6 +138,10 @@ export class TimingApi {
     if (p.bestMs != null) cur.bestMs = p.bestMs;
     if (p.laps != null) cur.laps = p.laps;
     const es = p.entries || [];
+    // When each lap was completed (server time), for race mode. Snapshot replaces the map
+    // and /laps only returns seq > cursor, so nothing is appended twice.
+    cur.hist = cur.hist || [];
+    for (const e of es) if (e.completedAt != null) cur.hist.push(e.completedAt);
     if (es.length) {
       cur.lastMs = es[es.length - 1].ms;                 // entries are ascending by seq
       const lastSecs = es[es.length - 1].sectors;
@@ -191,12 +198,65 @@ export class TimingApi {
     const matched = [];
     for (const [pid, pl] of this.players) {
       const driverId = this.matchDriver(pid, pl.name);
-      if (driverId && pl.bestMs != null) matched.push({ driverId, bestMs: pl.bestMs, laps: pl.laps, lastMs: pl.lastMs, sectors: pl.sectors, bestSectors: pl.best });
+      if (driverId && pl.bestMs != null) matched.push({ driverId, bestMs: pl.bestMs, laps: pl.laps, lastMs: pl.lastMs, sectors: pl.sectors, bestSectors: pl.best, hist: pl.hist || [] });
     }
-    // Contest mode: rank by best single lap, ascending.
+    this.matched = matched.length;
+
+    const st = (this.race.state && this.race.state.event && this.race.state.event.sessionType) || 'race';
+    if (st === 'race' || st === 'endurance') return this.dispatchRace(matched);
+
+    // Qualifying / practice (and anything else): the API's own Contest ranking, best lap first.
     matched.sort((a, b) => a.bestMs - b.bestMs);
     const rows = matched.map((m, i) => ({ driverId: m.driverId, rank: i + 1, laps: m.laps, bestMs: m.bestMs, lastMs: m.lastMs, sectors: m.sectors, bestSectors: m.bestSectors }));
-    this.matched = rows.length;
-    this.race.apply({ type: 'timing.external', rows });
+    this.race.apply({ type: 'timing.external', mode: 'best', rows });
+  }
+
+  /*
+   * Race mode: the API only ranks by best lap (the server does not know track position), so
+   * a race order is rebuilt from the lap history instead. A car with more laps since the
+   * start is ahead; on the same lap, whoever crossed the line first is ahead. That is exactly
+   * what a line-timing screen shows.
+   *
+   * Only laps completed after the operator pressed Start race count, so laps left over from
+   * practice in the same room do not. The gap is measured at the line: the time between two
+   * cars completing the same lap, or whole laps once one has actually been lapped (never
+   * "+1 LAP" just because the leader happened to cross first a moment ago).
+   *
+   * Temporary, until the API can report position itself.
+   */
+  dispatchRace(matched) {
+    const started = this.race.state && this.race.state.race && this.race.state.race.startedAt;
+    const t0 = started ? started + (this.skew || 0) : null;
+    for (const m of matched) {
+      m.times = t0 == null ? [] : m.hist.filter((at) => at >= t0).sort((a, b) => a - b);
+      m.raceLaps = m.times.length;
+      m.lastAt = m.times[m.raceLaps - 1];
+    }
+    const running = matched.filter((m) => m.raceLaps > 0).sort((a, b) => b.raceLaps - a.raceLaps || a.lastAt - b.lastAt);
+    const waiting = matched.filter((m) => m.raceLaps === 0);
+
+    // How far `me` is behind `ref`, taken at the moment `me` last crossed the line.
+    const behind = (me, ref) => {
+      const c = me.raceLaps;
+      const refDone = ref.times.filter((at) => at <= me.lastAt).length;
+      if (refDone - c >= 1) return { laps: refDone - c, ms: null };
+      const refAt = ref.times[c - 1];
+      return { laps: 0, ms: refAt == null ? null : me.lastAt - refAt };
+    };
+
+    const rows = running.map((m, i) => {
+      const g = i === 0 ? { laps: 0, ms: null } : behind(m, running[0]);
+      const iv = i === 0 ? { laps: 0, ms: null } : behind(m, running[i - 1]);
+      return {
+        driverId: m.driverId, rank: i + 1, laps: m.raceLaps, bestMs: m.bestMs, lastMs: m.lastMs,
+        sectors: m.sectors, bestSectors: m.bestSectors, totalMs: m.lastAt - t0,
+        gapMs: g.ms, gapLaps: g.laps, intMs: iv.ms, intLaps: iv.laps,
+      };
+    });
+    // No race lap yet: no rank, so the console keeps them in grid order behind the runners.
+    for (const m of waiting) {
+      rows.push({ driverId: m.driverId, rank: null, laps: 0, bestMs: m.bestMs, lastMs: m.lastMs, sectors: m.sectors, bestSectors: m.bestSectors, gapMs: null, gapLaps: 0, intMs: null, intLaps: 0 });
+    }
+    this.race.apply({ type: 'timing.external', mode: 'race', rows });
   }
 }

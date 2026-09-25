@@ -60,6 +60,15 @@ export function labelGaps(ranked, { drift = false, quali = false } = {}) {
       return;
     }
 
+    // Gaps already measured at the line by a race-mode timing feed: the time between two
+    // cars completing the same lap, or whole laps once one has really been lapped.
+    if (d.extLine) {
+      const L = d.extLine;
+      d.gap = L.gapLaps > 0 ? `+${L.gapLaps} LAP${L.gapLaps > 1 ? 'S' : ''}` : L.gapMs == null ? '--' : `+${fmtGap(L.gapMs)}`;
+      d.interval = L.intLaps > 0 ? `+${L.intLaps}L` : L.intMs == null ? '--' : `+${fmtGap(L.intMs)}`;
+      return;
+    }
+
     // A lap down is not a time gap and must never be shown as one: "+1 LAP" and "+84.320"
     // would be read as the same distance by anybody glancing at a tower.
     const lapDown = leader.lapsDone - d.lapsDone;
