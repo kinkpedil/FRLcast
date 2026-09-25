@@ -1,4 +1,4 @@
-import { Bus, fmtTime, fmtClock, classification, raceElapsed, leaderLap, fastestLap, FLAG_LABEL } from './shared.js';
+import { Bus, fmtTime, fmtClock, classification, raceElapsed, leaderLap, fastestLap, FLAG_LABEL, closestFight } from './shared.js';
 import { CloudPanelBus } from './cloudpanel.js';
 import { cloudOptions } from './cloudbus.js';
 import { THEMES } from './themes.js';
@@ -307,7 +307,45 @@ function renderSceneStrip() {
  */
 let autoDirector = false;
 try { autoDirector = localStorage.getItem('frl.autodirector') === '1'; } catch (e) {}
-const adState = { fastId: null, hideAt: 0, lastStatus: null };
+const adState = { fastId: null, hideAt: 0, lastStatus: null, fightSince: 0, fightKey: '', h2hOn: false, h2hAt: 0, calmSince: 0 };
+
+/*
+ * Battles. A fight within a second that lasts a few seconds is worth the head-to-head on air;
+ * a car just going past is not, and neither is one that flickers on and off, so it waits
+ * FIGHT_HOLD before showing and keeps it up for at least H2H_MIN once shown. Only a
+ * head-to-head the director put up is taken down again: one the operator turned on is theirs.
+ */
+const FIGHT_MS = 1000, FIGHT_HOLD = 6000, FIGHT_END_MS = 1500, H2H_MIN = 15000, CALM_HOLD = 6000;
+
+function directBattles(s, now) {
+  const racing = s.race.startedAt && ['green', 'yellow'].includes(s.race.status)
+    && !['qualifying', 'practice', 'drift'].includes(s.event.sessionType);
+  const f = racing ? closestFight(classification(s)) : null;
+  const key = f ? f.a.id + '|' + f.b.id : '';
+
+  if (f && f.gapMs < FIGHT_MS) {
+    if (adState.fightKey !== key) { adState.fightKey = key; adState.fightSince = now; }
+    adState.calmSince = 0;
+    if (!adState.h2hOn && !s.overlay.show.h2h && now - adState.fightSince >= FIGHT_HOLD) {
+      // Auto pairing, so the widget follows this fight (and the next one) by itself.
+      if ((s.overlay.h2h || {}).mode !== 'auto') bus.action('overlay.h2h', { patch: { mode: 'auto', a: null, b: null } });
+      bus.action('overlay.update', { patch: { show: { h2h: true } } });
+      adState.h2hOn = true; adState.h2hAt = now;
+      toast(`${t('Battle on air')}: ${f.a.name} / ${f.b.name}`);
+    }
+    return;
+  }
+  adState.fightKey = ''; adState.fightSince = 0;
+  if (!adState.h2hOn) return;
+  if (!s.overlay.show.h2h) { adState.h2hOn = false; return; }          // the operator took it down
+  const calm = !f || f.gapMs >= FIGHT_END_MS;
+  if (calm && !adState.calmSince) adState.calmSince = now;
+  if (!calm) adState.calmSince = 0;
+  if (adState.calmSince && now - adState.calmSince >= CALM_HOLD && now - adState.h2hAt >= H2H_MIN) {
+    bus.action('overlay.update', { patch: { show: { h2h: false } } });
+    adState.h2hOn = false; adState.calmSince = 0;
+  }
+}
 
 function runDirector() {
   if (!autoDirector || !state) return;
@@ -333,6 +371,7 @@ function runDirector() {
     if (rs && s.overlay.activeScene !== rs.id) bus.action('scene.select', { id: rs.id });
     else if (!rs && !s.overlay.show.results) bus.action('overlay.update', { patch: { show: { results: true } } });
   }
+  directBattles(s, now);
   adState.lastStatus = s.race.status;
 }
 setInterval(runDirector, 500);
@@ -4020,7 +4059,7 @@ requestAnimationFrame(previewLoop);
  * no server is needed.
  */
 (() => {
-  let dc = { url: '', onFinish: false, onFlag: false, recapAuto: false };
+  let dc = { url: '', onFinish: false, onFlag: false, recapAuto: false, onStandings: false };
   try { const s = JSON.parse(localStorage.getItem('frl.discord') || 'null'); if (s) dc = { ...dc, ...s }; } catch (e) {}
   const save = () => { try { localStorage.setItem('frl.discord', JSON.stringify(dc)); } catch (e) {} };
   const dstat = (m) => { const el = $('#dcStatus'); if (el) el.textContent = m; };
@@ -4035,14 +4074,54 @@ requestAnimationFrame(previewLoop);
 
   const FLAG_EMOJI = { green: '🟢', yellow: '🟡', safety: '🚨', vsc: '🟨', red: '🔴', formation: '🚦', finished: '🏁', idle: '⚪' };
 
+  /*
+   * The result, written for the session it came from. A qualifying or practice board is a
+   * best-lap table (time and gap to pole); a race is positions, laps and gaps, with the
+   * fastest lap and any penalties underneath. Discord caps a description at 4096 characters,
+   * so the list stops at 20 cars.
+   */
+  const SESSION_TITLE = { race: 'Race result', endurance: 'Endurance result', qualifying: 'Qualifying result', practice: 'Practice result', drift: 'Drift result' };
   function resultEmbed(s) {
-    const rows = classification(s).slice(0, 12);
-    const lines = rows.map((d, i) => `**${d.dnf ? (d.retired ? 'RET' : 'DNF') : (i + 1)}.** ${d.name}${d.team ? ' _(' + d.team + ')_' : ''} — ${d.lapsDone} ${t('laps')}`);
+    const type = s.event.sessionType || 'race';
+    const best = type === 'qualifying' || type === 'practice';
+    const rows = classification(s).slice(0, 20);
+    const pole = rows.find((d) => d.bestLap != null);
+    const lines = rows.map((d, i) => {
+      const pos = d.dnf ? (d.retired ? 'RET' : 'DNF') : String(i + 1);
+      const team = d.team ? ` _(${d.team})_` : '';
+      if (best) {
+        const time = d.bestLap != null ? fmtTime(d.bestLap) : t('no time');
+        const gap = d.bestLap != null && pole && d !== pole ? ` (+${((d.bestLap - pole.bestLap) / 1000).toFixed(3)})` : '';
+        return `**${pos}.** ${d.name}${team}: ${time}${gap}`;
+      }
+      const gap = i === 0 || d.dnf ? '' : ` · ${d.gap}`;
+      return `**${pos}.** ${d.name}${team}: ${d.lapsDone} ${t('laps')}${gap}${d.penaltySec ? ` · +${d.penaltySec}s` : ''}`;
+    });
+    const extra = [];
+    if (!best) {
+      const fl = fastestLap(s);
+      if (fl && fl.bestLap != null) extra.push(`${t('Fastest lap')}: ${fl.name}, ${fmtTime(fl.bestLap)}`);
+      const pens = (s.race.penalties || []).filter((p) => p.status === 'applied').length;
+      if (pens) extra.push(`${pens} ${t('penalties')}`);
+    }
     return { embeds: [{
-      title: `🏁 ${s.event.name || 'Race'}${s.event.round ? ' · ' + s.event.round : ''} — ${t('Result')}`,
-      description: lines.join('\n') || '—',
+      title: `${best ? '⏱️' : '🏁'} ${s.event.name || 'Race'}${s.event.round ? ' · ' + s.event.round : ''}: ${t(SESSION_TITLE[type] || 'Race result')}`,
+      description: [lines.join('\n') || t('No result yet.'), extra.length ? '\n' + extra.join('\n') : ''].join(''),
       color: 0x00e0a4,
-      footer: { text: s.event.track || 'FRL Broadcast' }
+      footer: { text: `${s.event.track || 'FRLcast'} · FRLcast` }
+    }] };
+  }
+
+  /* The championship table, top 20, after a round has been scored. */
+  function standingsEmbed(s) {
+    const rows = (s.standings || []).slice(0, 20);
+    const lines = rows.map((r, i) => `**${i + 1}.** ${r.name}${r.num ? ' #' + r.num : ''}: ${r.points} ${t('pts')}`);
+    const rounds = ((s.championship && s.championship.rounds) || []).length;
+    return { embeds: [{
+      title: `🏆 ${(s.championship && s.championship.name) || s.event.name || t('Championship')}: ${t('standings')}`,
+      description: lines.join('\n') || t('No rounds scored yet.'),
+      color: 0xffd60a,
+      footer: { text: `${t('After')} ${rounds} ${rounds === 1 ? t('round') : t('rounds')} · FRLcast` }
     }] };
   }
 
@@ -4081,6 +4160,9 @@ requestAnimationFrame(previewLoop);
   if ($('#dcUrl')) $('#dcUrl').onchange = (e) => { dc.url = e.target.value.trim(); save(); };
   if ($('#dcOnFinish')) $('#dcOnFinish').onchange = (e) => { dc.onFinish = e.target.checked; save(); };
   if ($('#dcOnFlag')) $('#dcOnFlag').onchange = (e) => { dc.onFlag = e.target.checked; save(); };
+  if ($('#dcOnStandings')) $('#dcOnStandings').onchange = (e) => { dc.onStandings = e.target.checked; save(); };
+  if ($('#btnDcResult')) $('#btnDcResult').onclick = () => { if (!dc.url) return dstat(t('Paste a webhook URL first')); dstat(t('Sending…')); post(resultEmbed(state)); };
+  if ($('#btnDcStandings')) $('#btnDcStandings').onclick = () => { if (!dc.url) return dstat(t('Paste a webhook URL first')); dstat(t('Sending…')); post(standingsEmbed(state)); };
   if ($('#btnDcTest')) $('#btnDcTest').onclick = () => { if (!dc.url) return dstat(t('Paste a webhook URL first')); dstat(t('Sending…')); post({ content: '✅ FRL Broadcast ' + t('connected to this channel.') }); };
 
   const paint = () => {
@@ -4088,12 +4170,18 @@ requestAnimationFrame(previewLoop);
     if ($('#dcOnFinish')) $('#dcOnFinish').checked = dc.onFinish;
     if ($('#dcOnFlag')) $('#dcOnFlag').checked = dc.onFlag;
     if ($('#dcRecapAuto')) $('#dcRecapAuto').checked = dc.recapAuto;
+    if ($('#dcOnStandings')) $('#dcOnStandings').checked = dc.onStandings;
   };
   paint();
   $$('.navbtn').forEach((b) => { if (b.dataset.page === 'obs') b.addEventListener('click', () => setTimeout(paint, 0)); });
 
   let last = null;
+  let lastRounds = null;
   bus.on('state', (s) => {
+    // A round just scored: post the table, once per round.
+    const rounds = ((s.championship && s.championship.rounds) || []).length;
+    if (dc.url && dc.onStandings && lastRounds !== null && rounds > lastRounds) post(standingsEmbed(s));
+    lastRounds = rounds;
     if (last !== null && s.race.status !== last && s.race.status === 'finished') {
       // fill the recap box on the console the moment the race ends, ready to post/copy
       if ($('#recapText')) $('#recapText').value = buildRecap(s).text;

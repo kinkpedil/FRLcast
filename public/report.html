@@ -61,6 +61,11 @@
   ul.steward .open { color: var(--bad); font-family: var(--mono); font-size: .75rem; }
 
   .wrap-x { overflow-x: auto; }
+  .lapchart { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 8px 4px 4px; }
+  .lapchart svg { display: block; min-width: 520px; width: 100%; height: auto; }
+  .lapchart .ax { fill: var(--ink-3); font: 500 11px var(--mono); }
+  .lapchart .grid { stroke: var(--line); stroke-width: 1; }
+  .lapchart .lbl { font: 600 11px Inter, system-ui, sans-serif; fill: var(--ink-2); }
   .btn { font: 500 .875rem Inter, system-ui, sans-serif; cursor: pointer;
          border: 1px solid var(--line); border-radius: 7px; padding: 9px 15px;
          background: var(--panel); color: var(--ink); }
@@ -96,6 +101,11 @@
 
     <h2>Classification</h2>
     <div class="wrap-x"><table id="classification"></table></div>
+
+    <div id="chartWrap" hidden>
+      <h2>Positions lap by lap</h2>
+      <div class="lapchart" id="lapChart"></div>
+    </div>
 
     <div id="stewardWrap" hidden>
       <h2>Stewards</h2>
@@ -145,6 +155,46 @@ bus.on('state', (state) => {
   $('#loading').hidden = true;
   $('#report').hidden = false;
 });
+
+/*
+ * The position graph: one line per car, P1 at the top, lap 0 the grid. Drawn as plain SVG
+ * so it prints, scales on a phone and needs no chart library. A gap in a car's line is a lap
+ * with no reading (retired, or timing that missed it), not a guess.
+ */
+function lapChartSvg(c) {
+  const W = 860, left = 34, right = 118, top = 16, bottom = 36;
+  const H = top + bottom + Math.max(4, c.cars - 1) * 30;
+  const x = (lap) => left + (c.laps ? (lap / c.laps) * (W - left - right) : 0);
+  const y = (pos) => top + ((pos - 1) / Math.max(1, c.cars - 1)) * (H - top - bottom);
+  const out = [`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Positions lap by lap">`];
+  for (let p = 1; p <= c.cars; p++) {
+    out.push(`<line class="grid" x1="${left}" x2="${W - right}" y1="${y(p)}" y2="${y(p)}"/>`);
+    out.push(`<text class="ax" x="${left - 8}" y="${y(p) + 4}" text-anchor="end">P${p}</text>`);
+  }
+  const step = Math.max(1, Math.ceil(c.laps / 12));
+  for (let l = 0; l <= c.laps; l += step) {
+    out.push(`<text class="ax" x="${x(l)}" y="${H - 8}" text-anchor="middle">${l === 0 ? 'GRID' : 'L' + l}</text>`);
+  }
+  for (const s of c.series) {
+    let d = '';
+    let pen = false;
+    s.points.forEach((p, lap) => {
+      if (p == null) { pen = false; return; }
+      d += `${pen ? 'L' : 'M'}${x(lap).toFixed(1)},${y(p).toFixed(1)} `;
+      pen = true;
+    });
+    const col = esc(s.color);
+    out.push(`<path d="${d}" fill="none" stroke="${col}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" opacity="${s.dnf ? 0.45 : 0.95}"><title>${esc(s.name)} #${esc(s.num)}</title></path>`);
+    s.points.forEach((p, lap) => {
+      if (p != null) out.push(`<circle cx="${x(lap).toFixed(1)}" cy="${y(p).toFixed(1)}" r="2.8" fill="${col}"><title>${esc(s.name)}: ${lap ? 'lap ' + lap : 'grid'}, P${p}</title></circle>`);
+    });
+    const lastLap = s.points.reduce((n, p, i) => (p != null ? i : n), 0);
+    const lastPos = s.points[lastLap];
+    out.push(`<text class="lbl" x="${x(lastLap) + 8}" y="${y(lastPos) + 4}">${esc(s.name)}${s.dnf ? ' (DNF)' : ''}</text>`);
+  }
+  out.push('</svg>');
+  return out.join('');
+}
 
 function render(r) {
   if (r.empty) {
@@ -207,6 +257,9 @@ function render(r) {
 
   // ---------------------------------------------------------------- stewards
   $('#stewardWrap').hidden = !r.penalties.length;
+  $('#chartWrap').hidden = !r.lapChart;
+  if (r.lapChart) $('#lapChart').innerHTML = lapChartSvg(r.lapChart);
+
   $('#steward').innerHTML = r.penalties.map((p) => `
     <li><span class="pen">${esc(p.headline)}</span> — <b>${esc(p.driver)}</b>
       <span class="num">#${esc(p.num)}</span>, lap ${p.lap}

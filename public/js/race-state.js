@@ -641,6 +641,7 @@ export class RaceState {
     const r = this.state.race;
     r.sessionFrom = at;
     r.lapAdjust = {};
+    r.lapChart = {};
     r.ext = {};
     r.extAt = 0;
   }
@@ -952,6 +953,29 @@ export class RaceState {
       }
     }
     this.prevPos = new Map(ranked.map((d) => [d.id, d.position]));
+
+    /*
+     * The lap chart: where each car was as it completed each lap, for the report's position
+     * graph. Written once per lap, at the moment the lap count goes up, so it is the order at
+     * the line rather than whatever the running order happened to be later. A lap taken away
+     * again (the -Lap correction) takes its entry with it. Race sessions only: a best-lap
+     * session has no running order to chart.
+     */
+    // Frozen while an API feed has gone quiet: the lap counts fall back to local timing then
+    // (usually zero), and reading that as "every lap was taken away" would wipe the chart.
+    const feedGap = !!race.extAt && !extActive;
+    if (race.startedAt && !isQuali && !isDrift && !feedGap) {
+      const chart = race.lapChart || (race.lapChart = {});
+      for (const d of ranked) {
+        const n = d.lapsDone || 0;
+        const row = chart[d.id] || (chart[d.id] = []);
+        if (row.length > n) row.length = n;
+        if (n > 0 && !d.dnf && row.length < n) {
+          while (row.length < n - 1) row.push(null);
+          row.push(d.position);
+        }
+      }
+    }
 
     this.autoFlags(race, drivers, leader, isQuali, isDrift);
 

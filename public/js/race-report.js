@@ -161,6 +161,20 @@ export function buildReport(state) {
 
   report.retirements = report.classification.filter((r) => r.dnf);
 
+  // ---------------------------------------------------------------- the lap chart
+  //
+  // Where every car was at the end of each lap (race-state records it at the line), with the
+  // grid as lap 0 when one was set. Race sessions only, and only once a lap has been run.
+  const chart = race.lapChart || {};
+  const series = drivers.map((d) => ({
+    name: d.name, num: d.num, color: d.color || '#8e8e93', dnf: !!d.dnf,
+    points: [startOf.get(d.id) ?? null, ...(chart[d.id] || [])]
+  })).filter((s) => s.points.slice(1).some((p) => p != null));
+  const chartLaps = series.reduce((n, s) => Math.max(n, s.points.length - 1), 0);
+  report.lapChart = (event.sessionType || 'race') !== 'qualifying' && (event.sessionType || 'race') !== 'practice' && chartLaps >= 1
+    ? { laps: chartLaps, cars: Math.max(drivers.length, ...series.flatMap((s) => s.points.filter((p) => p != null))), series }
+    : null;
+
   // Who gained the most, only when a grid was actually set.
   report.movers = report.classification
     .filter((r) => r.gained != null && r.gained > 0 && !r.dnf)

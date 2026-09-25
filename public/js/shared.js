@@ -136,3 +136,34 @@ export const FLAG_LABEL = {
   red: 'RED FLAG',
   finished: 'CHEQUERED FLAG'
 };
+
+/**
+ * The closest fight on track: two cars next to each other in the order, on the same lap,
+ * and how far apart they are in milliseconds. Null when nobody is racing anybody.
+ *
+ * The gap comes from the best measurement there is, in this order: the gap at the line the
+ * timing API reports (the car's interval to the one ahead), the minimap track position when
+ * vision is tracking cars, and finally the two cars' race times on the same lap. Before the
+ * API, the head-to-head only knew track position, so with the API live every pair measured
+ * zero and "the closest fight" was simply the first pair in the list.
+ */
+export function closestFight(rows) {
+  const live = rows.filter((d) => !d.dnf);
+  let best = null;
+  for (let i = 0; i < live.length - 1; i++) {
+    const a = live[i], b = live[i + 1];
+    if (a.lapsDone !== b.lapsDone || !(a.lapsDone > 0)) continue;
+    let gap = null;
+    const line = b.extLine;
+    if (line && !line.intLaps && line.intMs != null) {
+      gap = line.intMs;
+    } else if ((a.livePos || b.livePos)) {
+      const pace = (b.lastLap > 0 && b.lastLap) || (a.lastLap > 0 && a.lastLap) || null;
+      if (pace) gap = Math.abs((a.livePos || 0) - (b.livePos || 0)) * pace;
+    } else if (a.totalMs != null && b.totalMs != null) {
+      gap = Math.abs(b.totalMs - a.totalMs);
+    }
+    if (gap != null && (!best || gap < best.gapMs)) best = { a, b, gapMs: gap };
+  }
+  return best;
+}

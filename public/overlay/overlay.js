@@ -1,4 +1,4 @@
-import { Bus, fmtTime, fmtGap, fmtClock, classification, raceElapsed, leaderLap, fastestLap, FLAG_LABEL } from '../js/shared.js';
+import { Bus, fmtTime, fmtGap, fmtClock, classification, raceElapsed, leaderLap, fastestLap, FLAG_LABEL, closestFight } from '../js/shared.js';
 import { buildPath, pointAtProgress } from '../js/tracker.js';
 import { CloudBus, cloudOptions } from '../js/cloudbus.js';
 
@@ -1046,20 +1046,9 @@ function pickPair(rows) {
     const b = live.find((d) => d.id === cfg.b);
     return a && b && a !== b ? [a, b] : null;
   }
-  /*
-   * The closest fight, not the front of the field. Adjacent pairs only: two cars a lap
-   * apart are not racing each other however similar their lap times look.
-   */
-  let best = null, bestGap = Infinity;
-  for (let i = 0; i < live.length - 1; i++) {
-    const a = live[i], b = live[i + 1];
-    if (a.lapsDone !== b.lapsDone) continue;
-    const pace = (b.lastLap > 0 && b.lastLap) || (a.lastLap > 0 && a.lastLap) || null;
-    if (!pace) continue;
-    const gap = Math.abs((a.livePos || 0) - (b.livePos || 0)) * pace;
-    if (gap < bestGap) { bestGap = gap; best = [a, b]; }
-  }
-  return best;
+  // The closest fight, not the front of the field (shared with the console's auto-director).
+  const f = closestFight(live);
+  return f ? [f.a, f.b] : null;
 }
 
 function renderH2H(rows) {

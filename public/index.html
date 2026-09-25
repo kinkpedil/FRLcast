@@ -699,8 +699,8 @@
                 <label class="field"><span>Radio quote</span><input type="text" id="radioText" maxlength="120" placeholder="Box this lap, box box"></label>
               </div>
               <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
-              <label class="toggle"><span>Auto-director <b style="color:var(--ink-mute)">fastest-lap banner + switch to Results scene</b></span><input type="checkbox" id="autoDirector"><i class="sw"></i></label>
-              <p class="hint" style="margin-top:6px">When on, the console flashes the fastest-lap banner for a few seconds each time the record falls, and switches to the <b>Results</b> scene (falling back to the results widget) when the chequered flag drops. It only does things you can also do by hand.</p>
+              <label class="toggle"><span>Auto-director <b style="color:var(--ink-mute)">fastest-lap banner, battles, Results scene</b></span><input type="checkbox" id="autoDirector"><i class="sw"></i></label>
+              <p class="hint" style="margin-top:6px">When on, the console flashes the fastest-lap banner for a few seconds each time the record falls, and switches to the <b>Results</b> scene (falling back to the results widget) when the chequered flag drops. <span>In a race it also puts the head-to-head on air when two cars stay within a second of each other for a few seconds, and takes it down once the fight is over (never one you turned on yourself).</span> It only does things you can also do by hand.</p>
               <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
               <div class="clocklabel">Audience poll</div>
               <label class="field" style="margin-top:6px"><span>Question</span><input type="text" id="pollQuestion" maxlength="60" placeholder="Who wins?"></label>
@@ -1262,10 +1262,14 @@
           <p class="hint" style="margin-bottom:10px">Post to your league's Discord automatically. In Discord: Channel → Edit → Integrations → Webhooks → New Webhook → Copy URL, then paste it here. Stored only in this browser.</p>
           <label class="field"><span>Webhook URL</span><input type="text" id="dcUrl" placeholder="https://discord.com/api/webhooks/…"></label>
           <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
-            <label class="toggle"><span>Post the result at the chequered flag</span><input type="checkbox" id="dcOnFinish"><i class="sw"></i></label>
+            <label class="toggle"><span>Post each session's result at the chequered flag</span><input type="checkbox" id="dcOnFinish"><i class="sw"></i></label>
+            <label class="toggle"><span>Post the standings when a round is scored</span><input type="checkbox" id="dcOnStandings"><i class="sw"></i></label>
             <label class="toggle"><span>Post every flag change</span><input type="checkbox" id="dcOnFlag"><i class="sw"></i></label>
           </div>
-          <div class="row" style="gap:8px;margin-top:10px">
+          <p class="hint" style="margin-top:8px">Qualifying and practice post a best-lap table with gaps to pole; a race posts positions, gaps, the fastest lap and penalties. A session the timing API ran is often never flagged finished: post it with the button.</p>
+          <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn sm primary" id="btnDcResult">Post result now</button>
+            <button class="btn sm" id="btnDcStandings">Post standings now</button>
             <button class="btn sm" id="btnDcTest">Send a test message</button>
             <span class="hint" id="dcStatus" style="margin-left:auto"></span>
           </div>

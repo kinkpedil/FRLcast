@@ -338,7 +338,8 @@ export class CloudBus {
         // Settings the console keeps as one blob rather than as columns nothing queries.
         grid: settings.grid || [],
         rules: settings.rules || {},
-        flags: settings.flags || {}
+        flags: settings.flags || {},
+        lapChart: settings.lapChart || {}
       },
       drivers,
       feed: this.feed.map((f) => ({
