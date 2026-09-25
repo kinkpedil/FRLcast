@@ -138,10 +138,11 @@ export class TimingApi {
     if (p.bestMs != null) cur.bestMs = p.bestMs;
     if (p.laps != null) cur.laps = p.laps;
     const es = p.entries || [];
-    // When each lap was completed (server time), for race mode. Snapshot replaces the map
-    // and /laps only returns seq > cursor, so nothing is appended twice.
-    cur.hist = cur.hist || [];
-    for (const e of es) if (e.completedAt != null) cur.hist.push(e.completedAt);
+    // Every lap with when it was completed (server time): the session filter and race mode
+    // both work from this. Snapshot replaces the map and /laps only returns seq > cursor, so
+    // nothing is appended twice.
+    cur.entries = cur.entries || [];
+    for (const e of es) cur.entries.push({ at: e.completedAt, ms: e.ms, sectors: Array.isArray(e.sectors) ? e.sectors : null });
     if (es.length) {
       cur.lastMs = es[es.length - 1].ms;                 // entries are ascending by seq
       const lastSecs = es[es.length - 1].sectors;
@@ -194,20 +195,66 @@ export class TimingApi {
     return d.id;
   }
 
+  /**
+   * One player's numbers for this session only.
+   *
+   * The room keeps every lap since it opened, so practice, qualifying and the race all sit in
+   * one history. Only laps completed after the session began (race.sessionFrom: the last
+   * Reset, Start or change of session type, on the game server's clock) are this session's.
+   */
+  summarize(pl, from) {
+    const all = pl.entries || [];
+    if (from == null && !all.length) {
+      // No history to filter and no session boundary: the header is all there is.
+      return { laps: pl.laps || 0, bestMs: pl.bestMs ?? null, lastMs: pl.lastMs ?? null, sectors: pl.sectors, bestSectors: pl.best, entries: [] };
+    }
+    const es = from == null ? all : all.filter((e) => e.at != null && e.at >= from);
+    return { ...this.stats(es), entries: es };
+  }
+
+  /** Laps, best, last and sector bests of a list of laps. */
+  stats(es) {
+    let bestMs = null;
+    const best = [];
+    for (const e of es) {
+      if (e.ms > 0 && (bestMs == null || e.ms < bestMs)) bestMs = e.ms;
+      for (let i = 0; i < (e.sectors || []).length; i++) {
+        const v = e.sectors[i];
+        if (v > 0 && (best[i] == null || v < best[i])) best[i] = v;
+      }
+    }
+    const last = es[es.length - 1];
+    return {
+      laps: es.length,
+      bestMs,
+      lastMs: last ? last.ms : null,
+      sectors: last && last.sectors ? last.sectors.slice() : null,
+      bestSectors: best.length ? best : null
+    };
+  }
+
   dispatch() {
+    const r = (this.race.state && this.race.state.race) || {};
+    const from = r.sessionFrom ? r.sessionFrom + (this.skew || 0) : null;
     const matched = [];
     for (const [pid, pl] of this.players) {
       const driverId = this.matchDriver(pid, pl.name);
-      if (driverId && pl.bestMs != null) matched.push({ driverId, bestMs: pl.bestMs, laps: pl.laps, lastMs: pl.lastMs, sectors: pl.sectors, bestSectors: pl.best, hist: pl.hist || [] });
+      if (driverId) matched.push({ driverId, ...this.summarize(pl, from) });
     }
     this.matched = matched.length;
+    const adj = r.lapAdjust || {};
 
     const st = (this.race.state && this.race.state.event && this.race.state.event.sessionType) || 'race';
-    if (st === 'race' || st === 'endurance') return this.dispatchRace(matched);
+    if (st === 'race' || st === 'endurance') return this.dispatchRace(matched, adj);
 
-    // Qualifying / practice (and anything else): the API's own Contest ranking, best lap first.
-    matched.sort((a, b) => a.bestMs - b.bestMs);
-    const rows = matched.map((m, i) => ({ driverId: m.driverId, rank: i + 1, laps: m.laps, bestMs: m.bestMs, lastMs: m.lastMs, sectors: m.sectors, bestSectors: m.bestSectors }));
+    // Qualifying / practice (and anything else): best lap first, the API's Contest ranking.
+    // Nobody has a time yet right after a new session: they stay listed, unranked.
+    const timed = matched.filter((m) => m.bestMs != null).sort((a, b) => a.bestMs - b.bestMs);
+    const lapsOf = (m) => Math.max(0, m.laps + (adj[m.driverId] || 0));
+    const rows = timed.map((m, i) => ({ driverId: m.driverId, rank: i + 1, laps: lapsOf(m), bestMs: m.bestMs, lastMs: m.lastMs, sectors: m.sectors, bestSectors: m.bestSectors }));
+    for (const m of matched.filter((x) => x.bestMs == null)) {
+      rows.push({ driverId: m.driverId, rank: null, laps: lapsOf(m), bestMs: null, lastMs: null, sectors: null, bestSectors: null });
+    }
     this.race.apply({ type: 'timing.external', mode: 'best', rows });
   }
 
@@ -224,11 +271,20 @@ export class TimingApi {
    *
    * Temporary, until the API can report position itself.
    */
-  dispatchRace(matched) {
+  dispatchRace(matched, adj = {}) {
     const started = this.race.state && this.race.state.race && this.race.state.race.startedAt;
     const t0 = started ? started + (this.skew || 0) : null;
     for (const m of matched) {
-      m.times = t0 == null ? [] : m.hist.filter((at) => at >= t0).sort((a, b) => a - b);
+      let es = t0 == null ? [] : (m.entries || []).filter((e) => e.at != null && e.at >= t0).sort((a, b) => a.at - b.at);
+      // The operator's correction. -1 drops the earliest crossing (a car that crossed the
+      // line before the real start gets no lap for it, and its bogus "lap time" no longer
+      // counts as a best lap); +1 credits a lap at the start, so gaps to the cars around it
+      // stay sensible.
+      const a = t0 == null ? 0 : (adj[m.driverId] || 0);
+      if (a < 0) es = es.slice(Math.min(-a, es.length));
+      if (t0 != null) Object.assign(m, this.stats(es));
+      m.times = es.map((e) => e.at);
+      if (a > 0) m.times = Array(a).fill(t0).concat(m.times);
       m.raceLaps = m.times.length;
       m.lastAt = m.times[m.raceLaps - 1];
     }

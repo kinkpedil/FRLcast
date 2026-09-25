@@ -628,6 +628,29 @@ export class RaceState {
     this.save();
   }
 
+  /**
+   * A new session as far as an outside timing feed is concerned.
+   *
+   * The official timing API keeps every lap of the room, practice included, and the poller
+   * used to rank from all of it: a reset or a switch from practice to qualifying changed
+   * nothing on screen, and practice times turned up on the qualifying board. So each new
+   * session records when it began, the poller only counts laps completed after that
+   * (server/timing-api.js), and the feed's last board and any lap corrections are dropped.
+   */
+  newSession(at) {
+    const r = this.state.race;
+    r.sessionFrom = at;
+    r.lapAdjust = {};
+    r.ext = {};
+    r.extAt = 0;
+  }
+
+  /** True while an outside feed (the timing API) owns the lap counts. */
+  extLive() {
+    const r = this.state.race;
+    return !!(r.ext && r.extAt && Date.now() - r.extAt < 15000 && Object.keys(r.ext).length);
+  }
+
   driver(id) {
     return this.state.drivers.find((d) => d.id === id) || null;
   }
@@ -1340,8 +1363,10 @@ export class RaceState {
         break;
       }
 
-      case 'event.update':
+      case 'event.update': {
+        const wasType = s.event.sessionType;
         Object.assign(s.event, a.patch || {});
+        if (a.patch && a.patch.sessionType && a.patch.sessionType !== wasType) this.newSession(now);
         // Practice and qualifying run to a clock. Give them a sensible default length the
         // moment they are chosen, so the tower shows a real countdown instead of counting
         // up from zero with no target. The operator can still change it.
@@ -1350,6 +1375,7 @@ export class RaceState {
           s.race.timeLimitSec = a.patch.sessionType === 'endurance' ? 3600 : 900;
         }
         break;
+      }
 
       case 'race.config':
         Object.assign(s.race, pick(a.patch || {}, ['totalLaps', 'timeLimitSec', 'predictOrder']));
@@ -1361,6 +1387,7 @@ export class RaceState {
         s.race.pausedAt = null;
         s.race.pausedTotal = 0;
         s.race.status = 'green';
+        this.newSession(s.race.startedAt);
         // A new session hands the flag back to the automation: whatever the operator
         // overruled last time was about the last race.
         s.race.flagSource = 'auto';
@@ -1414,6 +1441,7 @@ export class RaceState {
         s.race.pausedAt = null;
         s.race.pausedTotal = 0;
         s.race.status = 'idle';
+        this.newSession(now);
         for (const d of s.drivers) resetDriverTiming(d, null);
         s.records = { bestLap: { ms: null, driverId: null, lap: null }, bestSectors: [] };
         s.feed = [];
@@ -1575,6 +1603,11 @@ export class RaceState {
       }
 
       case 'lap.record':   // operator hotkey / REST hook — same path as a detected crossing
+        // With the timing API live a crossing written here is overwritten on the next poll,
+        // so the operator's +Lap (button or hotkey) becomes a lap correction the poller applies.
+        if (this.extLive() && (a.source === 'operator' || a.source === 'hotkey')) {
+          return this.apply({ type: 'timing.lapAdjust', driverId: a.driverId, delta: 1 });
+        }
         return this.apply({ ...a, type: 'timing.cross', kind: 'finish', minLapMs: a.minLapMs ?? 4000 });
 
       case 'timing.cross': {
@@ -1664,8 +1697,31 @@ export class RaceState {
       }
 
       case 'lap.undo': {
+        // Same reason as lap.record above: with the API live, -Lap is a correction.
+        if (this.extLive()) return this.apply({ type: 'timing.lapAdjust', driverId: a.driverId, delta: -1 });
         const d = this.driver(a.driverId);
         if (d) d.crossings.pop();
+        break;
+      }
+
+      /*
+       * Correct one car's lap count while the timing API owns it. The typical case: a car
+       * crosses the line just after Start race is pressed but before the real start, and
+       * gets a lap it never drove. -1 drops its earliest crossing, +1 credits a lap the feed
+       * missed; the poller applies it, so order and gaps follow. Cleared by a new session.
+       */
+      case 'timing.lapAdjust': {
+        const d = this.driver(a.driverId);
+        const delta = Math.sign(Number(a.delta) || 0);
+        if (!d || !delta) break;
+        const adj = s.race.lapAdjust || (s.race.lapAdjust = {});
+        const next = Math.max(-20, Math.min(20, (adj[d.id] || 0) + delta));
+        if (next) adj[d.id] = next; else delete adj[d.id];
+        // Shown at once rather than after the next poll, so the button visibly works.
+        if (s.race.ext && s.race.ext[d.id] && s.race.ext[d.id].laps != null) {
+          s.race.ext[d.id].laps = Math.max(0, s.race.ext[d.id].laps + delta);
+        }
+        this.pushFeed('info', `${d.name} LAP COUNT ${delta > 0 ? '+1' : '-1'} (CORRECTED)`, d.id);
         break;
       }
 

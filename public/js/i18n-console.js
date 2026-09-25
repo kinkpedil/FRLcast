@@ -812,6 +812,8 @@
     'Create and link': 'Buat dan hubungkan',
     '4 to 12 letters or digits, unique across every league on FRLcast. Avoid O next to 0.':
       '4 sampai 12 huruf atau angka, unik di semua liga FRLcast. Hindari huruf O di sebelah angka 0.',
+    'Add a lap. With the timing API live this corrects its lap count.': 'Tambah satu lap. Saat timing API aktif, ini mengoreksi jumlah lap-nya.',
+    'Remove a lap, for example one counted because the car crossed the line before the start.': 'Kurangi satu lap, misalnya lap yang terhitung karena mobil melewati garis sebelum start.',
     'Refresh list': 'Muat ulang daftar',
     'Sign in': 'Masuk',
     'Sign out': 'Keluar',

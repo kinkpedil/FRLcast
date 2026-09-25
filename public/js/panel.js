@@ -498,8 +498,8 @@ function renderRace() {
         <td class="mono dim">${d.bestLap != null ? fmtTime(d.bestLap) : '--'}</td>
         <td class="mono dim">${esc(d.gap)}</td>
         <td>
-          <button class="btn sm primary" data-act="lap">+ Lap</button>
-          <button class="btn sm" data-act="undo">Undo</button>
+          <button class="btn sm primary" data-act="lap" title="Add a lap. With the timing API live this corrects its lap count.">+ Lap</button>
+          <button class="btn sm" data-act="undo" title="Remove a lap, for example one counted because the car crossed the line before the start.">−Lap</button>
           <button class="btn sm" data-act="pit">Pit</button>
           <button class="btn sm" data-act="pen">+5s</button>
           <button class="btn sm" data-act="dnf" title="Cycle: running, DNF, Retired">DNF</button>
