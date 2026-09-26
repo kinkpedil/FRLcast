@@ -38,48 +38,36 @@
     var bot = document.getElementById('mqBot');
     if (!top || !bot) return;
 
-    // Real product screenshots woven with typographic stat tiles. Every stat is a true fact
-    // about the product, not filler, so the strip reads as a brand band rather than padding.
-    var shots = [
-      { img: '/shots/overlay.png', alt: 'The broadcast overlay' },
-      { img: '/shots/dashboard.png', alt: 'The operator console' },
-      { img: '/shots/tutorial-thumbnail.jpg', alt: 'The video tutorial' }
+    // Every tile is a different real FRLcast screen. The top row shows the broadcast side,
+    // the bottom row the console and driver side, so no image appears twice in a loop.
+    var topShots = [
+      { img: '/shots/mq/console.png', alt: 'The operator console', fit: 'cover' },
+      { img: '/shots/mq/leaderboard.png', alt: 'The leaderboard overlay', fit: 'top' },
+      { img: '/shots/mq/live.png', alt: 'The public live timing page', fit: 'cover' },
+      { img: '/shots/mq/tower.png', alt: 'The timing tower overlay', fit: 'top' }
     ];
-    var stats = [
-      { n: '~1s', k: 'flag to the phone' },
-      { n: '11', k: 'overlay widgets' },
-      { n: '10', k: 'broadcast themes' },
-      { n: 'EN·ID', k: 'console and app' },
-      { n: '1', k: 'OBS browser source' },
-      { n: '40 KB', k: 'the driver app' }
+    var botShots = [
+      { img: '/shots/overlay.png', alt: 'The broadcast overlay', fit: 'cover' },
+      { img: '/shots/mq/report.png', alt: 'The race report', fit: 'cover' },
+      { img: '/shots/driver.png', alt: 'The driver app', fit: 'cover' },
+      { img: '/shots/mq/lowerthird.png', alt: 'The lower third overlay', fit: 'contain' }
     ];
     function imgTile(shot) {
       var d = document.createElement('div');
-      d.className = 'mq-tile';
+      d.className = 'mq-tile mq-fit-' + shot.fit;
       var im = document.createElement('img');
       im.src = shot.img; im.alt = shot.alt; im.loading = 'lazy';
       d.appendChild(im);
       return d;
     }
-    function statTile(s) {
-      var d = document.createElement('div');
-      d.className = 'mq-tile mq-stat';
-      d.innerHTML = '<b>' + s.n + '</b><span>' + s.k + '</span>';
-      return d;
-    }
-    // Each row is: screenshot, stat, stat, repeated, offset so the two rows never line up.
-    function fill(track, offset) {
-      var seq = document.createDocumentFragment();
-      for (var i = 0; i < 6; i++) {
-        seq.appendChild(imgTile(shots[(offset + i) % shots.length]));
-        seq.appendChild(statTile(stats[(offset * 2 + i * 2) % stats.length]));
-        seq.appendChild(statTile(stats[(offset * 2 + i * 2 + 1) % stats.length]));
-      }
+    // Repeat the row's own set of distinct shots three times for a seamless loop.
+    function fill(track, list) {
       var whole = document.createDocumentFragment();
-      for (var r = 0; r < 3; r++) whole.appendChild(seq.cloneNode(true));
+      for (var r = 0; r < 3; r++) list.forEach(function (s) { whole.appendChild(imgTile(s)); });
       track.appendChild(whole);
     }
-    fill(top, 0);
+    fill(top, topShots);
+    fill(bot, botShots);
     // The rows move as the page scrolls. This is user-driven, not autoplay, so it runs even
     // under reduced motion: nothing moves unless the reader is actively scrolling.
     var sec = document.querySelector('.marquee');
@@ -92,12 +80,15 @@
         var r = sec.getBoundingClientRect();
         if (r.bottom < -200 || r.top > window.innerHeight + 200) return;
         // Tie the travel to the scroll position directly: about 0.9px of slide per pixel
-        // scrolled, which is clearly visible without being dizzying. One third of the track
-        // is a full sequence, so wrapping inside it keeps the loop seamless in both directions.
+        // scrolled, which is clearly visible without being dizzying. One third of each track
+        // is a full sequence, so wrapping inside it keeps the loop seamless both ways.
+        // Scrolling down carries the top row to the right and the bottom row to the left.
         var oneThird = top.scrollWidth / 3;
+        var botThird = bot.scrollWidth / 3;
         var x = ((window.scrollY * 0.9 % oneThird) + oneThird) % oneThird;
-        top.style.transform = 'translate3d(' + (-x) + 'px,0,0)';
-        bot.style.transform = 'translate3d(' + (x - oneThird) + 'px,0,0)';
+        var xb = ((window.scrollY * 0.9 % botThird) + botThird) % botThird;
+        top.style.transform = 'translate3d(' + (x - oneThird) + 'px,0,0)';
+        bot.style.transform = 'translate3d(' + (-xb) + 'px,0,0)';
       });
     }
     window.addEventListener('scroll', onScroll, { passive: true });

@@ -155,17 +155,12 @@ a { color: inherit; text-decoration: none; }
   width: clamp(300px, 32vw, 440px); aspect-ratio: 16 / 10; border-radius: 18px; overflow: hidden;
   flex: none; border: 1px solid var(--line); background: var(--panel);
 }
-.mq-tile img { width: 100%; height: 100%; object-fit: cover; }
-.mq-stat {
-  width: clamp(180px, 18vw, 250px);
-  display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 6px;
-  padding: 26px; background: var(--bg-2);
-}
-.mq-stat b {
-  font-size: clamp(2.2rem, 4vw, 3.4rem); font-weight: 700; letter-spacing: -.02em; line-height: .9;
-  background: linear-gradient(180deg, #cdd9e2, #5b616b); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-}
-.mq-stat span { color: var(--ink-3); font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.mq-tile img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+/* Tall overlays (leaderboard, tower) read from the top; the lower third is a wide bar that
+   should sit whole on a tile rather than be cropped. */
+.mq-fit-top img { object-position: top center; }
+.mq-fit-contain { background: radial-gradient(130% 130% at 50% 0%, rgba(0, 224, 164, .10), transparent 60%), var(--bg-2); }
+.mq-fit-contain img { object-fit: contain; padding: clamp(14px, 2vw, 26px); }
 
 /* ============================================================ WHAT IT IS */
 .what {
