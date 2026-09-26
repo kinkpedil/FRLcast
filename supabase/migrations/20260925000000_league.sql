@@ -179,23 +179,63 @@ grant execute on function public.driver_login(text, text, text, text, text)     
 -- Register ahead of race day, from the website. Same rules and the same account as the app,
 -- so the driver later signs in on their phone with this number and password. Not a check-in:
 -- a driver entering on Tuesday is not at the track yet.
+--
+-- Written out rather than calling driver_register, because that issues a new session token:
+-- a driver updating their entry on the website would sign their own phone out mid-event.
+-- This never touches the token, and a new account has none until the app signs in.
 create or replace function public.event_join(
   p_code text, p_nick text, p_num text, p_password text, p_team text default ''
 ) returns json
 language plpgsql security definer set search_path = public, extensions, pg_temp as $$
 declare
-  v_res json;
+  v_event   public.events;
+  v_account public.driver_accounts;
+  v_team    text := trim(coalesce(p_team, ''));
 begin
-  v_res := public.driver_register(p_code, p_nick, p_num, p_password, p_team, '');
-  if (v_res ->> 'ok')::boolean and not (v_res ->> 'rejoined')::boolean then
-    update public.registrations r set checked_in_at = null
-      from public.driver_accounts a
-     where a.id = r.account_id and a.token = (v_res ->> 'token')::uuid;
+  if length(coalesce(p_password, '')) < 4 then
+    return json_build_object('ok', false, 'error', 'Password needs at least 4 characters');
   end if;
-  -- The website has no use for a session token; it is not handed out.
-  return json_build_object('ok', (v_res ->> 'ok')::boolean, 'error', v_res ->> 'error',
-    'rejoined', coalesce((v_res ->> 'rejoined')::boolean, false),
-    'nick', v_res ->> 'nick', 'num', v_res ->> 'num', 'team', v_res ->> 'team');
+  if length(trim(coalesce(p_nick, ''))) = 0 then
+    return json_build_object('ok', false, 'error', 'Type the name you race under');
+  end if;
+  if length(trim(coalesce(p_num, ''))) = 0 then
+    return json_build_object('ok', false, 'error', 'Type your race number');
+  end if;
+
+  select * into v_event from public.events where code = upper(trim(p_code));
+  if not found then
+    return json_build_object('ok', false, 'error', 'No event with that code');
+  end if;
+
+  select * into v_account from public.driver_accounts
+    where event_id = v_event.id and num = trim(p_num);
+
+  if found then
+    -- Same wording as driver_register, so this cannot be used to find which numbers exist.
+    if v_account.pass_hash <> crypt(p_password, v_account.pass_hash) then
+      return json_build_object('ok', false, 'error', 'That number is already registered');
+    end if;
+    update public.driver_accounts
+       set nick = trim(p_nick),
+           team = case when v_team <> '' then v_team else team end
+     where id = v_account.id
+     returning * into v_account;
+    update public.registrations set nick = v_account.nick, team = v_account.team
+     where account_id = v_account.id;
+    update public.drivers set name = v_account.nick, team = v_account.team
+     where account_id = v_account.id;
+    return json_build_object('ok', true, 'rejoined', true,
+      'nick', v_account.nick, 'num', v_account.num, 'team', v_account.team);
+  end if;
+
+  insert into public.driver_accounts (event_id, num, nick, team, pass_hash)
+  values (v_event.id, trim(p_num), trim(p_nick), v_team, crypt(p_password, gen_salt('bf', 10)))
+  returning * into v_account;
+  insert into public.registrations (event_id, account_id, nick, num, team)
+  values (v_event.id, v_account.id, v_account.nick, v_account.num, v_account.team);
+
+  return json_build_object('ok', true, 'rejoined', false,
+    'nick', v_account.nick, 'num', v_account.num, 'team', v_account.team);
 end $$;
 
 -- Check in from the website without touching the phone's session (driver_login would issue a
