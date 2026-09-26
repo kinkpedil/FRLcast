@@ -124,7 +124,6 @@ a { color: inherit; text-decoration: none; }
   opacity: 0; animation: heroShot 1s var(--ease) .45s forwards;
 }
 @keyframes heroShot { to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .hero-shot { opacity: 1; animation: none; } }
 .hero-shot img {
   width: 100%; border-radius: 16px; border: 1px solid var(--line-strong);
   box-shadow: 0 40px 120px -40px rgba(0, 0, 0, .9); background: var(--panel);
@@ -151,6 +150,14 @@ a { color: inherit; text-decoration: none; }
 .marquee { background: var(--bg); padding: clamp(90px, 14vw, 170px) 0 clamp(50px, 8vw, 90px); display: flex; flex-direction: column; gap: 14px; }
 .mq-row { overflow: hidden; }
 .mq-track { display: flex; gap: 14px; width: max-content; will-change: transform; }
+/* Each track is three identical copies; sliding by one third loops seamlessly. The top row
+   runs right, the bottom row left. This is the page's headline motion, so it runs by default;
+   it pauses when the reader hovers a row, and slows right down if they asked for less motion. */
+#mqTop { animation: mq-right 40s linear infinite; }
+#mqBot { animation: mq-left 34s linear infinite; }
+@keyframes mq-right { from { transform: translate3d(-33.333%, 0, 0); } to { transform: translate3d(0, 0, 0); } }
+@keyframes mq-left  { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-33.333%, 0, 0); } }
+.mq-row:hover .mq-track { animation-play-state: paused; }
 .mq-tile {
   width: clamp(300px, 32vw, 440px); aspect-ratio: 16 / 10; border-radius: 18px; overflow: hidden;
   flex: none; border: 1px solid var(--line); background: var(--panel);
@@ -258,3 +265,23 @@ a { color: inherit; text-decoration: none; }
 .footer nav a { color: var(--ink-2); font-size: 13px; }
 .footer nav a:hover { color: var(--ink); }
 .foot-credit { color: var(--ink-3); font-family: var(--mono); font-size: 12px; }
+
+/* ============================================================ EXTRA MOTION
+   More life across the page. The marquee above runs always; these are subtler and back off
+   for readers who asked for reduced motion. */
+.hero-word { background-size: 100% 260%; animation: wordShimmer 9s ease-in-out infinite; }
+@keyframes wordShimmer { 0%, 100% { background-position: 50% 0%; } 50% { background-position: 50% 100%; } }
+.hero-shot { animation: heroShot 1s var(--ease) .45s forwards, heroFloat 7s ease-in-out 1.4s infinite; }
+@keyframes heroFloat { 0%, 100% { margin-bottom: 0; } 50% { margin-bottom: 18px; } }
+
+.brand .live { animation: pulse 2.4s ease-in-out infinite; }
+
+/* Hover: marquee tiles lift, showcase images push in a touch, feature numbers pick up accent. */
+.mq-tile { transition: transform .3s var(--ease), border-color .3s; }
+.mq-tile:hover { transform: scale(1.035); border-color: var(--line-strong); }
+.card-media img { transition: transform .6s var(--ease); }
+.card:hover .card-media img { transform: scale(1.05); }
+.feat { transition: border-color .3s; }
+.feat-no { transition: transform .4s var(--ease); }
+.feat:hover .feat-no { transform: translateX(6px); }
+

@@ -68,32 +68,9 @@
     }
     fill(top, topShots);
     fill(bot, botShots);
-    // The rows move as the page scrolls. This is user-driven, not autoplay, so it runs even
-    // under reduced motion: nothing moves unless the reader is actively scrolling.
-    var sec = document.querySelector('.marquee');
-    var raf = 0;
-    function onScroll() {
-      if (raf) return;
-      raf = requestAnimationFrame(function () {
-        raf = 0;
-        // Only bother while the strip is anywhere near the viewport.
-        var r = sec.getBoundingClientRect();
-        if (r.bottom < -200 || r.top > window.innerHeight + 200) return;
-        // Tie the travel to the scroll position directly: about 0.9px of slide per pixel
-        // scrolled, which is clearly visible without being dizzying. One third of each track
-        // is a full sequence, so wrapping inside it keeps the loop seamless both ways.
-        // Scrolling down carries the top row to the right and the bottom row to the left.
-        var oneThird = top.scrollWidth / 3;
-        var botThird = bot.scrollWidth / 3;
-        var x = ((window.scrollY * 0.9 % oneThird) + oneThird) % oneThird;
-        var xb = ((window.scrollY * 0.9 % botThird) + botThird) % botThird;
-        top.style.transform = 'translate3d(' + (x - oneThird) + 'px,0,0)';
-        bot.style.transform = 'translate3d(' + (-xb) + 'px,0,0)';
-      });
-    }
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    onScroll();
+    // The rows run continuously on their own (CSS: the top row rightward, the bottom row
+    // leftward). Each track is three identical copies, so the animation slides exactly one
+    // copy and loops seamlessly. Nothing to drive from JS.
   })();
 
   // ---------------------------------------------------------------- magnet (hero screenshot)
