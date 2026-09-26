@@ -258,6 +258,11 @@ if (!cfg.url || !cfg.anonKey) {
             <button class="btn btn-ghost btn-sm" data-copy="${origin}/overlay/all.html?event=${esc(e.code)}">Copy</button>
           </div>
           <div class="url">
+            <span class="tag">ENTRY</span>
+            <code>${origin}/join?event=${esc(e.code)}</code>
+            <button class="btn btn-ghost btn-sm" data-copy="${origin}/join?event=${esc(e.code)}">Copy</button>
+          </div>
+          <div class="url">
             <span class="tag">APP</span>
             <code>drivers type <b style="color:var(--accent)">${esc(e.code)}</b> into the driver app</code>
           </div>

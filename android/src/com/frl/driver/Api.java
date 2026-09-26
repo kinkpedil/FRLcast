@@ -43,6 +43,7 @@ public final class Api {
   public static final String K_Y = "ovY";
   public static final String K_ALPHA = "ovAlpha";
   public static final String K_SUB = "ovSub";      // show the instruction line
+  public static final String K_BOARD = "ovBoard";  // show the pit board strip
 
   public static SharedPreferences prefs(Context c) {
     return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);

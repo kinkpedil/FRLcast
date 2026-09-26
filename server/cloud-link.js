@@ -87,6 +87,10 @@ export class CloudLink {
     this.cloudAccounts = new Set();
     this.pending = new Set();    // registrations being written right now
     this.lastRegs = '';
+    this.lastIncidents = '';     // '' until the first read: reports already there are not news
+    this.incidentHeld = new Map();
+    this.noCheckin = false;      // the league migration is not on this project yet
+    this.noIncidents = false;
     this.quiet = false;          // first read after linking: nothing in it is news
     this.radioCursor = '';
     this.lastError = '';
@@ -337,6 +341,11 @@ export class CloudLink {
     this.cloudIds = new Set();
     this.cloudAccounts = new Set();
     this.lastRegs = '';
+    // The event's incident reports leave with it; local (LAN) reports stay.
+    if ((this.race.state.incidents || []).some((x) => x.cloud)) this.race.apply({ type: 'incident.sync', rows: [] });
+    this.lastIncidents = '';
+    this.noCheckin = false;
+    this.noIncidents = false;
     if (forget) { delete this.saved.code; this.save(); }
   }
 
@@ -395,15 +404,41 @@ export class CloudLink {
 
   // ---------------------------------------------------------------- in: event -> here
 
+  /*
+   * The league migration (20260925000000_league.sql) adds registrations.checked_in_at and the
+   * incident_reports table. Until the owner has run it, asking for either is an error, and
+   * that must not take the sign-in queue down with it. So each is tried, and dropped for
+   * this link (with a quiet note) the first time the project says it does not exist.
+   */
+  missing(err) {
+    return /checked_in_at|incident_reports|does not exist|schema cache|42703|42P01|PGRST20/i.test(String(err && err.message || err));
+  }
+
   async pull() {
     if (!this.event) return;
+    // Look again now and then: the owner may have run the migration while this was linked.
+    if ((this.noCheckin || this.noIncidents) && Date.now() - (this.noAt || 0) > 10 * 60 * 1000) {
+      this.noCheckin = false; this.noIncidents = false;
+    }
     const ev = this.event.id;
-    const [regs, radio] = await Promise.all([
-      this.from('registrations').select('id,account_id,nick,num,team,status,driver_id,created_at')
-        .eq('event_id', ev).order('created_at', { ascending: true }),
+    const regCols = 'id,account_id,nick,num,team,status,driver_id,created_at' + (this.noCheckin ? '' : ',checked_in_at');
+    const [regs, radio, reports] = await Promise.all([
+      this.from('registrations').select(regCols).eq('event_id', ev).order('created_at', { ascending: true }),
       this.from('team_radio').select('id,team,from_nick,from_num,text,created_at')
-        .eq('event_id', ev).gt('created_at', this.radioCursor).order('created_at', { ascending: true })
+        .eq('event_id', ev).gt('created_at', this.radioCursor).order('created_at', { ascending: true }),
+      this.noIncidents ? Promise.resolve({ data: null, error: null })
+        : this.from('incident_reports').select('id,from_nick,from_num,against_num,lap,text,status,created_at')
+          .eq('event_id', ev).order('created_at', { ascending: false }).limit(100)
     ]);
+    if (regs.error && !this.noCheckin && this.missing(regs.error)) {
+      this.noCheckin = true; this.noAt = Date.now();   // run the league migration for check-in times
+      return this.pull();
+    }
+    if (reports.error && this.missing(reports.error)) {
+      this.noIncidents = true; this.noAt = Date.now(); // run the league migration for incident reports
+    } else if (reports.data) {
+      this.applyIncidents(reports.data);
+    }
     if (regs.error || radio.error) {
       this.lastError = (regs.error || radio.error).message;
       return;
@@ -428,7 +463,8 @@ export class CloudLink {
         id: r.id, accountId: r.account_id, nick: r.nick, num: r.num, team: r.team || '',
         at: new Date(r.created_at).getTime(),
         status: held ? held.status : r.status,
-        driverId: held ? held.driverId : (back.get(r.driver_id) || null)
+        driverId: held ? held.driverId : (back.get(r.driver_id) || null),
+        checkedInAt: r.checked_in_at ? new Date(r.checked_in_at).getTime() : null
       };
     });
     this.cloudAccounts = new Set(data.map((r) => r.account_id));
@@ -469,8 +505,41 @@ export class CloudLink {
     await this.pull();
   }
 
+  /** Incident reports the drivers filed through the event, as it holds them now. */
+  applyIncidents(data) {
+    const rows = data.map((r) => ({
+      id: r.id, at: new Date(r.created_at).getTime(),
+      fromNum: r.from_num, fromName: r.from_nick, againstNum: r.against_num,
+      lap: r.lap, text: r.text,
+      // A status this console has just set wins over a read that raced the write.
+      status: this.incidentHeld.get(r.id) || r.status
+    }));
+    const sig = JSON.stringify(rows);
+    if (sig === this.lastIncidents) return;
+    const known = new Set((this.race.state.incidents || []).filter((x) => x.cloud).map((x) => x.id));
+    for (const r of rows) {
+      if (!this.quiet && this.lastIncidents !== '' && !known.has(r.id) && r.status === 'open') {
+        this.race.apply({ type: 'feed.push', kind: 'penalty', text: `REPORT FROM ${r.fromName || '#' + r.fromNum}${r.againstNum ? ' ABOUT #' + r.againstNum : ''}` });
+      }
+    }
+    this.lastIncidents = sig;
+    this.race.apply({ type: 'incident.sync', rows });
+  }
+
   /** Accept / refuse / forget a hosted sign-in. Returns true when it was one. */
   intercept(a) {
+    if (a && a.type === 'incident.set' && this.event && !this.noIncidents) {
+      const r = (this.race.state.incidents || []).find((x) => x.id === a.id);
+      if (r && r.cloud) {
+        this.race.apply(a);
+        this.incidentHeld.set(a.id, a.status);
+        this.from('incident_reports').update({ status: a.status }).eq('id', a.id).then(({ error }) => {
+          if (error) this.lastError = `Could not save that report's status: ${error.message}`;
+          this.incidentHeld.delete(a.id);
+        });
+        return true;
+      }
+    }
     if (!this.event || !a || !this.cloudIds.has(a.id)) return false;
     if (!['registration.approve', 'registration.reject', 'registration.remove'].includes(a.type)) return false;
     this.writeRegistration(a).catch((e) => { this.lastError = `Could not save that sign-in: ${e.message}`; });

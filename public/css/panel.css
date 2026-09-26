@@ -688,3 +688,14 @@ mark { background: rgba(0,224,164,.28); color: var(--ink); border-radius: 3px; p
 .cloud-err { color: #ff6b61; margin-top: 10px; }
 .regcloud { display: block; margin-bottom: 6px; color: var(--ink); }
 .cloudcode-sm { font-family: var(--mono); color: var(--accent); letter-spacing: .08em; }
+
+/* ---------- incident reports + check-in ---------- */
+
+.inclist { display: flex; flex-direction: column; gap: 8px; }
+.incrow { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg-3); border-left: 3px solid var(--red); }
+.incrow.reviewed, .incrow.dismissed { opacity: .55; border-left-color: var(--line-2); }
+.incrow .inchead { font-size: 13px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.incrow .inchead small { margin-left: auto; color: var(--ink-mute); font-family: var(--mono); font-size: 11px; }
+.incrow .incvs { color: var(--ink-mute); font-size: 12px; }
+.incrow .inctext { margin-top: 4px; color: var(--ink-dim); font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rcheck { margin-left: 6px; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(0,224,164,.15); color: var(--accent); }

@@ -48,6 +48,12 @@ public interface Backend {
    */
   JSONObject sendRadio(String token, String text) throws Exception;
 
+  /**
+   * Report an incident to race control: the other car's number (may be empty) and what
+   * happened. It lands in the steward's queue; it is never a penalty by itself.
+   */
+  JSONObject report(String token, String againstNum, String text) throws Exception;
+
   /** For the one error message a driver ever sees about connectivity. */
   String describe();
 
@@ -104,6 +110,11 @@ public interface Backend {
 
     @Override public JSONObject sendRadio(String token, String text) throws Exception {
       return Api.post(url("/api/driver/radio"), new JSONObject().put("token", token).put("text", text));
+    }
+
+    @Override public JSONObject report(String token, String againstNum, String text) throws Exception {
+      return Api.post(url("/api/driver/report"), new JSONObject()
+          .put("token", token).put("against", againstNum).put("text", text));
     }
 
     @Override public String describe() { return host; }
@@ -166,6 +177,19 @@ public interface Backend {
 
     @Override public JSONObject sendRadio(String token, String text) throws Exception {
       return rpc("driver_radio", new JSONObject().put("p_token", token).put("p_text", text));
+    }
+
+    @Override public JSONObject report(String token, String againstNum, String text) throws Exception {
+      JSONObject o = rpc("driver_report", new JSONObject()
+          .put("p_token", token).put("p_against", againstNum).put("p_text", text));
+      // An event on a project that has not had the league migration yet has no such function.
+      // Say what the driver can do about it, not what PostgREST said.
+      String err = o.optString("error", "").toLowerCase();
+      if (!o.optBoolean("ok") && (err.contains("driver_report") || err.contains("function"))) {
+        return new JSONObject().put("ok", false)
+            .put("error", "This event cannot take reports yet. Tell race control directly.");
+      }
+      return o;
     }
 
     @Override public String describe() { return "event " + code; }

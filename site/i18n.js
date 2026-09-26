@@ -12,7 +12,7 @@
   var KEEP = [
     'FRL BROADCAST', 'supabase-config.js', 'npm start', 'http://localhost:4700',
     'NUSANTARA DRIFT LEAGUE', 'NDL3', 'ROUND 1', 'EBISU MINAMI', 'you@league.example',
-    'FR Legends', 'OBS', 'VSC', 'APK', 'REPORT', 'APP', 'Supabase'
+    'FR Legends', 'OBS', 'VSC', 'APK', 'REPORT', 'APP', 'ENTRY', 'Supabase'
   ];
 
   var ID = {

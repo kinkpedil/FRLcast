@@ -282,6 +282,7 @@ public class OverlayService extends Service {
     }
 
     view.update(flag, who, personal);
+    view.setBoard(approved && Api.prefs(this).getBoolean(Api.K_BOARD, true) ? pitBoard(me) : "");
 
     // After the window has been updated, so a penalty landing on this same poll paints
     // over the flag rather than being painted over by it.
@@ -292,6 +293,42 @@ public class OverlayService extends Service {
       if (lastFlag != null) buzz();
       lastFlag = flag;
     }
+  }
+
+  /**
+   * One line of numbers for the bottom of the window: "P3/12  ▲+0.700  ▼+1.204  5 LEFT".
+   * Both servers answer with the same shape, except that the laptop sends each gap as the
+   * text its leaderboard shows and the hosted event sends milliseconds; either is read.
+   */
+  static String pitBoard(JSONObject me) {
+    if (me == null || me.optInt("position") <= 0) return "";
+    StringBuilder b = new StringBuilder("P").append(me.optInt("position"));
+    int cars = me.optInt("cars", 0);
+    if (cars > 0) b.append('/').append(cars);
+    String up = gapText(me.optJSONObject("ahead"));
+    String down = gapText(me.optJSONObject("behind"));
+    if (!up.isEmpty()) b.append("  \u25B2").append(up);
+    if (!down.isEmpty()) b.append("  \u25BC").append(down);
+    if (!me.isNull("lapsLeft") && me.has("lapsLeft")) {
+      int left = me.optInt("lapsLeft", -1);
+      if (left == 1) b.append("  LAST LAP");
+      else if (left > 1) b.append("  ").append(left).append(" LEFT");
+    }
+    return b.toString();
+  }
+
+  static String gapText(JSONObject car) {
+    if (car == null) return "";
+    if (car.optBoolean("dnf")) return "";
+    String g = car.optString("gap", "");
+    if (!g.isEmpty() && !"--".equals(g) && !"DNF".equals(g)) return g.startsWith("+") ? g : "+" + g;
+    int laps = car.optInt("gapLaps", 0);
+    if (laps > 0) return "+" + laps + "L";
+    if (car.has("gapMs") && !car.isNull("gapMs")) {
+      long ms = Math.abs(car.optLong("gapMs"));
+      return String.format(java.util.Locale.US, "+%d.%03d", ms / 1000, ms % 1000);
+    }
+    return "";
   }
 
   /**

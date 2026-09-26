@@ -267,6 +267,35 @@ app.post('/api/driver/logout', (req, res) => {
  * penalty record, and sending a phone the whole broadcast state several times a second
  * would cost battery for information it cannot use.
  */
+/*
+ * A driver's own numbers, plus the pit board: the cars directly ahead and behind with the
+ * gap to each, the gap to the leader, and the laps left. Taken from the running order the
+ * leaderboard uses, so it follows every timing source (vision, the timing API, manual).
+ * The hosted event builds the same shape in SQL (driver_state); keep the two in step.
+ */
+function pitBoard(s, d) {
+  const byPos = (n) => (s.drivers || []).find((x) => x.position === n) || null;
+  const car = (x, gap) => (x ? { num: x.num, name: x.name, gap: x.dnf ? 'DNF' : (gap || '') } : null);
+  const ahead = byPos(d.position - 1);
+  const behind = byPos(d.position + 1);
+  // Laps left only means something in a lap race. The session type decides, not a leftover
+  // time limit (qualifying sets one, and it stays in the state when the session changes).
+  const laps = (s.event.sessionType || 'race') === 'race' && s.race.totalLaps > 0;
+  return {
+    position: d.position, lapsDone: d.lapsDone, lastLap: d.lastLap, bestLap: d.bestLap,
+    blueFlag: !!d.blueFlag, blackFlag: !!d.blackFlag,
+    penaltyPending: !!d.penaltyPending, penaltyServed: d.penaltyServed || 0, pit: !!d.pit,
+    cars: (s.drivers || []).length,
+    gap: d.position > 1 && !d.dnf ? (d.gap || '') : '',
+    // My interval is my gap to the car ahead; the car behind's interval is its gap to me.
+    ahead: car(ahead, d.interval),
+    behind: car(behind, behind && behind.interval),
+    lapsLeft: laps ? Math.max(0, s.race.totalLaps - (d.lapsDone || 0)) : null,
+    totalLaps: s.race.totalLaps || 0,
+    session: s.event.sessionType || 'race'
+  };
+}
+
 app.get('/api/driver/me', (req, res) => {
   const who = auth.whoIs(req.query.token);
   if (!who) return res.status(401).json({ ok: false, error: 'Signed out' });
@@ -285,11 +314,7 @@ app.get('/api/driver/me', (req, res) => {
     status: reg ? reg.status : 'pending',
     flag: s.race.status,
     event: { name: s.event.name, round: s.event.round, session: s.event.sessionName },
-    me: d ? {
-      position: d.position, lapsDone: d.lapsDone, lastLap: d.lastLap, bestLap: d.bestLap,
-      blueFlag: !!d.blueFlag, blackFlag: !!d.blackFlag,
-      penaltyPending: !!d.penaltyPending, penaltyServed: d.penaltyServed || 0, pit: !!d.pit
-    } : null,
+    me: d ? pitBoard(s, d) : null,
     /*
      * This driver's own penalties, most recent first, with the wording race control sees.
      *
@@ -328,6 +353,30 @@ function driverTeam(who) {
   const d = reg && reg.driverId ? race.driver(reg.driverId) : null;
   return (d && d.team) || who.team || '';
 }
+
+/*
+ * An incident report from a driver's phone: which car (by number) and what happened. The
+ * reporter comes from the token, never from the body, so nobody can file one in another
+ * driver's name. It goes to race control's queue; it never becomes a penalty by itself.
+ */
+app.post('/api/driver/report', (req, res) => {
+  const body = req.body || {};
+  const who = auth.whoIs(body.token);
+  if (!who) return res.status(401).json({ ok: false, error: 'Signed out' });
+  const text = String(body.text || '').trim();
+  if (!text) return res.status(400).json({ ok: false, error: 'Say what happened' });
+  const s = race.state;
+  const reg = s.registrations.find((r) => r.accountId === who.id) || null;
+  const d = reg && reg.driverId ? race.driver(reg.driverId) : null;
+  race.apply({
+    type: 'incident.add',
+    fromNum: who.num, fromName: (d && d.name) || who.nick,
+    againstNum: String(body.against || '').trim(),
+    lap: d ? d.lapsDone : null,
+    text
+  });
+  res.json({ ok: true });
+});
 
 app.post('/api/driver/radio', (req, res) => {
   const who = auth.whoIs((req.body || {}).token);

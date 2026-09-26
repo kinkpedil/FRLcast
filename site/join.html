@@ -1,0 +1,291 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Enter the event</title>
+<meta name="description" content="Register for a FRLcast event before race day, see who is entered, and check in.">
+<style>
+  /*
+   * The entry page for one event (?event=CODE): register before race day, see the entry
+   * list, and check in on the day. No login and no app needed to enter, but the account is
+   * the same one the driver app uses: register here with a number and password, then sign
+   * in on the phone with those on race day (which is also the check-in).
+   *
+   * Everything goes through the event's public database functions (event_join,
+   * event_entries, event_checkin from 20260925000000_league.sql). On a project that has not
+   * had that migration yet, entering still works through driver_register and the list says
+   * it is not available yet, rather than the page breaking.
+   */
+  :root {
+    --bg: #0b0d11; --panel: #12151b; --line: rgba(255,255,255,.08);
+    --ink: #f2f4f8; --ink-2: rgba(242,244,248,.72); --ink-3: rgba(242,244,248,.45);
+    --accent: #00e0a4; --warn: #ffd60a; --bad: #ff453a;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 400 15px/1.55 Inter, -apple-system, "Segoe UI", system-ui, sans-serif; }
+  .shell { max-width: 820px; margin: 0 auto; padding: 22px 16px 70px; }
+
+  header.top { display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 22px; }
+  .kicker { font-family: var(--mono); font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+  h1 { font-size: 1.6rem; line-height: 1.15; margin: 4px 0 2px; letter-spacing: -.01em; }
+  .where { color: var(--ink-2); font-size: .9rem; }
+  .langbtns { margin-left: auto; display: flex; gap: 4px; }
+  .langbtns button { font: inherit; font-size: .8rem; padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink-2); cursor: pointer; }
+  .langbtns button.on { border-color: var(--accent); color: var(--accent); }
+
+  .grid { display: grid; gap: 16px; grid-template-columns: 1fr; margin-bottom: 28px; }
+  @media (min-width: 720px) { .grid { grid-template-columns: 3fr 2fr; } }
+  .card { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 16px 18px; }
+  .card h2 { margin: 0 0 4px; font-size: 1.05rem; }
+  .card p.sub { margin: 0 0 14px; color: var(--ink-2); font-size: .88rem; }
+  label { display: block; margin-bottom: 10px; }
+  label span { display: block; font-family: var(--mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+  input { width: 100%; font: inherit; color: var(--ink); background: #0e1116; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; outline: none; }
+  input:focus { border-color: var(--accent); }
+  .two { display: grid; gap: 10px; grid-template-columns: 2fr 1fr; }
+  button.go { font: inherit; font-weight: 700; width: 100%; padding: 11px 16px; border-radius: 9px; border: 0; background: var(--accent); color: #05221b; cursor: pointer; margin-top: 4px; }
+  button.go.alt { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  button.go:disabled { opacity: .5; cursor: default; }
+  .msg { margin-top: 10px; font-size: .88rem; padding: 9px 11px; border-radius: 8px; }
+  .msg.ok { background: rgba(0,224,164,.12); color: var(--accent); }
+  .msg.bad { background: rgba(255,69,58,.12); color: #ff7a70; }
+  .fine { color: var(--ink-3); font-size: .8rem; margin: 8px 0 0; }
+
+  h2.sec { font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin: 6px 0 10px; font-weight: 700; display: flex; gap: 10px; align-items: baseline; }
+  h2.sec .count { margin-left: auto; font-family: var(--mono); letter-spacing: 0; text-transform: none; color: var(--ink-2); }
+  .wrap-x { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th { text-align: left; font-family: var(--mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,.05); }
+  .num { font-family: var(--mono); color: var(--ink-2); width: 56px; }
+  .tag { font-family: var(--mono); font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; white-space: nowrap; }
+  .tag.ok { background: rgba(0,224,164,.14); color: var(--accent); }
+  .tag.wait { background: rgba(255,214,10,.12); color: var(--warn); }
+  .tag.here { background: rgba(0,163,255,.16); color: #5ac8fa; }
+  .empty { color: var(--ink-3); font-size: .88rem; padding: 10px 0; }
+  .foot { color: var(--ink-3); font-size: .8rem; margin-top: 30px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .foot a { color: var(--accent); text-decoration: none; }
+  [hidden] { display: none !important; }
+</style>
+
+<div class="shell">
+  <header class="top">
+    <div>
+      <div class="kicker" id="round"><span data-t="kicker">Entry</span></div>
+      <h1 id="evname">Enter the event</h1>
+      <div class="where" id="where"></div>
+    </div>
+    <div class="langbtns">
+      <button data-lang="en" class="on">EN</button>
+      <button data-lang="id">ID</button>
+    </div>
+  </header>
+
+  <p class="empty" id="nocode" hidden data-t="nocode">This page needs an event code in its address, like /join?event=NDL3. Ask race control for the link.</p>
+
+  <div id="app" hidden>
+    <div class="grid">
+      <form class="card" id="joinForm" autocomplete="on">
+        <h2 data-t="joinTitle">Enter</h2>
+        <p class="sub" data-t="joinSub">Your entry uses the same account as the driver app: on race day, sign in on your phone with this number and password.</p>
+        <label><span data-t="fName">Racing name</span><input id="fNick" maxlength="40" required autocomplete="nickname"></label>
+        <div class="two">
+          <label><span data-t="fTeam">Team (optional)</span><input id="fTeam" maxlength="30"></label>
+          <label><span data-t="fNum">Number</span><input id="fNum" inputmode="numeric" maxlength="4" required></label>
+        </div>
+        <label><span data-t="fPass">Password (4 or more)</span><input id="fPass" type="password" minlength="4" required autocomplete="new-password"></label>
+        <button class="go" id="joinGo" type="submit" data-t="joinGo">Enter this event</button>
+        <div class="msg" id="joinMsg" hidden></div>
+        <p class="fine" data-t="fine">Pick a password you use nowhere else. Race control accepts each entry before it goes on the grid.</p>
+      </form>
+
+      <form class="card" id="checkForm">
+        <h2 data-t="checkTitle">Race day: check in</h2>
+        <p class="sub" data-t="checkSub">Tell race control you are here. Signing in on the driver app does this too.</p>
+        <label><span data-t="fNum">Number</span><input id="cNum" inputmode="numeric" maxlength="4" required></label>
+        <label><span data-t="fPassPlain">Password</span><input id="cPass" type="password" required autocomplete="current-password"></label>
+        <button class="go alt" id="checkGo" type="submit" data-t="checkGo">Check in</button>
+        <div class="msg" id="checkMsg" hidden></div>
+      </form>
+    </div>
+
+    <h2 class="sec"><span data-t="listTitle">Entry list</span><span class="count" id="count"></span></h2>
+    <div class="wrap-x"><table id="tbl"></table></div>
+    <p class="empty" id="listNote" hidden></p>
+  </div>
+
+  <p class="foot"><span data-t="foot">Entries update as they come in.</span>
+    · <a id="hubLink" href="/event" data-t="hub">Event hub</a>
+    · <a href="https://frlcast.my.id">FRLcast by kinkpedil12</a></p>
+</div>
+
+<script src="/supabase-config.js"></script>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const code = (new URLSearchParams(location.search).get('event') || '').trim().toUpperCase();
+  const cfg = window.FRL_SUPABASE || {};
+
+  const STR = {
+    en: {
+      kicker: 'Entry', title: 'Enter the event',
+      nocode: 'This page needs an event code in its address, like /join?event=NDL3. Ask race control for the link.',
+      joinTitle: 'Enter', joinSub: 'Your entry uses the same account as the driver app: on race day, sign in on your phone with this number and password.',
+      fName: 'Racing name', fTeam: 'Team (optional)', fNum: 'Number', fPass: 'Password (4 or more)', fPassPlain: 'Password',
+      joinGo: 'Enter this event', fine: 'Pick a password you use nowhere else. Race control accepts each entry before it goes on the grid.',
+      checkTitle: 'Race day: check in', checkSub: 'Tell race control you are here. Signing in on the driver app does this too.',
+      checkGo: 'Check in', listTitle: 'Entry list', foot: 'Entries update as they come in.', hub: 'Event hub',
+      entered: 'You are entered. Race control will accept you before race day.',
+      reentered: 'Welcome back: your entry is updated.',
+      checkedIn: 'Checked in. See you on track.',
+      failed: 'Could not reach the event. Try again.',
+      confirmed: 'Confirmed', pending: 'Pending', here: 'Checked in',
+      NO: 'NO', DRIVER: 'DRIVER', TEAM: 'TEAM', STATUS: 'STATUS',
+      none: 'No entries yet. Be the first.',
+      noList: 'The entry list is not switched on for this event yet. Your entry still counts.',
+      noCheck: 'Check-in on the website is not switched on for this event yet. Sign in on the driver app instead.',
+      of: 'entries', noEvent: 'No event with that code.'
+    },
+    id: {
+      kicker: 'Pendaftaran', title: 'Daftar event',
+      nocode: 'Halaman ini butuh kode event di alamatnya, misalnya /join?event=NDL3. Minta link-nya ke race control.',
+      joinTitle: 'Daftar', joinSub: 'Pendaftaranmu memakai akun yang sama dengan aplikasi driver: di hari race, login di HP dengan nomor dan password ini.',
+      fName: 'Nama balap', fTeam: 'Tim (opsional)', fNum: 'Nomor', fPass: 'Password (minimal 4)', fPassPlain: 'Password',
+      joinGo: 'Daftar event ini', fine: 'Pakai password yang tidak kamu pakai di tempat lain. Race control menerima setiap pendaftaran sebelum masuk grid.',
+      checkTitle: 'Hari race: check-in', checkSub: 'Beri tahu race control kamu sudah hadir. Login di aplikasi driver juga melakukan ini.',
+      checkGo: 'Check-in', listTitle: 'Daftar peserta', foot: 'Daftar peserta diperbarui setiap ada pendaftaran.', hub: 'Hub event',
+      entered: 'Kamu sudah terdaftar. Race control akan menerimamu sebelum hari race.',
+      reentered: 'Selamat datang kembali: pendaftaranmu diperbarui.',
+      checkedIn: 'Sudah check-in. Sampai jumpa di trek.',
+      failed: 'Tidak bisa menghubungi event. Coba lagi.',
+      confirmed: 'Diterima', pending: 'Menunggu', here: 'Sudah check-in',
+      NO: 'NO', DRIVER: 'PEMBALAP', TEAM: 'TIM', STATUS: 'STATUS',
+      none: 'Belum ada peserta. Jadilah yang pertama.',
+      noList: 'Daftar peserta belum diaktifkan untuk event ini. Pendaftaranmu tetap tercatat.',
+      noCheck: 'Check-in lewat website belum diaktifkan untuk event ini. Login di aplikasi driver saja.',
+      of: 'peserta', noEvent: 'Tidak ada event dengan kode itu.'
+    }
+  };
+  // The database's own messages, in the reader's language.
+  const ERR_ID = {
+    'Password needs at least 4 characters': 'Password minimal 4 karakter',
+    'Type the name you race under': 'Isi nama balapmu',
+    'No event with that code': 'Tidak ada event dengan kode itu',
+    'That number is already registered': 'Nomor itu sudah dipakai',
+    'Wrong number or password': 'Nomor atau password salah'
+  };
+  let lang = 'en';
+  try { lang = localStorage.getItem('frl.lang') === 'id' ? 'id' : 'en'; } catch (e) { /* private window */ }
+  let entries = null, listMissing = false, eventName = '';
+
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const T = () => STR[lang];
+  const errText = (e) => (lang === 'id' && ERR_ID[e]) || e;
+
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
+    document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = T()[el.dataset.t] || el.textContent; });
+    // The event's own name once it has loaded; the page's title until then.
+    $('#evname').textContent = eventName || T().title;
+    renderList();
+  }
+  document.querySelectorAll('[data-lang]').forEach((b) => {
+    b.onclick = () => { lang = b.dataset.lang; try { localStorage.setItem('frl.lang', lang); } catch (e) {} applyLang(); };
+  });
+
+  /* One database function, called the way the driver app calls them. */
+  async function rpc(fn, args) {
+    const res = await fetch(`${cfg.url}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: { apikey: cfg.anonKey, authorization: `Bearer ${cfg.anonKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify(args)
+    });
+    const body = await res.json().catch(() => ({}));
+    // A function that is not there yet (the league migration not run): PostgREST says 404.
+    if (res.status === 404 || /Could not find the function/i.test(body.message || '')) return { missing: true };
+    if (!res.ok) throw new Error(body.message || res.status);
+    return body;
+  }
+
+  function show(el, ok, text) { el.hidden = false; el.className = 'msg ' + (ok ? 'ok' : 'bad'); el.textContent = text; }
+
+  async function loadList() {
+    try {
+      const r = await rpc('event_entries', { p_code: code });
+      if (r.missing) { listMissing = true; renderList(); return; }
+      if (!r.ok) { $('#evname').textContent = T().noEvent; return; }
+      eventName = r.event.name || code;
+      $('#evname').textContent = eventName;
+      $('#round').textContent = [r.event.round, code].filter(Boolean).join(' · ');
+      $('#where').textContent = r.event.track || '';
+      document.title = `${r.event.name || code}: ${T().title}`;
+      listMissing = false;
+      entries = r.entries || [];
+      renderList();
+    } catch (e) { /* offline for a moment: the next refresh tries again */ }
+  }
+
+  function renderList() {
+    const note = $('#listNote');
+    if (listMissing) { $('#tbl').innerHTML = ''; note.hidden = false; note.textContent = T().noList; $('#count').textContent = ''; return; }
+    if (!entries) return;
+    note.hidden = entries.length > 0;
+    note.textContent = T().none;
+    $('#count').textContent = entries.length ? `${entries.length} ${T().of}` : '';
+    $('#tbl').innerHTML = entries.length ? `<tr><th>${T().NO}</th><th>${T().DRIVER}</th><th>${T().TEAM}</th><th>${T().STATUS}</th></tr>` +
+      entries.slice().sort((a, b) => Number(a.num) - Number(b.num)).map((e) => `<tr>
+        <td class="num">#${esc(e.num)}</td><td>${esc(e.nick)}</td><td style="color:var(--ink-2)">${esc(e.team)}</td>
+        <td>${e.status === 'approved' ? `<span class="tag ok">${T().confirmed}</span>` : `<span class="tag wait">${T().pending}</span>`}
+            ${e.checkedIn ? ` <span class="tag here">${T().here}</span>` : ''}</td></tr>`).join('') : '';
+  }
+
+  $('#joinForm').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const btn = $('#joinGo'); btn.disabled = true;
+    const args = { p_code: code, p_nick: $('#fNick').value.trim(), p_num: $('#fNum').value.trim(),
+                   p_password: $('#fPass').value, p_team: $('#fTeam').value.trim() };
+    try {
+      let r = await rpc('event_join', args);
+      // Before the league migration: enter through the function the app uses. The entry
+      // counts the same; it is just marked as checked in once check-in exists.
+      if (r.missing) r = await rpc('driver_register', { ...args, p_game_id: '' });
+      if (r.ok) {
+        show($('#joinMsg'), true, r.rejoined ? T().reentered : T().entered);
+        $('#fPass').value = '';
+        loadList();
+      } else {
+        show($('#joinMsg'), false, errText(r.error || T().failed));
+      }
+    } catch (e) {
+      show($('#joinMsg'), false, T().failed);
+    }
+    btn.disabled = false;
+  };
+
+  $('#checkForm').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const btn = $('#checkGo'); btn.disabled = true;
+    try {
+      const r = await rpc('event_checkin', { p_code: code, p_num: $('#cNum').value.trim(), p_password: $('#cPass').value });
+      if (r.missing) show($('#checkMsg'), false, T().noCheck);
+      else if (r.ok) { show($('#checkMsg'), true, T().checkedIn); $('#cPass').value = ''; loadList(); }
+      else show($('#checkMsg'), false, errText(r.error || T().failed));
+    } catch (e) {
+      show($('#checkMsg'), false, T().failed);
+    }
+    btn.disabled = false;
+  };
+
+  applyLang();
+  if (!code) {
+    $('#nocode').hidden = false;
+  } else {
+    $('#app').hidden = false;
+    $('#hubLink').href = `/event?event=${encodeURIComponent(code)}`;
+    $('#round').textContent = code;
+    loadList();
+    setInterval(() => { if (document.visibilityState !== 'hidden') loadList(); }, 30000);
+  }
+</script>
