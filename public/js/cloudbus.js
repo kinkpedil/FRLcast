@@ -324,6 +324,7 @@ export class CloudBus {
         flagSource: ev.flag_source,
         totalLaps: ev.total_laps,
         timeLimitSec: Number(settings.timeLimitSec || 0),
+        pitOpen: settings.pitOpen !== false,
         predictOrder: settings.predictOrder !== false,
         startedAt: ms(ev.started_at),
         finishedAt: ms(ev.finished_at),

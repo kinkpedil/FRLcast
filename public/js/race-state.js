@@ -36,7 +36,10 @@ function defaultState() {
       sessionName: 'FEATURE RACE'
     },
     race: {
-      status: 'idle', // idle | formation | green | yellow | safety | red | finished
+      status: 'idle', // idle | formation | green | yellow | safety | vsc | white | red | finished
+      // Pit lane open or closed. Session-wide, independent of the flag (a race can be green
+      // with the pits shut). Shown on the overlay and pushed to every driver's phone.
+      pitOpen: true,
       totalLaps: 10,
       startedAt: null,     // epoch ms of green flag
       finishedAt: null,
@@ -1057,8 +1060,13 @@ export class RaceState {
      */
     if (rules.blue !== false && leader && race.status === 'green') {
       for (const d of drivers) {
-        d.blueFlag = d !== leader && !d.dnf && !d.finished &&
-          (leader.livePos || 0) - (d.livePos || 0) >= 0.9;
+        // Two ways to be caught. From vision the live position is continuous, so being
+        // within a tenth of a lap of the leader is "about to be lapped". From the timing
+        // API there is no track position at all, only lap counts, so a car the leader has
+        // already put a whole lap on is the backmarker being lapped. Either raises blue.
+        const byPos = (leader.livePos || 0) - (d.livePos || 0) >= 0.9;
+        const lapped = (leader.lapsDone || 0) - (d.lapsDone || 0) >= 1;
+        d.blueFlag = d !== leader && !d.dnf && !d.finished && (byPos || lapped);
       }
     } else {
       for (const d of drivers) d.blueFlag = false;
@@ -1561,11 +1569,20 @@ export class RaceState {
         break;
       }
 
+      case 'race.pit':
+        // Pit lane open or closed. Its own control, not a flag: the operator can shut the
+        // pits while the race stays green (a common endurance call), so it never touches
+        // race.status.
+        s.race.pitOpen = a.open !== false;
+        this.pushFeed('flag', s.race.pitOpen ? 'PIT LANE OPEN' : 'PIT LANE CLOSED');
+        break;
+
       case 'race.reset':
         s.race.startedAt = null;
         s.race.finishedAt = null;
         s.race.pausedAt = null;
         s.race.pausedTotal = 0;
+        s.race.pitOpen = true;
         s.race.status = 'idle';
         this.newSession(now);
         for (const d of s.drivers) resetDriverTiming(d, null);

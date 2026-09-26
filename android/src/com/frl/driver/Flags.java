@@ -33,6 +33,7 @@ public final class Flags {
       case "yellow":    return Color.parseColor("#ffd60a");
       case "safety":    return Color.parseColor("#ff9f0a");
       case "vsc":       return Color.parseColor("#ffcc00");
+      case "white":     return Color.parseColor("#f2f2f7");
       case "red":       return Color.parseColor("#ff3b30");
       case "finished":  return Color.parseColor("#ffffff");
       default:          return Color.parseColor("#8e8e93");
@@ -47,6 +48,7 @@ public final class Flags {
       case "yellow":    return "YELLOW FLAG";
       case "safety":    return "SAFETY CAR";
       case "vsc":       return "VSC";
+      case "white":     return "WHITE FLAG";
       case "red":       return "RED FLAG";
       case "finished":  return "CHEQUERED FLAG";
       case "idle":      return "STANDBY";
@@ -64,6 +66,7 @@ public final class Flags {
       case "yellow":    return "Slow down, no overtaking";
       case "safety":    return "Safety car — slow, no overtaking";
       case "vsc":       return "Virtual safety car — slow, hold the gap";
+      case "white":     return "Slow car ahead, take care";
       case "red":       return "Session stopped — slow down and return to the pits";
       case "finished":  return "Chequered flag — race over";
       default:          return "";
@@ -72,6 +75,6 @@ public final class Flags {
 
   /** Yellow and white need dark lettering or the word disappears into its own flag. */
   public static boolean isPale(String flag) {
-    return "yellow".equals(flag) || "vsc".equals(flag) || "finished".equals(flag);
+    return "yellow".equals(flag) || "vsc".equals(flag) || "white".equals(flag) || "finished".equals(flag);
   }
 }

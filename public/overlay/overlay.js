@@ -62,6 +62,9 @@ const FLAG_COLOR = {
   // Yellow-on-yellow would be indistinguishable from a local yellow at a glance, and the
   // two mean different things to a driver, so the VSC gets its own hue.
   vsc: ['#ffcc00', false],
+  // A slightly off-white so the white flag reads as a flag against the panel, with dark
+  // lettering. The chequered flag keeps pure white and light text (it is a different call).
+  white: ['#f2f2f7', true],
   red: ['#ff3b30', true],
   finished: ['#ffffff', false]
 };
@@ -97,6 +100,7 @@ function build() {
             <div class="flag-pill" id="flagPill"><span class="flag-dot"></span><span class="label" id="flagText">STANDBY</span></div>
             <div class="brand-logo" id="brandLogo"><img alt="" id="brandImg" hidden><b id="brandName"></b></div>
           </div>
+          <div class="pit-pill" id="pitPill" hidden><span class="label">PITS CLOSED</span></div>
           <div class="seg event"><div class="k">Event</div><div class="v" id="stEvent">--</div></div>
           <div class="seg"><div class="k" id="stLapK">Lap</div><div class="v" id="stLap">--</div></div>
           <div class="seg"><div class="k" id="stClockK">Race time</div><div class="v" id="stClock">00:00</div></div>
@@ -754,6 +758,14 @@ function renderStatus(rows) {
   document.getElementById('flagText').textContent = FLAG_LABEL[state.race.status] || '--';
   if (prevFlag !== null && prevFlag !== state.race.status) restart(pill, 'wipe');
   prevFlag = state.race.status;
+
+  // Pits closed is its own badge next to the flag, since a race can be green with the
+  // pit lane shut. Absent (open) most of the time, so it only shows when it matters.
+  const pitPill = document.getElementById('pitPill');
+  if (pitPill) {
+    const closed = state.race.pitOpen === false;
+    if (pitPill.hidden === closed) { pitPill.hidden = !closed; if (closed) restart(pitPill, 'wipe'); }
+  }
 
   setText(document.getElementById('stEvent'), `${state.event.name} — ${state.event.round}`, 'value');
 
@@ -1582,7 +1594,7 @@ function applyGapSeparator(rows) {
 function renderSignature(rows) {
   const o = state.overlay, e = state.event, r = state.race;
   let sig = `${JSON.stringify(o.layout)}|${JSON.stringify(o.style)}|${o.theme}|${o.skin}|${o.towerTitle || ''}|${o.nonce || 0}|${o.editSelected}|` +
-            `${r.status}|${r.totalLaps}|${o.accent}|${o.focusDriverId}|` +
+            `${r.status}|${r.pitOpen === false ? 'C' : 'O'}|${r.totalLaps}|${o.accent}|${o.focusDriverId}|` +
             `${o.show.leaderboard}${o.show.tower}${o.show.status}${o.show.lowerThird}${o.show.gap}${o.show.results}${o.show.fastlap}${o.show.sectors}${o.show.delta}${o.show.radio}|${JSON.stringify(o.radio||{})}|${(state.radio && state.radio[0] && state.radio[0].id) || 0}|${JSON.stringify(o.poll||{})}|${JSON.stringify(state.votes||{})}|${o.show.sponsor}${o.show.countdown}${o.show.intro}${o.show.qr}|${JSON.stringify(o.sponsors||[])}|${o.sponsorIndex}|${JSON.stringify(o.countdown||{})}|` +
             `${e.name}|${e.round}|${e.track}|${e.sessionType}|${e.sessionName}|${(o.ticker || []).join('~')}|` +
             `${o.autoTicker}|${(state.feed || [])[0]?.t || 0}|${JSON.stringify(state.records?.bestSectors || [])}|` +

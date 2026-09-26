@@ -49,6 +49,9 @@ const db = await fresh(files);
 check('all migrations apply', true);
 await db.exec(fs.readFileSync(path.join(MIG, '20260925000000_league.sql'), 'utf8'));
 check('league migration re-runs (idempotent)', true);
+// The idempotency re-run above restores league's driver_state; put the later migration's
+// version back so the rest of the checks run against the newest function.
+await db.exec(fs.readFileSync(path.join(MIG, '20260927000000_flags.sql'), 'utf8'));
 
 // ---------------------------------------------------------------- 2. without playerid
 const noPlayer = files.filter((f) => !f.includes('playerid'));
@@ -125,6 +128,25 @@ check('pit board: laps left', me.lapsLeft === 5, String(me.lapsLeft));
 check('pit board: ahead (same lap, ms)', me.ahead && me.ahead.num === '7' && me.ahead.gapMs === 700 && me.ahead.gapLaps === 0, JSON.stringify(me.ahead));
 check('pit board: behind (a lap down)', me.behind && me.behind.num === '43' && me.behind.gapLaps === 1, JSON.stringify(me.behind));
 check('pit board: gap to leader', me.gapMs === 700, String(me.gapMs));
+check('pit board: pit open by default', me.pitOpen === true, String(me.pitOpen));
+check('pit board: no endurance time in a lap race', me.timeLeftMs == null, String(me.timeLeftMs));
+
+// white flag stores, and pit lane closes through the settings blob
+await q(db, `update public.events set status = 'white' where id = $1`, [ev]);
+await q(db, `update public.events set settings = jsonb_set(settings, '{pitOpen}', 'false') where id = $1`, [ev]);
+st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
+check('white flag is a valid status', st.flag === 'white', st.flag);
+check('pit board: pit closed reaches the phone', st.me.pitOpen === false, String(st.me.pitOpen));
+await q(db, `update public.events set status = 'green', settings = jsonb_set(settings, '{pitOpen}', 'true') where id = $1`, [ev]);
+
+// endurance: time-left counts down from the limit and the green-flag stamp
+await q(db, `update public.events set session_type = 'endurance', total_laps = 0,
+  started_at = now() - interval '10 minutes', paused_total = 0,
+  settings = jsonb_set(settings, '{timeLimitSec}', '1800') where id = $1`, [ev]);
+st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
+check('endurance: laps left is null', st.me.lapsLeft === null, String(st.me.lapsLeft));
+check('endurance: time left ~ 20 min', st.me.timeLeftMs > 1180000 && st.me.timeLeftMs <= 1200000, String(st.me.timeLeftMs));
+await q(db, `update public.events set session_type = 'race', total_laps = 10, started_at = null where id = $1`, [ev]);
 
 await q(db, `update public.events set session_type = 'qualifying' where id = $1`, [ev]);
 st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);

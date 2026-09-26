@@ -133,6 +133,7 @@ export const FLAG_LABEL = {
   // The abbreviation every broadcast uses, and the only one that fits the pill on one
   // line. Spelled out it wraps and pushes the bar out of shape.
   vsc: 'VSC',
+  white: 'WHITE FLAG',
   red: 'RED FLAG',
   finished: 'CHEQUERED FLAG'
 };

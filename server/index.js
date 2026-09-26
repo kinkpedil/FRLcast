@@ -281,6 +281,15 @@ function pitBoard(s, d) {
   // Laps left only means something in a lap race. The session type decides, not a leftover
   // time limit (qualifying sets one, and it stays in the state when the session changes).
   const laps = (s.event.sessionType || 'race') === 'race' && s.race.totalLaps > 0;
+  // Endurance is timed, not lap counted: the phone shows the time left, worked out from
+  // the green-flag stamp and any red-flag pauses, the same clock the overlay uses.
+  let timeLeftMs = null;
+  if ((s.event.sessionType || 'race') === 'endurance' && (s.race.timeLimitSec || 0) > 0 && s.race.startedAt) {
+    const now = Date.now();
+    const paused = (s.race.pausedTotal || 0) + (s.race.pausedAt ? now - s.race.pausedAt : 0);
+    const elapsed = now - s.race.startedAt - paused;
+    timeLeftMs = Math.max(0, s.race.timeLimitSec * 1000 - elapsed);
+  }
   return {
     position: d.position, lapsDone: d.lapsDone, lastLap: d.lastLap, bestLap: d.bestLap,
     blueFlag: !!d.blueFlag, blackFlag: !!d.blackFlag,
@@ -291,6 +300,10 @@ function pitBoard(s, d) {
     ahead: car(ahead, d.interval),
     behind: car(behind, behind && behind.interval),
     lapsLeft: laps ? Math.max(0, s.race.totalLaps - (d.lapsDone || 0)) : null,
+    timeLeftMs,
+    // Pit lane state is session wide, but it rides in the driver's own object so the phone
+    // reads one payload. Defaults open on an older state that never set it.
+    pitOpen: s.race.pitOpen !== false,
     totalLaps: s.race.totalLaps || 0,
     session: s.event.sessionType || 'race'
   };

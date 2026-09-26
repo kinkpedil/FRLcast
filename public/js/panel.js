@@ -420,6 +420,13 @@ if ($('#btnUndo')) $('#btnUndo').onclick = () => { bus.action('history.undo'); t
 })();
 $$('.flagbtn').forEach((b) => { b.onclick = () => bus.action('race.flag', { flag: b.dataset.flag }); });
 
+// Pit lane open / closed. A toggle, not a flag: the button label follows the current state
+// and flips it, and it reaches the overlay and every driver's phone the same second.
+{
+  const pb = $('#btnPitToggle');
+  if (pb) pb.onclick = () => bus.action('race.pit', { open: state.race.pitOpen === false });
+}
+
 $('#btnResultCsv').onclick = () => {
   const rows = classification(state);
   const head = 'pos,num,name,team,car,laps,total,best,gap,penalty_s,pit_stops,dnf';
@@ -507,6 +514,14 @@ function renderRace() {
   $('#flBig').textContent = fl ? fmtTime(fl.bestLap) : '--:--.---';
   $('#flWho').textContent = fl ? `${fl.name} · lap ${fl.lapTimes.indexOf(fl.bestLap) + 1}` : '';
   $$('.flagbtn').forEach((b) => b.classList.toggle('on', b.dataset.flag === r.status));
+  {
+    const pb = $('#btnPitToggle');
+    if (pb) {
+      const closed = r.pitOpen === false;
+      pb.textContent = closed ? 'Open pit lane' : 'Close pit lane';
+      pb.classList.toggle('on', closed);
+    }
+  }
 
   syncIfIdle('#evName', state.event.name);
   syncIfIdle('#evRound', state.event.round);
@@ -3961,7 +3976,9 @@ requestAnimationFrame(previewLoop);
     { id: 'flag.yellow', label: 'Flag: Yellow', run: () => bus.action('race.flag', { flag: 'yellow' }) },
     { id: 'flag.safety', label: 'Flag: Safety car', run: () => bus.action('race.flag', { flag: 'safety' }) },
     { id: 'flag.vsc', label: 'Flag: VSC', run: () => bus.action('race.flag', { flag: 'vsc' }) },
+    { id: 'flag.white', label: 'Flag: White', run: () => bus.action('race.flag', { flag: 'white' }) },
     { id: 'flag.red', label: 'Flag: Red', run: () => bus.action('race.flag', { flag: 'red' }) },
+    { id: 'pit.toggle', label: 'Pit lane: open / close', run: () => bus.action('race.pit', { open: state.race.pitOpen === false }) },
     { id: 'flag.finished', label: 'Flag: Chequered', run: () => bus.action('race.flag', { flag: 'finished' }) },
     { id: 'flag.formation', label: 'Flag: Formation', run: () => bus.action('race.flag', { flag: 'formation' }) },
     { id: 'undo', label: 'Undo', run: () => bus.action('history.undo') },

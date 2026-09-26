@@ -460,6 +460,29 @@ html, body {
 }
 .flag-pill.dark { color: #fff; }
 
+/* Pits-closed badge: its own segment next to the flag, only present when the pit lane is
+   shut. Amber so it reads as a restriction without being confused for a red flag. */
+.pit-pill {
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #05070a;
+  background: #ff9f0a;
+  white-space: nowrap;
+  overflow: hidden;
+  position: relative;
+}
+.pit-pill.wipe::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(255, 255, 255, .85);
+  animation: flagWipe .6s var(--ease-out);
+}
+
 /* white wipe across the pill whenever the flag changes */
 .flag-pill.wipe::before {
   content: '';

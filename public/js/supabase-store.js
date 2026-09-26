@@ -68,6 +68,9 @@ function settingsOf(state) {
     // No column of their own, so they ride in the blob — otherwise a hosted overlay never
     // learns the session length and its countdown falls back to counting up.
     timeLimitSec: state.race.timeLimitSec || 0,
+    // Pit lane open/closed rides in the blob too (no column of its own), so a hosted
+    // event's overlay and driver phones learn it. Defaults open when absent.
+    pitOpen: state.race.pitOpen !== false,
     // The report's position graph on a hosted event.
     lapChart: state.race.lapChart || {},
     predictOrder: state.race.predictOrder !== false
