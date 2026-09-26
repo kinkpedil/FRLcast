@@ -80,22 +80,22 @@
       track.appendChild(whole);
     }
     fill(top, 0);
-    fill(bot, 1);
-
-    if (reduce) return;
+    // The rows move as the page scrolls. This is user-driven, not autoplay, so it runs even
+    // under reduced motion: nothing moves unless the reader is actively scrolling.
+    var sec = document.querySelector('.marquee');
     var raf = 0;
     function onScroll() {
       if (raf) return;
       raf = requestAnimationFrame(function () {
         raf = 0;
-        var sec = document.querySelector('.marquee');
+        // Only bother while the strip is anywhere near the viewport.
         var r = sec.getBoundingClientRect();
-        // How far the section has travelled through the viewport, scaled down.
-        var off = (window.innerHeight - r.top) * 0.18;
-        // A third of each track is one full sequence; keep the transform inside it so the
-        // loop never runs out of tiles at either end.
+        if (r.bottom < -200 || r.top > window.innerHeight + 200) return;
+        // Tie the travel to the scroll position directly: about 0.9px of slide per pixel
+        // scrolled, which is clearly visible without being dizzying. One third of the track
+        // is a full sequence, so wrapping inside it keeps the loop seamless in both directions.
         var oneThird = top.scrollWidth / 3;
-        var x = ((off % oneThird) + oneThird) % oneThird;
+        var x = ((window.scrollY * 0.9 % oneThird) + oneThird) % oneThird;
         top.style.transform = 'translate3d(' + (-x) + 'px,0,0)';
         bot.style.transform = 'translate3d(' + (x - oneThird) + 'px,0,0)';
       });
