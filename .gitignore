@@ -69,3 +69,5 @@ site/multiview.html
 site/dl/
 site/version.txt
 site/app-version.txt
+
+.claude/
