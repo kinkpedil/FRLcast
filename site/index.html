@@ -4,243 +4,203 @@
 <script>document.documentElement.classList.add('js')</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FRL Broadcast: live timing and overlays for FR Legends leagues</title>
+<title>FRLcast: live timing and overlays for FR Legends leagues</title>
 <meta name="description" content="Race control, automatic flags, penalties and OBS overlays for FR Legends leagues. Drivers get every flag on their phone through a floating window.">
 <meta name="theme-color" content="#0b0d11">
 
-<meta property="og:title" content="FRL Broadcast">
+<meta property="og:title" content="FRLcast">
 <meta property="og:description" content="Live timing, flags and OBS overlays for FR Legends leagues, with an Android app that puts every flag in front of the driver.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="/shots/overlay.png">
 
 <link rel="preload" href="/fonts/geist-700.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/geist-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/landing.css">
 </head>
 <body>
 
-<header class="header">
-  <div class="shell">
-    <a class="brand" href="/"><span class="live" aria-hidden="true"></span>FRL BROADCAST</a>
-    <nav class="nav">
-      <a class="nav-link" href="#console">The console</a>
-      <a class="nav-link" href="#whatsnew">What's new</a>
-      <a class="nav-link" href="#how">How it works</a>
-      <a class="nav-link" href="#drivers">Driver app</a>
-      <a class="btn btn-primary btn-sm" href="/dashboard">Open the dashboard</a>
-    </nav>
+<!-- ============================================================ HERO -->
+<section class="hero" id="top">
+  <nav class="nav reveal" data-fade="down">
+    <a class="brand" href="/"><span class="live" aria-hidden="true"></span>FRLcast</a>
+    <div class="nav-links">
+      <a href="#what">What it is</a>
+      <a href="#features">Features</a>
+      <a href="#showcase">Showcase</a>
+      <a href="/changelog">What's new</a>
+    </div>
+    <span class="nav-mount" data-i18n-mount></span>
+    <a class="pill pill-primary" href="/dashboard">Open the dashboard</a>
+  </nav>
+
+  <div class="hero-stage">
+    <h1 class="giant hero-word reveal" data-fade="up" data-d="1">FRLCAST</h1>
+    <div class="hero-shot magnet">
+      <img src="/shots/overlay.png" width="1280" height="648" alt="Broadcast overlay: a green flag, the event name, a lap counter and a ten car leaderboard." fetchpriority="high">
+    </div>
   </div>
-</header>
 
-<main>
+  <div class="hero-foot">
+    <p class="hero-tag reveal" data-fade="up" data-d="2">Race control, live timing and OBS overlays for your FR Legends league, from one console.</p>
+    <a class="pill pill-primary hero-cta reveal" data-fade="up" data-d="3" href="/dashboard">Open the dashboard</a>
+  </div>
+</section>
 
-  <!-- Hero: the thing a viewer actually sees on the stream, next to the claim. -->
-  <section class="hero">
-    <div class="shell">
-      <div class="reveal" style="--i:0">
-        <h1>Race control for your FR Legends league.</h1>
-        <p class="lede">Live timing, flags and OBS overlays from one console, with every flag going straight to the drivers' phones.</p>
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="/dashboard">Open the dashboard</a>
-          <a class="btn btn-ghost" href="#drivers">Get the driver app</a>
-        </div>
+<!-- ============================================================ MARQUEE -->
+<section class="marquee" aria-hidden="true">
+  <div class="mq-row" data-dir="1">
+    <div class="mq-track" id="mqTop"></div>
+  </div>
+  <div class="mq-row" data-dir="-1">
+    <div class="mq-track" id="mqBot"></div>
+  </div>
+</section>
+
+<!-- ============================================================ WHAT IT IS -->
+<section class="what" id="what">
+  <span class="glow glow-a" aria-hidden="true"></span>
+  <span class="glow glow-b" aria-hidden="true"></span>
+  <h2 class="giant reveal" data-fade="up">WHAT IT IS</h2>
+  <p class="reveal-text" data-animate-text>FRLcast turns FR Legends into a broadcast. One console holds the timing, the flags, the grid, penalties, a championship and every OBS overlay. Every flag reaches the drivers' phones in about a second. Set it up once, then run the whole race night from one screen.</p>
+  <a class="pill pill-primary reveal" data-fade="up" href="/dashboard">Open the dashboard</a>
+</section>
+
+<!-- ============================================================ FEATURES -->
+<section class="features" id="features">
+  <h2 class="giant giant-dark reveal" data-fade="up">FEATURES</h2>
+  <div class="feat-list">
+    <article class="feat reveal" data-fade="up" data-d="0">
+      <span class="feat-no">01</span>
+      <div class="feat-body">
+        <h3>Timing</h3>
+        <p>Live classification with gaps, last lap and best lap. Predicted running order between crossings, pit and DNF, lap corrections, and a results export at the flag.</p>
       </div>
-      <div class="shot reveal" style="--i:1">
-        <img src="/shots/overlay.png" width="1280" height="648" alt="Broadcast overlay showing a green flag, the event name, lap counter and a ten car leaderboard." fetchpriority="high">
+    </article>
+    <article class="feat reveal" data-fade="up" data-d="1">
+      <span class="feat-no">02</span>
+      <div class="feat-body">
+        <h3>Race control</h3>
+        <p>Formation, green, yellow, safety car, VSC, red and chequered. Automatic flags for stopped cars, time penalties, drive throughs and disqualification, and investigations that stay open until a steward decides.</p>
       </div>
-    </div>
-  </section>
-
-  <!-- Notice: commentator + fully automatic timing need the local desktop app, not the web. -->
-  <section class="shell" style="padding-top:0">
-    <div class="reveal" style="border:1px solid var(--line-strong);border-left:3px solid var(--accent);border-radius:var(--r-sm);background:var(--panel);padding:16px 18px">
-      <h3 style="margin:0 0 6px">Want the commentator and fully automatic timing?</h3>
-      <p class="body" style="margin:0">The website runs your event, the audience poll and the driver app. But the spoken commentator, the natural voice, and fully automatic live timing read straight from the game only run in the free desktop app. That part needs a program on your own machine, not this website.</p>
-      <p style="margin:12px 0 0"><a class="btn btn-primary btn-sm" href="https://github.com/kinkpedil/FRLcast/releases/latest">Download the desktop app</a>
-        <a class="btn btn-ghost btn-sm" href="/changelog">What's new</a></p>
-    </div>
-  </section>
-
-  <!-- One large asset carries this section. No cards, no columns. -->
-  <section class="console" id="console">
-    <div class="shell">
-      <div class="console-head reveal">
-        <h2>One console runs the whole session.</h2>
-        <p class="body">Timing, the flag, the grid, penalties and every overlay come from the same screen. What you change here is on the stream in the same second.</p>
+    </article>
+    <article class="feat reveal" data-fade="up" data-d="2">
+      <span class="feat-no">03</span>
+      <div class="feat-body">
+        <h3>Broadcast overlays</h3>
+        <p>Leaderboard, timing tower, gap, lower third, results, track map and more, in one OBS browser source. Eleven skins, ten themes, scene transitions and your league logo.</p>
       </div>
-      <div class="shot reveal" style="--i:1">
-        <img src="/shots/dashboard.png" width="1440" height="760" alt="The operator console: session timer, flag buttons from formation to chequered, live classification with per driver lap and penalty controls, and event details." loading="lazy">
+    </article>
+    <article class="feat reveal" data-fade="up" data-d="3">
+      <span class="feat-no">04</span>
+      <div class="feat-body">
+        <h3>Championship and drift</h3>
+        <p>A points scheme you set yourself, standings kept per round, and a public season page. Tandem drift battles with judging and brackets that follow the running order.</p>
       </div>
-    </div>
-  </section>
-
-  <!-- Dense capability list, grouped. Deliberately not three matching cards. -->
-  <section class="caps">
-    <div class="shell">
-      <h2 class="reveal">Everything a league night needs, in one place.</h2>
-      <div class="cap-grid">
-        <div class="cap reveal" style="--i:0">
-          <h3>Timing</h3>
-          <ul>
-            <li>Live classification with gaps, last lap and best lap</li>
-            <li>Predicted running order between timing crossings</li>
-            <li>Pit, DNF and manual lap correction</li>
-            <li>Results export at the end of the session</li>
-          </ul>
-        </div>
-        <div class="cap reveal" style="--i:1">
-          <h3>Race control</h3>
-          <ul>
-            <li>Formation, green, yellow, safety car, VSC, red, chequered</li>
-            <li>Automatic flags for stopped cars, with the operator able to take over</li>
-            <li>Time penalties, drive throughs, warnings and disqualification</li>
-            <li>Investigations that stay open until a steward decides</li>
-          </ul>
-        </div>
-        <div class="cap reveal" style="--i:2">
-          <h3>Broadcast</h3>
-          <ul>
-            <li>Overlays for leaderboard, tower, gap, lower third, results and track map</li>
-            <li>Scenes that switch and transition inside one browser source</li>
-            <li>Ten themes, plus your league logo in the status bar</li>
-            <li>Highlight markers written as you go, for the VOD edit</li>
-          </ul>
-        </div>
-        <div class="cap reveal" style="--i:3">
-          <h3>Championship</h3>
-          <ul>
-            <li>Points scheme you set yourself</li>
-            <li>Results kept per round</li>
-            <li>Standings on screen and on its own page</li>
-          </ul>
-        </div>
-        <div class="cap reveal" style="--i:4">
-          <h3>Drift</h3>
-          <ul>
-            <li>Tandem battles with judging</li>
-            <li>Brackets that follow the running order</li>
-            <li>Scores on the overlay as they are given</li>
-          </ul>
-        </div>
-        <div class="cap reveal" style="--i:5">
-          <h3>Tracking</h3>
-          <ul>
-            <li>Cars followed by colour on the capture feed</li>
-            <li>The circuit learned from the first clean laps</li>
-            <li>Capture from this machine or from a phone</li>
-          </ul>
-        </div>
+    </article>
+    <article class="feat reveal" data-fade="up" data-d="4">
+      <span class="feat-no">05</span>
+      <div class="feat-body">
+        <h3>Driver app</h3>
+        <p>An Android app that draws a floating window over the game. Flags, a pit board and penalties land there in about a second. Drivers report incidents and send team radio from their phone.</p>
       </div>
-    </div>
-  </section>
+    </article>
+  </div>
+</section>
 
-  <!-- What's new: a short, dated changelog so returning leagues see the movement. -->
-  <section class="driver" id="whatsnew">
-    <div class="shell">
-      <div class="reveal">
-        <h2>What's new</h2>
-        <p class="body">The console keeps getting better. The latest additions:</p>
-        <ul class="notes">
-          <li><span>Team radio, on air</span><span>A driver types a call (like BOX BOX) in the app, it reaches every teammate's floating window, shows on the broadcast, and is read aloud, then clears itself after 10 to 20s.</span></li>
-          <li><span>Eight more skins</span><span>DTM, Formula E, GTWC, IMSA, IndyCar, NASCAR, Porsche Cup and Super GT, eleven looks in all.</span></li>
-          <li><span>Scene stingers</span><span>An accent-colour wipe with your wordmark plays when you switch event scenes, only on scenes, never on a flag.</span></li>
-          <li><span>Race recap to Discord</span><span>A written summary of the race, built for you and posted to Discord in one click.</span></li>
-          <li><span>More broadcast tools</span><span>Highlight-reel marker export, a multiview control room, and saved "looks" that store a skin + theme you can reapply.</span></li>
-          <li><span>Self-updating overlay</span><span>The overlay heals its own connection and picks up each new version on its own, no more refreshing the OBS source after an update.</span></li>
-          <li><span>Broadcast skins</span><span>MotoGP, WEC and F1 on top of Classic, class grouping, 3-letter codes, team-colour tabs and a custom header wordmark. A skin changes shape; the theme still sets colours.</span></li>
-          <li><span>New overlay widgets</span><span>Fastest-lap banner, sector-time card, team radio, audience poll, sponsor rotator, pre-show countdown and a driver intro card, each a toggle you can place on the layout.</span></li>
-          <li><span>Manual mode</span><span>For a low-spec machine with no camera: set the order by drag or ▲▼, add laps by hand, by typed time, or with a per-driver stopwatch.</span></li>
-          <li><span>Public live page</span><span>A no-login page viewers follow on their phone, classification, flag, fastest lap and championship, plus live audience voting.</span></li>
-          <li><span>Shortcuts &amp; Stream Deck</span><span>Bind any control to a key you choose; a Stream Deck Hotkey button sends the same keystroke, no plugin, no server.</span></li>
-          <li><span>OBS WebSocket</span><span>Optional: let the console cut OBS scenes on a flag and save a replay clip on a marker.</span></li>
-          <li><span>Faster operating</span><span>One-click scene bar, an auto-director for the fastest-lap banner and results, and undo with Ctrl+Z.</span></li>
-          <li><span>Bilingual manual</span><span>The in-console Help now covers every feature in both English and Indonesian.</span></li>
+<!-- ============================================================ SHOWCASE -->
+<section class="showcase" id="showcase">
+  <h2 class="giant reveal" data-fade="up">SHOWCASE</h2>
+
+  <div class="stack">
+    <article class="card" data-card="0">
+      <div class="card-copy">
+        <div class="card-head">
+          <span class="feat-no">01</span>
+          <span class="card-cat">On the stream</span>
+        </div>
+        <h3>The broadcast overlay</h3>
+        <p>Leaderboard, timing tower, gap and results in one OBS browser source. Scenes switch and transition inside it, so the whole broadcast is a single layer over your capture.</p>
+        <ul class="card-points">
+          <li>Eleven skins, ten themes, your league logo</li>
+          <li>Fastest lap, sector splits, team radio and a delta widget</li>
+          <li>It heals its own connection and picks up new versions on its own</li>
         </ul>
-        <p style="margin:18px 0 0"><a class="btn btn-ghost btn-sm" href="/changelog">Every desktop version, with what changed</a></p>
+        <a class="pill pill-ghost" href="/changelog">See what is new</a>
       </div>
-    </div>
-  </section>
+      <figure class="card-media">
+        <img src="/shots/overlay.png" alt="The broadcast overlay: a green flag, the event name, a lap counter and a ten car leaderboard." loading="lazy">
+      </figure>
+    </article>
 
-  <!-- The two audiences, side by side. The verbs are the labels. -->
-  <section class="paths" id="how">
-    <div class="shell">
-      <h2 class="reveal">Two people use this, and they use it differently.</h2>
-      <div class="path-grid">
-        <div class="path reveal" style="--i:0">
-          <span class="mono">RACE CONTROL</span>
-          <ol>
-            <li><strong>Sign in and open your event</strong>Your event is yours. Two leagues running the same night never see each other's timing.</li>
-            <li><strong>Build the grid</strong>Add drivers yourself, or accept the ones who sign in from the app. Accepting one puts them on the grid.</li>
-            <li><strong>Point OBS at the overlay</strong>One browser source per overlay, or one scene source for all of them.</li>
-            <li><strong>Run the session</strong>Start the race, work the flags, hand out penalties. The drivers see it on their phones.</li>
-          </ol>
-          <a class="btn btn-primary" href="/dashboard">Open the dashboard</a>
+    <article class="card" data-card="1">
+      <div class="card-copy">
+        <div class="card-head">
+          <span class="feat-no">02</span>
+          <span class="card-cat">Race control</span>
         </div>
-        <div class="path reveal" style="--i:1">
-          <span class="mono">DRIVERS</span>
-          <ol>
-            <li><strong>Install the app</strong>One Android file, about 33 KB. No store account needed.</li>
-            <li><strong>Register once</strong>Racing name, number and a password. Race control decides who gets in.</li>
-            <li><strong>Sign in to the event</strong>The server address your race control gives you, your number, your password.</li>
-            <li><strong>Turn on the floating flag</strong>It rides over FR Legends while you drive, at whatever size you drag it to.</li>
-          </ol>
-          <a class="btn btn-ghost" href="#drivers">Get the driver app</a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Image and copy, with the download where the reader is already looking. -->
-  <section class="driver" id="drivers">
-    <div class="shell">
-      <div class="reveal">
-        <h2>The flag reaches the driver, not just the stream.</h2>
-        <p class="body">A phone in a pocket is no use mid corner, so the app draws its own window on top of the game. Flags land there in about a second. Penalties arrive with the steward's reason attached, in the same words race control typed.</p>
-        <div class="dl">
-          <a class="btn btn-primary" href="/dl/FRLDriver.apk" download>Download the driver app</a>
-          <span class="dl-meta">APK · 33 KB · Android 7.0 and up</span>
-        </div>
-        <ul class="notes">
-          <li><span>Floating window</span><span>Drag it anywhere, drag the corner to any size down to a thumbnail. It stays where you put it.</span></li>
-          <li><span>Penalties</span><span>A banner with what you were given and why, then the window goes back to the flag.</span></li>
-          <li><span>Permission</span><span>Android asks once for permission to draw over other apps. Without it the window cannot appear.</span></li>
-          <li><span>Signing in</span><span>Type the event code race control gives you &mdash; four to twelve letters, like NDL3 &mdash; not this website&rsquo;s address. A link they send you works too.</span></li>
+        <h3>The operator console</h3>
+        <p>Timing, the flag, the grid, penalties and every overlay come from one screen. What you change here is on the stream in the same second.</p>
+        <ul class="card-points">
+          <li>Formation to chequered, automatic flags for stopped cars</li>
+          <li>Penalties and investigations that stay open until a steward decides</li>
+          <li>A championship you score yourself, kept round by round</li>
         </ul>
+        <a class="pill pill-primary" href="/dashboard">Open the dashboard</a>
       </div>
-      <div class="phone reveal" style="--i:1">
-        <img src="/shots/driver.png" width="1080" height="2240" alt="An Android phone showing the driver app with a floating blue window reading UNDER INVESTIGATION over the app, and a notification giving the reason." loading="lazy">
-      </div>
-    </div>
-  </section>
+      <figure class="card-media">
+        <img src="/shots/dashboard.png" alt="The operator console: session timer, flag buttons, live classification with per driver controls, and event details." loading="lazy">
+      </figure>
+    </article>
 
-  <section class="close">
-    <div class="shell">
-      <h2 class="reveal">Ready for the next round.</h2>
-      <p class="lede reveal" style="--i:1">Set up the event, hand the drivers the app, and go live.</p>
-      <div class="hero-actions reveal" style="--i:2">
-        <a class="btn btn-primary" href="/dashboard">Open the dashboard</a>
-        <a class="btn btn-ghost" href="/dl/FRLDriver.apk" download>Download the driver app</a>
+    <article class="card" data-card="2">
+      <div class="card-copy">
+        <div class="card-head">
+          <span class="feat-no">03</span>
+          <span class="card-cat">In the driver's pocket</span>
+        </div>
+        <h3>Every flag on the phone</h3>
+        <p>A phone in a pocket is no use mid corner, so the app draws its own window over the game. Flags, a pit board and penalties land there in about a second.</p>
+        <ul class="card-points">
+          <li>Drag it anywhere, drag the corner to any size</li>
+          <li>Penalties arrive with the steward's reason, word for word</li>
+          <li>Report an incident or send team radio without leaving the game</li>
+        </ul>
+        <div class="card-actions">
+          <a class="pill pill-ghost" href="/dl/FRLDriver.apk" download>Get the app</a>
+          <a class="pill pill-ghost" href="/join">Enter an event</a>
+        </div>
       </div>
-    </div>
-  </section>
+      <figure class="card-media card-media-phone">
+        <img src="/shots/driver.png" alt="An Android phone showing the driver app with a floating window reading UNDER INVESTIGATION over the game." loading="lazy">
+      </figure>
+    </article>
+  </div>
+</section>
 
-</main>
+<!-- ============================================================ CLOSE -->
+<section class="close">
+  <h2 class="giant reveal" data-fade="up">READY FOR THE NEXT ROUND</h2>
+  <p class="hero-tag reveal" data-fade="up" data-d="1">Set up the event, hand the drivers the app, and go live.</p>
+  <div class="close-actions reveal" data-fade="up" data-d="2">
+    <a class="pill pill-primary" href="/dashboard">Open the dashboard</a>
+    <a class="pill pill-ghost" href="/dl/FRLDriver.apk" download>Download the driver app</a>
+  </div>
+</section>
 
 <footer class="footer">
-  <div class="shell">
-    <span class="mono">FRL BROADCAST</span>
-    <nav>
-      <a href="#console">The console</a>
-      <a href="#how">How it works</a>
-      <a href="#drivers">Driver app</a>
-      <a href="/changelog">Changelog</a>
-      <a href="/dashboard">Sign in</a>
-    </nav>
-  </div>
+  <span class="brand"><span class="live" aria-hidden="true"></span>FRLcast</span>
+  <nav>
+    <a href="#what">What it is</a>
+    <a href="#features">Features</a>
+    <a href="#showcase">Showcase</a>
+    <a href="/changelog">Changelog</a>
+    <a href="/dashboard">Sign in</a>
+  </nav>
+  <span class="foot-credit">FRLcast by kinkpedil12</span>
 </footer>
 
-<script src="/app.js?v=20260926141207" defer></script>
-<script src="/js/i18n-core.js?v=20260926141207"></script>
-<script src="/i18n.js?v=20260926141207"></script>
+<script src="/app.js?v=20260926-redesign" defer></script>
+<script src="/js/i18n-core.js?v=20260926-redesign"></script>
+<script src="/i18n.js?v=20260926-redesign"></script>
 </body>
 </html>

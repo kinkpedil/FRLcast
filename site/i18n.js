@@ -268,7 +268,57 @@
       'Bar scene satu klik, auto-director untuk banner lap tercepat dan hasil, serta undo dengan Ctrl+Z.',
     'Bilingual manual': 'Manual dua bahasa',
     'The in-console Help now covers every feature in both English and Indonesian.':
-      'Menu Help di konsol kini mencakup tiap fitur dalam bahasa Inggris dan Indonesia.'
+      'Menu Help di konsol kini mencakup tiap fitur dalam bahasa Inggris dan Indonesia.',
+    // ---------------------------------------------------------------- landing redesign
+    'What it is': 'Apa ini',
+    'Features': 'Fitur',
+    'Showcase': 'Showcase',
+    'Race control, live timing and OBS overlays for your FR Legends league, from one console.':
+      'Race control, timing langsung, dan overlay OBS untuk liga FR Legends kamu, dari satu konsol.',
+    'WHAT IT IS': 'APA INI',
+    'FRLcast turns FR Legends into a broadcast. One console holds the timing, the flags, the grid, penalties, a championship and every OBS overlay. Every flag reaches the drivers\' phones in about a second. Set it up once, then run the whole race night from one screen.':
+      'FRLcast mengubah FR Legends jadi siaran. Satu konsol memegang timing, bendera, grid, penalti, championship, dan semua overlay OBS. Tiap bendera sampai ke HP pembalap dalam sekitar satu detik. Atur sekali, lalu jalankan seluruh malam balapan dari satu layar.',
+    'FEATURES': 'FITUR',
+    'Live classification with gaps, last lap and best lap. Predicted running order between crossings, pit and DNF, lap corrections, and a results export at the flag.':
+      'Klasemen langsung dengan gap, lap terakhir, dan lap terbaik. Perkiraan urutan di antara lintasan, pit dan DNF, koreksi lap, dan ekspor hasil saat bendera finish.',
+    'Formation, green, yellow, safety car, VSC, red and chequered. Automatic flags for stopped cars, time penalties, drive throughs and disqualification, and investigations that stay open until a steward decides.':
+      'Formasi, hijau, kuning, safety car, VSC, merah, dan finis. Bendera otomatis untuk mobil berhenti, penalti waktu, drive through dan diskualifikasi, serta investigasi yang tetap terbuka sampai steward memutuskan.',
+    'Broadcast overlays': 'Overlay siaran',
+    'Leaderboard, timing tower, gap, lower third, results, track map and more, in one OBS browser source. Eleven skins, ten themes, scene transitions and your league logo.':
+      'Leaderboard, timing tower, gap, lower third, hasil, peta trek, dan lainnya, dalam satu browser source OBS. Sebelas skin, sepuluh tema, transisi scene, dan logo liga kamu.',
+    'Championship and drift': 'Championship dan drift',
+    'A points scheme you set yourself, standings kept per round, and a public season page. Tandem drift battles with judging and brackets that follow the running order.':
+      'Skema poin yang kamu atur sendiri, klasemen per ronde, dan halaman musim publik. Tandem drift battle dengan penjurian dan bracket yang mengikuti urutan.',
+    'An Android app that draws a floating window over the game. Flags, a pit board and penalties land there in about a second. Drivers report incidents and send team radio from their phone.':
+      'Aplikasi Android yang menggambar jendela mengambang di atas game. Bendera, pit board, dan penalti muncul di sana dalam sekitar satu detik. Pembalap melaporkan insiden dan mengirim radio tim dari HP.',
+    'SHOWCASE': 'SHOWCASE',
+    'On the stream': 'Di stream',
+    'The broadcast overlay': 'Overlay siaran',
+    'One console, the whole session': 'Satu konsol, seluruh sesi',
+    'Open it': 'Buka',
+    "In the driver's pocket": 'Di saku pembalap',
+    'Every flag on the phone': 'Tiap bendera di HP',
+    'Enter an event': 'Daftar event',
+    'READY FOR THE NEXT ROUND': 'SIAP UNTUK RONDE BERIKUTNYA',
+    'FRLcast by kinkpedil12': 'FRLcast by kinkpedil12',
+
+    // ---------------------------------------------------------------- showcase copy
+    "The operator console": "Konsol operator",
+    "Leaderboard, timing tower, gap and results in one OBS browser source. Scenes switch and transition inside it, so the whole broadcast is a single layer over your capture.": "Leaderboard, timing tower, gap, dan hasil dalam satu browser source OBS. Scene berganti dan bertransisi di dalamnya, jadi seluruh siaran adalah satu lapisan di atas capture kamu.",
+    "Eleven skins, ten themes, your league logo": "Sebelas skin, sepuluh tema, logo liga kamu",
+    "Fastest lap, sector splits, team radio and a delta widget": "Lap tercepat, split sektor, radio tim, dan widget delta",
+    "It heals its own connection and picks up new versions on its own": "Overlay memulihkan koneksinya sendiri dan mengambil versi baru sendiri",
+    "See what is new": "Lihat yang baru",
+    "Timing, the flag, the grid, penalties and every overlay come from one screen. What you change here is on the stream in the same second.": "Timing, bendera, grid, penalti, dan semua overlay berasal dari satu layar. Yang kamu ubah di sini muncul di stream pada detik yang sama.",
+    "Formation to chequered, automatic flags for stopped cars": "Dari formasi sampai finis, bendera otomatis untuk mobil berhenti",
+    "Penalties and investigations that stay open until a steward decides": "Penalti dan investigasi yang tetap terbuka sampai steward memutuskan",
+    "A championship you score yourself, kept round by round": "Championship yang kamu skor sendiri, disimpan ronde demi ronde",
+    "A phone in a pocket is no use mid corner, so the app draws its own window over the game. Flags, a pit board and penalties land there in about a second.": "HP di saku tidak berguna saat menikung, jadi aplikasi menggambar jendelanya sendiri di atas game. Bendera, pit board, dan penalti muncul di sana dalam sekitar satu detik.",
+    "Drag it anywhere, drag the corner to any size": "Geser ke mana saja, geser sudutnya untuk ukuran apa pun",
+    "Penalties arrive with the steward's reason, word for word": "Penalti datang dengan alasan steward, kata demi kata",
+    "Report an incident or send team radio without leaving the game": "Laporkan insiden atau kirim radio tim tanpa keluar dari game",
+    "Get the app": "Ambil aplikasi",
+
   };
 
   window.FRL_I18N.install(ID, KEEP);
