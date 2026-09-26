@@ -136,7 +136,15 @@ a { color: inherit; text-decoration: none; }
   .pill { padding: 10px 18px; font-size: 12px; }
 }
 @media (max-width: 720px) {
-  .hero-shot { bottom: auto; top: 52%; transform: translateY(-50%); }
+  /* Stack the hero on a phone: the wordmark, then the screenshot below it, then the tagline.
+     Floating the shot over the name only works where the name is wide enough to show around
+     it; on a narrow screen it just covers the word. */
+  .hero-stage { flex-direction: column; justify-content: center; gap: clamp(20px, 6vw, 40px); }
+  .hero-word { font-size: clamp(3.2rem, 21vw, 8rem); }
+  .hero-shot {
+    position: static; margin: 0 auto; bottom: auto; width: min(90%, 460px);
+    animation: heroShot 1s var(--ease) .45s forwards;
+  }
   .hero-cta { display: none; }
   .hero-tag { max-width: 100%; }
 }
@@ -263,7 +271,11 @@ a { color: inherit; text-decoration: none; }
    for readers who asked for reduced motion. */
 .hero-word { background-size: 100% 260%; animation: wordShimmer 9s ease-in-out infinite; }
 @keyframes wordShimmer { 0%, 100% { background-position: 50% 0%; } 50% { background-position: 50% 100%; } }
-.hero-shot { animation: heroShot 1s var(--ease) .45s forwards, heroFloat 7s ease-in-out 1.4s infinite; }
+/* The gentle float is desktop only: on a phone the shot is in the normal flow, so animating
+   its margin would nudge the tagline below it. */
+@media (min-width: 721px) {
+  .hero-shot { animation: heroShot 1s var(--ease) .45s forwards, heroFloat 7s ease-in-out 1.4s infinite; }
+}
 @keyframes heroFloat { 0%, 100% { margin-bottom: 0; } 50% { margin-bottom: 18px; } }
 
 
