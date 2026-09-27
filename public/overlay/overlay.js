@@ -1058,6 +1058,39 @@ function renderBracket() {
  * the viewer has to work out that it is a starting order instead. The stagger says it
  * without a caption.
  */
+/**
+ * Full-screen grid reveal: one grid row (two cars) at a time, big, cycling on its own timer,
+ * like the pre-race grid walk of a real broadcast. Positions 1 and 2 first, then 3 and 4, etc.
+ */
+function renderGridReveal(grid, byId) {
+  const box = document.getElementById('gdRows');
+  if (!box) return;
+  const nPairs = Math.ceil(grid.length / 2);
+  if (!nPairs) { box.innerHTML = '<div class="gd-empty">grid not set</div>'; box.dataset.sig = 'empty'; return; }
+  const idx = Math.floor(Date.now() / 4800) % nPairs;
+  const ids = [grid[idx * 2], grid[idx * 2 + 1]];
+  const sig = 'reveal|' + idx + '|' + ids.map((id) => { const d = byId.get(id) || {}; return `${d.name}:${d.num}:${d.color}:${d.photo ? 1 : 0}`; }).join(',');
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  setText(document.getElementById('gdSub'), `ROW ${idx + 1} OF ${nPairs}`, null);
+  const cardHtml = (id, pos) => {
+    const d = byId.get(id);
+    if (!d) return '<div class="gr-card empty"></div>';
+    const c = d.color || '#8e8e93';
+    const photo = d.photo
+      ? `<span class="gr-photo" style="background-image:url('${String(d.photo).replace(/'/g, '%27')}')"></span>`
+      : `<span class="gr-photo ph">${esc((d.short || d.name || '').slice(0, 2).toUpperCase())}</span>`;
+    return `<div class="gr-card" style="--c:${c}">
+      <span class="gr-pos">${pos}</span>
+      ${photo}
+      <span class="gr-num">#${esc(d.num)}</span>
+      <span class="gr-name">${esc(d.name)}</span>
+      <span class="gr-team">${esc(d.team || d.car || '')}</span>
+    </div>`;
+  };
+  box.innerHTML = `<div class="gd-reveal" data-k="${idx}">${cardHtml(ids[0], idx * 2 + 1)}${cardHtml(ids[1], idx * 2 + 2)}</div>`;
+}
+
 function renderGrid() {
   const box = document.getElementById('gdRows');
   const card = document.getElementById('gdCard');
@@ -1066,8 +1099,11 @@ function renderGrid() {
   const byId = new Map((state.drivers || []).map((d) => [d.id, d]));
   // The style template: F1 (angled dark slots) or WEC (class coloured). Followed by the grid
   // itself so a photo or name edit re-renders the reveal.
-  const style = ['f1', 'wec', 'classic'].includes(state.overlay.gridStyle) ? state.overlay.gridStyle : 'f1';
+  const style = ['reveal', 'f1', 'wec', 'classic'].includes(state.overlay.gridStyle) ? state.overlay.gridStyle : 'f1';
   if (card) card.dataset.style = style;
+  const gridEl = document.getElementById('grid');
+  if (gridEl) gridEl.classList.toggle('fullscreen', style === 'reveal');
+  if (style === 'reveal') return renderGridReveal(grid, byId);
   const sig = style + '|' + grid.map((id) => { const d = byId.get(id) || {}; return `${d.name}:${d.num}:${d.color}:${d.carClass || ''}:${d.photo ? 1 : 0}`; }).join(',');
   if (box.dataset.sig === sig) return;
   box.dataset.sig = sig;
@@ -2046,6 +2082,8 @@ function tick() {
   }
   // The intro card cycles through the grid on its own timer when no driver is in focus.
   if (shown.intro && !state.overlay.focusDriverId) renderIntro(latestRows);
+  // The full-screen grid reveal advances to the next row on its own timer.
+  if (shown.grid && state.overlay.gridStyle === 'reveal') renderGrid();
   // The hype meter decays each tick even when no new reactions arrive.
   if (shown.reactions) renderReactions();
 }
