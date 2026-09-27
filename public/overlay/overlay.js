@@ -2324,6 +2324,48 @@ function playStinger(s) {
 }
 
 /*
+ * The intro / outro bumper: a full-screen branded takeover the operator plays on demand.
+ * Bigger than the scene stinger, it holds for a few seconds and dismisses itself. Keyed on
+ * the timestamp so replaying the same kind twice still plays the animation.
+ */
+let bumperEl = null, lastBumperAt = 0, bumperTimer = null;
+function playBumper(s) {
+  const b = s.overlay && s.overlay.bumper;
+  const stage = document.querySelector('.stage');
+  if (!stage) return;
+  if (!b || !b.at) { lastBumperAt = 0; return; }
+  if (b.at === lastBumperAt) return;
+  lastBumperAt = b.at;
+  if (!bumperEl) {
+    bumperEl = document.createElement('div');
+    bumperEl.className = 'bumper';
+    bumperEl.innerHTML = '<div class="bumper-bg"></div><div class="bumper-body">' +
+      '<div class="bumper-logo" id="bumperLogo"></div>' +
+      '<div class="bumper-kicker" id="bumperKick"></div>' +
+      '<div class="bumper-title" id="bumperTitle"></div>' +
+      '<div class="bumper-sub" id="bumperSub"></div></div>';
+    stage.appendChild(bumperEl);
+  }
+  const o = s.overlay || {}, ev = s.event || {};
+  bumperEl.style.setProperty('--sting', o.accent || '#00e0a4');
+  const brand = o.brand || {};
+  const logo = document.getElementById('bumperLogo');
+  if (logo) logo.innerHTML = brand.logo
+    ? `<img src="${String(brand.logo).replace(/"/g, '&quot;')}" alt="">`
+    : `<b>${esc(brand.name || ev.name || 'FRLcast')}</b>`;
+  const outro = b.kind === 'outro';
+  setText(document.getElementById('bumperKick'), outro ? 'THAT IS ALL FROM US' : [ev.round, ev.track].filter(Boolean).join(' · '), null);
+  setText(document.getElementById('bumperTitle'), outro ? 'THANKS FOR WATCHING' : (ev.name || 'RACE'), null);
+  setText(document.getElementById('bumperSub'), outro ? (brand.name || '') : (ev.sessionName || ''), null);
+  bumperEl.classList.remove('play', 'outro');
+  if (outro) bumperEl.classList.add('outro');
+  void bumperEl.offsetWidth;
+  bumperEl.classList.add('play');
+  clearTimeout(bumperTimer);
+  bumperTimer = setTimeout(() => bumperEl && bumperEl.classList.remove('play'), 6000);
+}
+
+/*
  * Coalesce renders to one per frame.
  *
  * Vision pushes a driver's progress several times a second, and each push arrives as a
@@ -2352,6 +2394,7 @@ function applyState(s) {
 }
 
 bus.on('state', (s) => {
+  if (s.overlay) playBumper(s);
   const scene = s.overlay && s.overlay.activeScene;
   const stageEl = document.querySelector('.stage');
   // A real scene change only: a state that arrived without overlay settings (realtime drops

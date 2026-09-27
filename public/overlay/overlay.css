@@ -2826,6 +2826,36 @@ html[data-skin="supergt"] .tw-row .t.best { color: var(--sgt-yellow); }
 .stinger.play .stinger-word { animation: stingWord .9s var(--ease-out) forwards; }
 @keyframes stingWord { 0%, 25% { opacity: 0; transform: translateX(-30px); } 45%, 55% { opacity: 1; transform: none; } 78%, 100% { opacity: 0; transform: translateX(30px); } }
 
+/* Full-screen intro / outro bumper: a branded takeover that holds for a few seconds. */
+.bumper { position: absolute; inset: 0; z-index: 70; pointer-events: none; overflow: hidden; opacity: 0; }
+.bumper.play { animation: bumperHold 6s forwards; }
+@keyframes bumperHold { 0% { opacity: 0; } 6%, 88% { opacity: 1; } 100% { opacity: 0; } }
+.bumper-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 40%, color-mix(in srgb, var(--sting, #00e0a4) 22%, #0b0d11) 0%, #0b0d11 70%),
+    #0b0d11;
+}
+.bumper-bg::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 40%, color-mix(in srgb, var(--sting,#00e0a4) 55%, transparent) 50%, transparent 60%);
+  transform: translateX(-30%);
+}
+.bumper.play .bumper-bg::after { animation: bumperShine 6s var(--ease-out) forwards; }
+@keyframes bumperShine { 0% { transform: translateX(-60%); } 40%, 100% { transform: translateX(60%); } }
+.bumper-body { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 0 8%; }
+.bumper-logo { max-height: 180px; margin-bottom: 14px; }
+.bumper-logo img { max-height: 180px; max-width: 520px; object-fit: contain; }
+.bumper-logo b { font-size: 64px; font-weight: 800; letter-spacing: .04em; color: #fff; }
+.bumper-kicker { font-size: 22px; font-weight: 800; letter-spacing: .26em; text-transform: uppercase; color: var(--sting, #00e0a4); }
+.bumper-title { font-size: 84px; font-weight: 800; letter-spacing: .02em; color: #fff; line-height: 1.02; }
+.bumper-sub { font-size: 26px; letter-spacing: .18em; text-transform: uppercase; color: #c7ced9; }
+.bumper.play .bumper-kicker { animation: bumpUp .7s var(--ease-out) .1s backwards; }
+.bumper.play .bumper-title { animation: bumpUp .7s var(--ease-out) .22s backwards; }
+.bumper.play .bumper-sub { animation: bumpUp .7s var(--ease-out) .34s backwards; }
+.bumper.play .bumper-logo { animation: bumpUp .7s var(--ease-out) backwards; }
+@keyframes bumpUp { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+
 /* Knockout qualifying: cars already knocked out, and the elimination line under the last car
    through to the next part. */
 .ko-out { opacity: .42; filter: saturate(.4); }

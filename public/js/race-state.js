@@ -187,6 +187,8 @@ function defaultState() {
        */
       scenes: [],
       activeScene: 'race',
+      // A full-screen branded bumper the operator plays on demand: { kind: 'intro'|'outro', at }.
+      bumper: null,
       transitionMs: 420,
       autoTicker: true,
       accent: '#00e0a4',
@@ -2019,6 +2021,12 @@ export class RaceState {
        * the layout editor and the overlays keep reading the same two fields they always
        * did while each scene quietly keeps its own arrangement.
        */
+      case 'overlay.bumper':
+        // Play (or clear) a full-screen intro/outro bumper. Stamped so the overlay replays
+        // the animation each time, even for the same kind twice in a row.
+        s.overlay.bumper = a.kind ? { kind: a.kind, at: now } : null;
+        break;
+
       case 'overlay.update': {
         const sc = this.scene(a.scene);
         if (a.patch && a.patch.show && sc) Object.assign(sc.show, a.patch.show);

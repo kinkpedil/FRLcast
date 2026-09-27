@@ -2024,6 +2024,8 @@ $('#sceneTrans').oninput = (e) => {
 };
 $('#sceneTrans').onchange = (e) => bus.action('overlay.update', { patch: { transitionMs: Number(e.target.value) } });
 if ($('#sceneStinger')) $('#sceneStinger').onchange = (e) => bus.action('overlay.update', { patch: { stinger: e.target.checked } });
+if ($('#btnBumpIntro')) $('#btnBumpIntro').onclick = () => bus.action('overlay.bumper', { kind: 'intro' });
+if ($('#btnBumpOutro')) $('#btnBumpOutro').onclick = () => bus.action('overlay.bumper', { kind: 'outro' });
 
 // ---------------------------------------------------------------- sessions and grid
 

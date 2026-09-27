@@ -11,7 +11,7 @@
  */
 
 const SETTINGS_ACTIONS = new Set([
-  'overlay.update', 'overlay.layout', 'overlay.scene',
+  'overlay.update', 'overlay.layout', 'overlay.scene', 'overlay.bumper',
   'drift.update', 'calibration.update', 'championship.update', 'rules.update'
 ]);
 
@@ -30,6 +30,10 @@ export async function writeAction(sb, event, type, extra) {
   switch (type) {
     case 'overlay.update':
       return patchSettings(sb, event, 'overlay', extra.patch || {});
+
+    case 'overlay.bumper':
+      // A full-screen intro/outro bumper, stamped so the overlay replays the animation.
+      return patchSettings(sb, event, 'overlay', { bumper: extra.kind ? { kind: extra.kind, at: Date.now() } : null });
 
     case 'overlay.layout': {
       // One widget's placement. Nested a level deeper than the rest of the overlay
