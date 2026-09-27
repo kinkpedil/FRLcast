@@ -308,35 +308,43 @@ public class OverlayService extends Service {
    * text its leaderboard shows and the hosted event sends milliseconds; either is read.
    */
   static String pitBoard(JSONObject me) {
-    if (me == null || me.optInt("position") <= 0) return "";
-    StringBuilder b = new StringBuilder("P").append(me.optInt("position"));
-    int cars = me.optInt("cars", 0);
-    if (cars > 0) b.append('/').append(cars);
-    String up = gapText(me.optJSONObject("ahead"));
-    String down = gapText(me.optJSONObject("behind"));
-    if (!up.isEmpty()) b.append("  \u25B2").append(up);
-    if (!down.isEmpty()) b.append("  \u25BC").append(down);
-    if (!me.isNull("lapsLeft") && me.has("lapsLeft")) {
-      int left = me.optInt("lapsLeft", -1);
-      if (left == 1) b.append("  LAST LAP");
-      else if (left > 1) b.append("  ").append(left).append(" LEFT");
-    }
-    // Endurance is timed, not lap counted: show the time remaining instead of laps left.
-    if (!me.isNull("timeLeftMs") && me.has("timeLeftMs")) {
-      long ms = me.optLong("timeLeftMs", -1);
-      if (ms >= 0) {
-        long s = ms / 1000;
-        b.append(String.format(java.util.Locale.US, "  %d:%02d LEFT", s / 60, s % 60));
+    if (me == null) return "";
+    StringBuilder b = new StringBuilder();
+    // The place-and-gaps half only means something once the car has a position. Before that
+    // (on the grid, or unclassified) the pit state still matters, so it is not gated on it.
+    if (me.optInt("position") > 0) {
+      b.append("P").append(me.optInt("position"));
+      int cars = me.optInt("cars", 0);
+      if (cars > 0) b.append('/').append(cars);
+      String up = gapText(me.optJSONObject("ahead"));
+      String down = gapText(me.optJSONObject("behind"));
+      if (!up.isEmpty()) b.append("  \u25B2").append(up);
+      if (!down.isEmpty()) b.append("  \u25BC").append(down);
+      if (!me.isNull("lapsLeft") && me.has("lapsLeft")) {
+        int left = me.optInt("lapsLeft", -1);
+        if (left == 1) b.append("  LAST LAP");
+        else if (left > 1) b.append("  ").append(left).append(" LEFT");
+      }
+      // Endurance is timed, not lap counted: show the time remaining instead of laps left.
+      if (!me.isNull("timeLeftMs") && me.has("timeLeftMs")) {
+        long ms = me.optLong("timeLeftMs", -1);
+        if (ms >= 0) {
+          long s = ms / 1000;
+          b.append(String.format(java.util.Locale.US, "  %d:%02d LEFT", s / 60, s % 60));
+        }
+      }
+      // A drive-through waiting to be served, and how many laps before it becomes a black flag.
+      if (me.has("serveInLaps") && !me.isNull("serveInLaps")) {
+        int sl = me.optInt("serveInLaps", -1);
+        if (sl == 0) b.append("  SERVE DT NOW");
+        else if (sl > 0) b.append("  SERVE DT: ").append(sl).append(sl == 1 ? " LAP" : " LAPS");
       }
     }
-    // A drive-through waiting to be served, and how many laps before it becomes a black flag.
-    if (me.has("serveInLaps") && !me.isNull("serveInLaps")) {
-      int sl = me.optInt("serveInLaps", -1);
-      if (sl == 0) b.append("  SERVE DT NOW");
-      else if (sl > 0) b.append("  SERVE DT: ").append(sl).append(sl == 1 ? " LAP" : " LAPS");
+    // Pit lane state, both ways and always, so the driver can read whether the pits are open.
+    if (me.has("pitOpen")) {
+      if (b.length() > 0) b.append("  ");
+      b.append(me.optBoolean("pitOpen", true) ? "PIT OPEN" : "PIT CLOSED");
     }
-    // Pit lane state, both ways, so the driver can always read whether the pits are open.
-    if (me.has("pitOpen")) b.append(me.optBoolean("pitOpen", true) ? "  PIT OPEN" : "  PIT CLOSED");
     return b.toString();
   }
 

@@ -41,14 +41,15 @@ if (params.get('motion') === 'full') document.documentElement.classList.add('mot
 const editing = params.get('edit') === '1';
 if (editing) document.documentElement.classList.add('edit');
 
-const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr'];
+const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr', 'pit', 'lights'];
 const LABELS = {
   status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower',
   lowerthird: 'Lower third', gap: 'Gap bar', results: 'Results',
   trackmap: 'Track map', battle: 'Tandem battle', bracket: 'Bracket',
   grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings', ticker: 'Ticker',
   fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta / time attack', radio: 'Team radio', poll: 'Audience poll',
-  sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code'
+  sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code',
+  pit: 'Pit lane', lights: 'Start lights'
 };
 const STAGE_W = 1920;
 const STAGE_H = 1080;
@@ -273,6 +274,16 @@ function build() {
         <div class="card qr-card">
           <img id="qrImg" alt="QR">
           <div class="qr-cap">SCAN TO FOLLOW &amp; VOTE</div>
+        </div>
+      </div>`,
+    pit: `
+      <div class="widget" id="pit">
+        <div class="pit-card" id="pitCard"><span class="pit-dot"></span><span class="label" id="pitLabel">PIT OPEN</span></div>
+      </div>`,
+    lights: `
+      <div class="widget" id="lights">
+        <div class="lights-gantry" id="lightsGantry">
+          <span class="lb" data-i="0"></span><span class="lb" data-i="1"></span><span class="lb" data-i="2"></span><span class="lb" data-i="3"></span><span class="lb" data-i="4"></span>
         </div>
       </div>`
   };
@@ -1350,6 +1361,33 @@ function renderQR() {
   if (img.getAttribute('src') !== src) img.setAttribute('src', src);
 }
 
+/** Pit lane open / closed, both ways so it is never a blank. */
+function renderPit() {
+  const card = document.getElementById('pitCard');
+  const label = document.getElementById('pitLabel');
+  if (!card || !label) return;
+  const closed = state.race.pitOpen === false;
+  if (card.dataset.closed === String(closed)) return;
+  card.dataset.closed = String(closed);
+  card.classList.toggle('closed', closed);
+  label.textContent = closed ? 'PIT CLOSED' : 'PIT OPEN';
+  restart(card, 'wipe');
+}
+
+/** Start-light gantry: n red lights (1..5), all green at lights-out (6). */
+function renderLights() {
+  const g = document.getElementById('lightsGantry');
+  if (!g) return;
+  const n = state.race.lights || 0;
+  if (g.dataset.n === String(n)) return;
+  g.dataset.n = String(n);
+  const go = n >= 6;
+  g.classList.toggle('go', go);
+  for (const b of g.querySelectorAll('.lb')) {
+    b.classList.toggle('red', !go && n > Number(b.dataset.i));
+  }
+}
+
 /** The sponsor rotator: shows one sponsor at a time; the console advances the index. */
 function renderSponsor() {
   const el = document.getElementById('spBody');
@@ -1586,7 +1624,7 @@ function applyGapSeparator(rows) {
 function renderSignature(rows) {
   const o = state.overlay, e = state.event, r = state.race;
   let sig = `${JSON.stringify(o.layout)}|${JSON.stringify(o.style)}|${o.theme}|${o.skin}|${o.towerTitle || ''}|${o.nonce || 0}|${o.editSelected}|` +
-            `${r.status}|${r.pitOpen === false ? 'C' : 'O'}|${r.totalLaps}|${o.accent}|${o.focusDriverId}|` +
+            `${r.status}|${r.pitOpen === false ? 'C' : 'O'}|${r.lights || 0}|${o.show.pit}${o.show.lights}|${r.totalLaps}|${o.accent}|${o.focusDriverId}|` +
             `${o.show.leaderboard}${o.show.tower}${o.show.status}${o.show.lowerThird}${o.show.gap}${o.show.results}${o.show.fastlap}${o.show.sectors}${o.show.delta}${o.show.radio}|${JSON.stringify(o.radio||{})}|${(state.radio && state.radio[0] && state.radio[0].id) || 0}|${JSON.stringify(o.poll||{})}|${JSON.stringify(state.votes||{})}|${o.show.sponsor}${o.show.countdown}${o.show.intro}${o.show.qr}|${JSON.stringify(o.sponsors||[])}|${o.sponsorIndex}|${JSON.stringify(o.countdown||{})}|` +
             `${e.name}|${e.round}|${e.track}|${e.sessionType}|${e.sessionName}|${(o.ticker || []).join('~')}|` +
             `${o.autoTicker}|${(state.feed || [])[0]?.t || 0}|${JSON.stringify(state.records?.bestSectors || [])}|` +
@@ -1679,6 +1717,10 @@ function renderInner() {
   if (shown.intro) renderIntro(rows);
   show('qr', vis.qr);
   if (shown.qr) renderQR();
+  show('pit', vis.pit);
+  if (shown.pit) renderPit();
+  show('lights', vis.lights);
+  if (shown.lights) renderLights();
   // A hidden widget still cost a full row diff on every state push. Nothing about it
   // is on screen, so skip the DOM entirely until it is shown again.
   // Class grouping (banners + per-class numbering) is shared by WEC and IMSA.

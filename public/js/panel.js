@@ -1912,7 +1912,8 @@ const WIDGET_LABELS = {
   status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower',
   lowerThird: 'Lower third', gap: 'Gap bar', results: 'Results',
   trackmap: 'Track map', battle: 'Tandem battle', bracket: 'Bracket',
-  grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings'
+  grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings',
+  pit: 'Pit lane', lights: 'Start lights'
 };
 
 function renderScenes() {
@@ -3381,7 +3382,8 @@ const LAYOUT_LABELS = {
   status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower',
   lowerthird: 'Lower third', gap: 'Gap bar', results: 'Results',
   trackmap: 'Track map', battle: 'Tandem battle', bracket: 'Bracket',
-  grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings', ticker: 'Ticker', fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta / time attack', radio: 'Team radio', poll: 'Audience poll', sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code'
+  grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings', ticker: 'Ticker', fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta / time attack', radio: 'Team radio', poll: 'Audience poll', sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code',
+  pit: 'Pit lane', lights: 'Start lights'
 };
 
 // Force every overlay to redraw the current layout. Changes already reach OBS live; this

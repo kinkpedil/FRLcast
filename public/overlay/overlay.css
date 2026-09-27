@@ -460,27 +460,42 @@ html, body {
 }
 .flag-pill.dark { color: #fff; }
 
-/* Pits-closed badge: its own segment next to the flag, only present when the pit lane is
-   shut. Amber so it reads as a restriction without being confused for a red flag. */
-.pit-pill {
-  display: flex;
-  align-items: center;
-  padding: 0 18px;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: #05070a;
-  background: #ff9f0a;
-  white-space: nowrap;
-  overflow: hidden;
-  position: relative;
+/* Pit lane widget: its own overlay card, green when open, amber when closed. */
+.pit-card {
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 12px 22px; border-radius: 12px;
+  font-size: 20px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+  color: #05070a; background: #30d158;
+  white-space: nowrap; overflow: hidden; position: relative;
 }
-.pit-pill.wipe::before {
+.pit-card.closed { background: #ff9f0a; }
+.pit-card .pit-dot { width: 14px; height: 14px; border-radius: 50%; background: rgba(0,0,0,.55); }
+.pit-card.wipe::before {
   content: '';
   position: absolute; inset: 0;
   background: rgba(255, 255, 255, .85);
   animation: flagWipe .6s var(--ease-out);
+}
+
+/* Start-light gantry widget. */
+.lights-gantry {
+  display: inline-flex; gap: 16px;
+  padding: 20px 26px; border-radius: 16px;
+  background: rgba(8, 10, 14, .78); box-shadow: 0 16px 44px rgba(0,0,0,.5);
+}
+.lights-gantry .lb {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #2a0d0d, #140505 70%);
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.05);
+  transition: background .12s ease, box-shadow .12s ease;
+}
+.lights-gantry .lb.red {
+  background: radial-gradient(circle at 38% 34%, #ff6a5a, #d60000 62%);
+  box-shadow: 0 0 22px 4px rgba(255,40,20,.6), inset 0 0 0 3px rgba(255,255,255,.12);
+}
+.lights-gantry.go .lb {
+  background: radial-gradient(circle at 38% 34%, #7bffb0, #00c853 62%);
+  box-shadow: 0 0 26px 5px rgba(0,220,100,.65), inset 0 0 0 3px rgba(255,255,255,.14);
 }
 
 /* white wipe across the pill whenever the flag changes */
