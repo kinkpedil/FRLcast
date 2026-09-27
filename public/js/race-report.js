@@ -300,3 +300,66 @@ export function reportAsText(report) {
 
   return out.join('\n');
 }
+
+/**
+ * A prose recap of the race, in one paragraph, for a caption on YouTube or Instagram.
+ * Built from the same report as everything else, so it never invents a fact the
+ * classification does not carry. Bilingual; `lang` picks EN or ID. No em-dash, by house rule.
+ */
+export function recapText(report, lang = 'en') {
+  if (report.empty) return '';
+  const id = lang === 'id';
+  const ev = report.event;
+  const where = [ev.track, ev.session].filter(Boolean).join(', ');
+  const title = [ev.name, ev.round].filter(Boolean).join(' ');
+  const s = [];
+
+  if (report.winner) {
+    const w = report.winner, m = report.margin, podium = report.classification.filter((r) => !r.dnf).slice(0, 3);
+    const second = podium[1], third = podium[2];
+    if (id) {
+      let line = `${w.name} memenangi ${title}${where ? ' di ' + where : ''}`;
+      if (m && m.text) line += `, unggul ${m.text} atas ${m.to.name}`;
+      else if (second) line += `, di depan ${second.name}`;
+      if (third) line += `, dengan ${third.name} melengkapi podium`;
+      s.push(line + '.');
+    } else {
+      let line = `${w.name} won ${title}${where ? ' at ' + where : ''}`;
+      if (m && m.text) line += `, by ${m.text} over ${m.to.name}`;
+      else if (second) line += `, ahead of ${second.name}`;
+      if (third) line += `, with ${third.name} completing the podium`;
+      s.push(line + '.');
+    }
+  }
+
+  if (report.fastest) {
+    const f = report.fastest;
+    s.push(id
+      ? `Lap tercepat milik ${f.name} (${f.bestText}).`
+      : `${f.name} set the fastest lap of the race (${f.bestText}).`);
+  }
+
+  const mover = report.movers && report.movers[0];
+  if (mover && mover.startedAt) {
+    s.push(id
+      ? `Kenaikan terbanyak: ${mover.name}, naik ${mover.gained} posisi dari P${mover.startedAt} ke P${mover.position}.`
+      : `Biggest mover was ${mover.name}, up ${mover.gained} place${mover.gained > 1 ? 's' : ''} from P${mover.startedAt} to P${mover.position}.`);
+  }
+
+  if (report.retirements && report.retirements.length) {
+    const names = report.retirements.map((r) => r.name).join(', ');
+    const n = report.retirements.length;
+    s.push(id
+      ? `${n} mobil tidak finish (${names}).`
+      : `${n} car${n > 1 ? 's' : ''} failed to finish (${names}).`);
+  }
+
+  const applied = (report.penalties || []).filter((p) => !p.open);
+  if (applied.length) {
+    s.push(id
+      ? `Steward menjatuhkan ${applied.length} penalti.`
+      : `Stewards handed down ${applied.length} penalt${applied.length > 1 ? 'ies' : 'y'}.`);
+  }
+
+  return s.join(' ');
+}

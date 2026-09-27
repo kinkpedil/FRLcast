@@ -466,6 +466,19 @@ html, body {
    A saved layout position (from the Layout editor) overrides these. */
 #pit { left: 1616px; top: 470px; }
 #lights { left: 800px; top: 452px; }
+#catching { left: 1548px; top: 620px; }
+
+/* Catching widget: who is reeling in the car ahead, and how fast. */
+.catch-card {
+  min-width: 300px; padding: 14px 18px; border-radius: var(--radius, 10px);
+  background: rgba(10, 12, 16, var(--panel-alpha, .88));
+  border-left: 4px solid var(--accent, #00e0a4);
+}
+.catch-tag { font-size: 11px; font-weight: 800; letter-spacing: .18em; color: var(--accent, #00e0a4); }
+.catch-line { font-size: 22px; margin-top: 4px; color: #fff; }
+.catch-line span { color: var(--ink-mute, #9aa3b2); font-weight: 500; font-size: 16px; }
+.catch-meta { display: flex; justify-content: space-between; gap: 20px; margin-top: 6px; font-size: 15px; font-weight: 700; color: #eef2f7; }
+.catch-meta span:last-child { color: var(--accent, #00e0a4); }
 
 /* Pit lane widget: its own overlay card, green when open, amber when closed. */
 .pit-card {

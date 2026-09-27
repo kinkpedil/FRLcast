@@ -8,6 +8,7 @@ import { Detector } from './detector.js';
 import { SETTING_FIELDS, applyVisionSettings, toInputValue } from './settings.js';
 import { Speaker } from './speaker.js';
 import { ObsWs } from './obsws.js';
+import { buildReport, recapText } from './race-report.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -433,6 +434,14 @@ $$('.flagbtn').forEach((b) => { b.onclick = () => bus.action('race.flag', { flag
   if (add) add.onclick = () => bus.action('race.lights', { n: Math.min(5, (state.race.lights || 0) + 1) });
   if (go) go.onclick = () => bus.action('race.lights', { n: 6 });
   if (off) off.onclick = () => bus.action('race.lights', { n: 0 });
+}
+
+// Broadcast a note to every driver's phone at once.
+{
+  const inp = $('#bcastMsg'), send = $('#btnBcastSend'), clear = $('#btnBcastClear');
+  if (send) send.onclick = () => { const t = (inp.value || '').trim(); if (t) { bus.action('driver.broadcast', { text: t }); inp.value = ''; } };
+  if (inp) inp.onkeydown = (e) => { if (e.key === 'Enter') send.click(); };
+  if (clear) clear.onclick = () => bus.action('driver.broadcast', { text: '' });
 }
 
 $('#btnResultCsv').onclick = () => {
@@ -1913,7 +1922,7 @@ const WIDGET_LABELS = {
   lowerThird: 'Lower third', gap: 'Gap bar', results: 'Results',
   trackmap: 'Track map', battle: 'Tandem battle', bracket: 'Bracket',
   grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings',
-  pit: 'Pit lane', lights: 'Start lights'
+  pit: 'Pit lane', lights: 'Start lights', catching: 'Catching'
 };
 
 function renderScenes() {
@@ -3383,7 +3392,7 @@ const LAYOUT_LABELS = {
   lowerthird: 'Lower third', gap: 'Gap bar', results: 'Results',
   trackmap: 'Track map', battle: 'Tandem battle', bracket: 'Bracket',
   grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings', ticker: 'Ticker', fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta / time attack', radio: 'Team radio', poll: 'Audience poll', sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code',
-  pit: 'Pit lane', lights: 'Start lights'
+  pit: 'Pit lane', lights: 'Start lights', catching: 'Catching'
 };
 
 // Force every overlay to redraw the current layout. Changes already reach OBS live; this
@@ -4296,6 +4305,11 @@ requestAnimationFrame(previewLoop);
   }
 
   if ($('#btnRecapBuild')) $('#btnRecapBuild').onclick = () => { if ($('#recapText')) $('#recapText').value = buildRecap(state).text; };
+  // A flowing paragraph, in the operator's language, for a video caption.
+  if ($('#btnRecapProse')) $('#btnRecapProse').onclick = () => {
+    const lang = (localStorage.getItem('frl.lang') === 'id') ? 'id' : 'en';
+    if ($('#recapText')) $('#recapText').value = recapText(buildReport(state), lang);
+  };
   if ($('#btnRecapPost')) $('#btnRecapPost').onclick = () => { if (!dc.url) return dstat(t('Paste a webhook URL first')); dstat(t('Sending…')); post(buildRecap(state).embed); };
   if ($('#btnRecapCopy')) $('#btnRecapCopy').onclick = async () => { try { await navigator.clipboard.writeText(buildRecap(state).text); dstat(t('Copied')); } catch (e) { if ($('#recapText')) { $('#recapText').value = buildRecap(state).text; $('#recapText').select(); } } };
   if ($('#dcRecapAuto')) $('#dcRecapAuto').onchange = (e) => { dc.recapAuto = e.target.checked; save(); };

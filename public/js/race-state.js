@@ -1,5 +1,6 @@
 import { labelGaps, fmtGap } from './timing.js';
 import { scoreRound as scoreRows, standingsFrom } from './points.js';
+import { paceOf } from './race-model.js';
 
 
 /**
@@ -159,6 +160,7 @@ function defaultState() {
         qr: false,
         pit: false,
         lights: false,
+        catching: false,
         ticker: false
       },
       /*
@@ -478,6 +480,7 @@ function makeDriver(partial, index) {
     classPos: null,    // place within this car's class, only in a multi-class field
     classLeader: false,
     gained: 0,         // places gained from the grid (positive = climbed)
+    catch: null,       // { onNum, onName, perLapMs, laps, gapMs } when catching the car ahead
     predicted: false,  // true when that progress is inferred from pace, not measured
     // race control, filled by recompute()
     blueFlag: false,         // about to be lapped by the leader
@@ -511,10 +514,10 @@ function defaultScenes() {
       layout: L({ leaderboard: { x: 48, y: 150, scale: 1 }, tower: { x: 1312, y: 150, scale: 1 },
                   fastlap: { x: 760, y: 116, scale: 1 }, sectors: { x: 730, y: 900, scale: 1 },
                   delta: { x: 730, y: 730, scale: 1 } }) },
-    { id: 'race', name: 'Race', show: show('status', 'leaderboard', 'lowerThird', 'fastlap', 'radio', 'ticker', 'pit'),
+    { id: 'race', name: 'Race', show: show('status', 'leaderboard', 'lowerThird', 'fastlap', 'radio', 'ticker', 'pit', 'catching'),
       layout: L({ leaderboard: { x: 48, y: 150, scale: 1 }, lowerthird: { x: 560, y: 878, scale: 1 },
                   fastlap: { x: 760, y: 116, scale: 1 }, radio: { x: 1572, y: 150, scale: 1 },
-                  pit: { x: 1616, y: 470, scale: 1 } }) },
+                  pit: { x: 1616, y: 470, scale: 1 }, catching: { x: 1548, y: 620, scale: 1 } }) },
     { id: 'battles', name: 'Battles & poll', show: show('status', 'h2h', 'gap', 'poll'),
       layout: L({ h2h: { x: 610, y: 176, scale: 1 }, gap: { x: 730, y: 900, scale: 1 },
                   poll: { x: 1500, y: 176, scale: 1 } }) },
@@ -1022,6 +1025,31 @@ export class RaceState {
       for (const d of ranked) {
         const gs = gr.indexOf(d.id);
         d.gained = (gs >= 0 && !isQuali && !isDrift) ? (gs + 1) - d.position : 0;
+      }
+    }
+
+    /*
+     * Who is catching whom, and how fast. For each car, compare its own pace with the car
+     * ahead: if it is the faster of the two and there is a real gap to close, work out the
+     * closing rate (ms per lap) and how many laps until it arrives. Read by the overlay's
+     * catching widget. Race only, and only once both cars have a couple of laps to judge
+     * pace from, so it never guesses off a single lap.
+     */
+    for (const d of ranked) d.catch = null;
+    if (!isQuali && !isDrift && race.status === 'green') {
+      for (let i = 1; i < ranked.length; i++) {
+        const d = ranked[i], ahead = ranked[i - 1];
+        if (d.dnf || ahead.dnf || d.lapsDone !== ahead.lapsDone) continue;
+        const gapMs = (d.totalMs || 0) - (ahead.totalMs || 0);
+        if (!(gapMs > 0)) continue;
+        const pd = paceOf(d), pa = paceOf(ahead);
+        if (!pd || !pa) continue;
+        const perLap = pa.mean - pd.mean;         // positive: d is the faster car
+        if (perLap < 60) continue;                // a real pace edge, not lap-time noise
+        const laps = Math.ceil(gapMs / perLap);
+        if (laps > 30) continue;                  // too far out to be a storyline
+        d.catch = { onNum: ahead.num, onName: ahead.name, num: d.num, name: d.name,
+                    perLapMs: Math.round(perLap), laps, gapMs: Math.round(gapMs) };
       }
     }
 
@@ -1635,6 +1663,19 @@ export class RaceState {
         const txt = (a.text || '').trim();
         if (txt) s.messages[a.driverId] = { text: txt, at: now };
         else delete s.messages[a.driverId];
+        break;
+      }
+
+      case 'driver.broadcast': {
+        // The same note to every driver's phone at once ("race starts in 2 min"). It reuses
+        // the per-driver message channel, so it reaches a hosted event's phones with no
+        // schema change; empty text clears everyone's.
+        s.messages = s.messages || {};
+        const txt = (a.text || '').trim();
+        for (const d of s.drivers) {
+          if (txt) s.messages[d.id] = { text: txt, at: now };
+          else delete s.messages[d.id];
+        }
         break;
       }
 

@@ -41,7 +41,7 @@ if (params.get('motion') === 'full') document.documentElement.classList.add('mot
 const editing = params.get('edit') === '1';
 if (editing) document.documentElement.classList.add('edit');
 
-const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr', 'pit', 'lights'];
+const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr', 'pit', 'lights', 'catching'];
 const LABELS = {
   status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower',
   lowerthird: 'Lower third', gap: 'Gap bar', results: 'Results',
@@ -49,7 +49,7 @@ const LABELS = {
   grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings', ticker: 'Ticker',
   fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta / time attack', radio: 'Team radio', poll: 'Audience poll',
   sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code',
-  pit: 'Pit lane', lights: 'Start lights'
+  pit: 'Pit lane', lights: 'Start lights', catching: 'Catching'
 };
 const STAGE_W = 1920;
 const STAGE_H = 1080;
@@ -284,6 +284,14 @@ function build() {
       <div class="widget" id="lights">
         <div class="lights-gantry" id="lightsGantry">
           <span class="lb" data-i="0"></span><span class="lb" data-i="1"></span><span class="lb" data-i="2"></span><span class="lb" data-i="3"></span><span class="lb" data-i="4"></span>
+        </div>
+      </div>`,
+    catching: `
+      <div class="widget" id="catching">
+        <div class="card catch-card">
+          <div class="catch-tag">CATCHING</div>
+          <div class="catch-line"><b id="catchWho">--</b> <span id="catchOn">--</span></div>
+          <div class="catch-meta"><span id="catchRate">--</span><span id="catchLaps">--</span></div>
         </div>
       </div>`
   };
@@ -1388,6 +1396,33 @@ function renderLights() {
   }
 }
 
+/**
+ * The most compelling catch to put on screen: the focus driver's if they are catching
+ * someone, otherwise the most imminent catch on track (fewest laps to arrive).
+ */
+function pickCatch(rows) {
+  const focus = rows.find((d) => d.id === state.overlay.focusDriverId);
+  if (focus && focus.catch) return focus.catch;
+  let best = null;
+  for (const d of rows) {
+    if (!d.catch) continue;
+    if (!best || d.catch.laps < best.laps || (d.catch.laps === best.laps && d.catch.gapMs < best.gapMs)) best = d.catch;
+  }
+  return best;
+}
+
+function renderCatching(c) {
+  const sig = `${c.num}>${c.onNum}|${c.perLapMs}|${c.laps}`;
+  const box = document.getElementById('catching');
+  if (!box || box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  setText(document.getElementById('catchWho'), c.name, 'value');
+  setText(document.getElementById('catchOn'), `on ${c.onName}`, null);
+  // A signed value in seconds per lap, using the minus sign, never an em-dash.
+  setText(document.getElementById('catchRate'), `−${(c.perLapMs / 1000).toFixed(2)}s/lap`, null);
+  setText(document.getElementById('catchLaps'), c.laps === 1 ? 'next lap' : `~${c.laps} laps`, null);
+}
+
 /** The sponsor rotator: shows one sponsor at a time; the console advances the index. */
 function renderSponsor() {
   const el = document.getElementById('spBody');
@@ -1624,7 +1659,7 @@ function applyGapSeparator(rows) {
 function renderSignature(rows) {
   const o = state.overlay, e = state.event, r = state.race;
   let sig = `${JSON.stringify(o.layout)}|${JSON.stringify(o.style)}|${o.theme}|${o.skin}|${o.towerTitle || ''}|${o.nonce || 0}|${o.editSelected}|` +
-            `${r.status}|${r.pitOpen === false ? 'C' : 'O'}|${r.lights || 0}|${o.show.pit}${o.show.lights}|${r.totalLaps}|${o.accent}|${o.focusDriverId}|` +
+            `${r.status}|${r.pitOpen === false ? 'C' : 'O'}|${r.lights || 0}|${o.show.pit}${o.show.lights}${o.show.catching}|${r.totalLaps}|${o.accent}|${o.focusDriverId}|` +
             `${o.show.leaderboard}${o.show.tower}${o.show.status}${o.show.lowerThird}${o.show.gap}${o.show.results}${o.show.fastlap}${o.show.sectors}${o.show.delta}${o.show.radio}|${JSON.stringify(o.radio||{})}|${(state.radio && state.radio[0] && state.radio[0].id) || 0}|${JSON.stringify(o.poll||{})}|${JSON.stringify(state.votes||{})}|${o.show.sponsor}${o.show.countdown}${o.show.intro}${o.show.qr}|${JSON.stringify(o.sponsors||[])}|${o.sponsorIndex}|${JSON.stringify(o.countdown||{})}|` +
             `${e.name}|${e.round}|${e.track}|${e.sessionType}|${e.sessionName}|${(o.ticker || []).join('~')}|` +
             `${o.autoTicker}|${(state.feed || [])[0]?.t || 0}|${JSON.stringify(state.records?.bestSectors || [])}|` +
@@ -1639,7 +1674,7 @@ function renderSignature(rows) {
   for (const d of rows) {
     sig += `
 ${d.id}|${d.position}|${d.lapsDone}|${d.lastLap}|${d.bestLap}|${d.totalMs}` +
-           `|${d.gap}|${d.interval}|${d.pit}|${d.dnf}|${d.retired}|${d.num}|${d.name}|${d.short}|${d.team}|${d.car}|${d.color}|${d.carClass}|${d.classPos}|${d.gained}|${d.photo}` +
+           `|${d.gap}|${d.interval}|${d.pit}|${d.dnf}|${d.retired}|${d.num}|${d.name}|${d.short}|${d.team}|${d.car}|${d.color}|${d.carClass}|${d.classPos}|${d.gained}|${d.catch ? d.catch.laps + '_' + d.catch.perLapMs : ''}|${d.photo}` +
            `|${(d.sectors || []).join('.')}|${(d.bestSectors || []).join('.')}|${d.stopped}` +
            // Position round the lap moves constantly, so it is only part of the
            // signature for the widgets that actually draw it. The head to head does:
@@ -1721,6 +1756,9 @@ function renderInner() {
   if (shown.pit) renderPit();
   show('lights', vis.lights);
   if (shown.lights) renderLights();
+  const catcher = pickCatch(rows);
+  show('catching', vis.catching && !!catcher);
+  if (shown.catching && catcher) renderCatching(catcher);
   // A hidden widget still cost a full row diff on every state push. Nothing about it
   // is on screen, so skip the DOM entirely until it is shown again.
   // Class grouping (banners + per-class numbering) is shared by WEC and IMSA.

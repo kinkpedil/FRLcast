@@ -96,6 +96,12 @@
                 <button class="btn ghost" id="btnLightOff">Off</button>
                 <span id="lightDots" style="letter-spacing:3px;font-size:16px"></span>
               </div>
+              <div class="flags" style="margin-top:8px;align-items:center">
+                <span style="font-size:12px;color:var(--ink-mute)">Message to all</span>
+                <input type="text" id="bcastMsg" placeholder="e.g. Race starts in 2 min" style="flex:1;min-width:180px">
+                <button class="btn" id="btnBcastSend">Send to all</button>
+                <button class="btn ghost" id="btnBcastClear">Clear</button>
+              </div>
             </div>
           </div>
 
@@ -1316,6 +1322,7 @@
           <textarea id="recapText" rows="6" readonly style="width:100%;font-size:12px"></textarea>
           <div class="row" style="gap:8px;margin-top:8px">
             <button class="btn sm" id="btnRecapBuild">Build recap</button>
+            <button class="btn sm" id="btnRecapProse" title="A flowing paragraph for a YouTube or Instagram caption">Paragraph</button>
             <button class="btn primary sm" id="btnRecapPost">Post to Discord</button>
             <button class="btn sm" id="btnRecapCopy">Copy</button>
             <label class="toggle" style="margin-left:auto"><span style="font-size:12px;color:var(--ink-mute);margin-right:8px">Auto at finish</span><input type="checkbox" id="dcRecapAuto"><i class="sw"></i></label>
