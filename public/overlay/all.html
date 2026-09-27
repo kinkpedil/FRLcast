@@ -1,7 +1,28 @@
 <meta charset="utf-8">
 <title>FRL Overlay — all</title>
-<link rel="stylesheet" href="overlay.css">
 <body data-widgets="status,leaderboard,tower,lowerthird,gap,results,trackmap,battle,bracket,grid,h2h,standings,ticker,fastlap,sectors,delta,radio,poll,sponsor,countdown,intro,qr,pit,lights,catching,rivalry,podium,reactions">
 <div class="stage"></div>
 <script src="/supabase-config.js"></script>
-<script type="module" src="overlay.js?v=live40"></script>
+<!--
+  Load the stylesheet and the module with the running app version as a cache-buster, so an
+  OBS Browser Source (which caches aggressively and does not always honour no-store) picks up
+  a new build after an update without anyone clearing its cache. Off a hosted event there is
+  no /api/version, so it falls back to a per-load stamp, which is always fresh.
+-->
+<script>
+(function () {
+  function load(v) {
+    var l = document.createElement('link');
+    l.rel = 'stylesheet'; l.href = 'overlay.css?v=' + v;
+    document.head.appendChild(l);
+    var s = document.createElement('script');
+    s.type = 'module'; s.src = 'overlay.js?v=' + v;
+    document.body.appendChild(s);
+  }
+  try {
+    fetch('/api/version').then(function (r) { return r.json(); })
+      .then(function (j) { load(j.current || j.version || Date.now()); })
+      .catch(function () { load(Date.now()); });
+  } catch (e) { load(Date.now()); }
+})();
+</script>
