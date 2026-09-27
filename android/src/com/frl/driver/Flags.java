@@ -66,7 +66,7 @@ public final class Flags {
       case "yellow":    return "Slow down, no overtaking";
       case "safety":    return "Safety car — slow, no overtaking";
       case "vsc":       return "Virtual safety car — slow, hold the gap";
-      case "white":     return "Slow car ahead, take care";
+      case "white":     return "Last lap, one to go";
       case "red":       return "Session stopped — slow down and return to the pits";
       case "finished":  return "Chequered flag — race over";
       default:          return "";

@@ -1,6 +1,6 @@
 -- White flag, pit-lane open/close, and the endurance time-left on the driver's phone.
 --
---   1. The white flag becomes a valid session status (slow car on track). The local server
+--   1. The white flag becomes a valid session status (NASCAR-standard: last lap, one to go). The local server
 --      keeps state in a JSON file with no constraint, so this is only about letting the
 --      hosted event store 'white' without the status check rejecting the write.
 --   2. Pit lane open/closed rides in the settings blob (settings->>'pitOpen'), like the
