@@ -460,6 +460,13 @@ html, body {
 }
 .flag-pill.dark { color: #fff; }
 
+/* Default placement for the pit and start-light widgets, used whenever the active scene
+   has no saved position for them (an older scene from before these widgets existed). Without
+   this they would stack at 0,0 behind the status bar and look as though they never appeared.
+   A saved layout position (from the Layout editor) overrides these. */
+#pit { left: 1616px; top: 470px; }
+#lights { left: 800px; top: 452px; }
+
 /* Pit lane widget: its own overlay card, green when open, amber when closed. */
 .pit-card {
   display: inline-flex; align-items: center; gap: 12px;
