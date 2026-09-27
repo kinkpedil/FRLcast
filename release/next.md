@@ -6,10 +6,4 @@
 -->
 ## en
 
-- Pit lane and start lights are now overlay widgets in the one broadcast source: turn them on and place them like any other widget (Grid scene has the lights, Race scene has the pit lane).
-- The driver's phone shows the pit lane state even before the car has a position, so PIT OPEN is never hidden.
-
 ## id
-
-- Pit lane dan start lights kini jadi widget overlay di satu source broadcast: nyalakan dan atur posisinya seperti widget lain (scene Grid ada lights-nya, scene Race ada pit lane-nya).
-- HP driver menampilkan status pit lane bahkan sebelum mobil punya posisi, jadi PIT OPEN tidak pernah tersembunyi.
