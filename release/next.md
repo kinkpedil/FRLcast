@@ -6,4 +6,8 @@
 -->
 ## en
 
+- White flag now means the last lap (NASCAR standard): the driver's phone reads "Last lap, one to go".
+
 ## id
+
+- Bendera putih kini berarti lap terakhir (standar NASCAR): HP driver menampilkan "Last lap, one to go".
