@@ -40,6 +40,9 @@ function defaultState() {
       // Pit lane open or closed. Session-wide, independent of the flag (a race can be green
       // with the pits shut). Shown on the overlay and pushed to every driver's phone.
       pitOpen: true,
+      // Start-light gantry: 0 off, 1..5 reds lit, 6 lights out (green). Overlay + driver app.
+      lights: 0,
+      lightsAt: null,
       totalLaps: 10,
       startedAt: null,     // epoch ms of green flag
       finishedAt: null,
@@ -412,6 +415,10 @@ function defaultState() {
     // { id, at, fromNum, fromName, againstNum, againstName, lap, text, status, cloud }
     // status: open | reviewed | dismissed. Race control decides; a report is never a penalty.
     incidents: [],
+    // Free-text notes race control pushes to one driver's phone, keyed by driver id:
+    // { [driverId]: { text, at } }. Held (not auto-expired) until changed or cleared, and
+    // mirrored to a hosted event through the settings blob so it reaches phones there too.
+    messages: {},
     updatedAt: Date.now()
   };
 }
@@ -466,6 +473,9 @@ function makeDriver(partial, index) {
     stopped: false,
     trackedAt: null,   // last time the tracker actually saw this car
     livePos: 0,        // lapsDone + progress round the current lap, for ordering
+    classPos: null,    // place within this car's class, only in a multi-class field
+    classLeader: false,
+    gained: 0,         // places gained from the grid (positive = climbed)
     predicted: false,  // true when that progress is inferred from pace, not measured
     // race control, filled by recompute()
     blueFlag: false,         // about to be lapped by the leader
@@ -974,6 +984,44 @@ export class RaceState {
     // A best-lap feed (qualifying, practice, the in-game board) is labelled best-lap style,
     // like qualifying. A race-mode feed brings its own gaps, measured at the line.
     labelGaps(ranked, { drift: isDrift, quali: isQuali || (extActive && !extRace) });
+
+    /*
+     * Multi-class: only when the grid actually runs more than one car class. Then each car
+     * is numbered within its own class in the running order (P1 in class first), and the
+     * class leaders are flagged, so the overlay can badge a class winner without a second
+     * classification. A single-class field carries none of this (classPos null).
+     */
+    {
+      const classes = new Set(ranked.map((d) => (d.carClass || '').trim()).filter(Boolean));
+      const multi = classes.size > 1;
+      race.multiClass = multi;
+      const seen = {};
+      for (const d of ranked) {
+        const c = (d.carClass || '').trim();
+        if (multi && c && !d.dnf) {
+          const n = (seen[c] = (seen[c] || 0) + 1);
+          d.classPos = n;
+          d.classLeader = n === 1;
+        } else {
+          d.classPos = null;
+          d.classLeader = false;
+        }
+      }
+    }
+
+    /*
+     * Places gained since the start: the grid position minus the current one, positive when
+     * a car has climbed. The story of who is having a race, for the report and a results
+     * badge. Only in a lap/endurance race where the grid means something.
+     */
+    {
+      const gr = race.grid || [];
+      for (const d of ranked) {
+        const gs = gr.indexOf(d.id);
+        d.gained = (gs >= 0 && !isQuali && !isDrift) ? (gs + 1) - d.position : 0;
+      }
+    }
+
     if (koLive) {
       // The last car through to the next part: the overlay draws the elimination line under it.
       const cut = ko.done ? 0 : ko.part === 1 ? ko.toQ2 : ko.part === 2 ? ko.toQ3 : 0;
@@ -1577,12 +1625,33 @@ export class RaceState {
         this.pushFeed('flag', s.race.pitOpen ? 'PIT LANE OPEN' : 'PIT LANE CLOSED');
         break;
 
+      case 'driver.message': {
+        // A note to one driver's phone. Empty text clears it. Kept until changed so a driver
+        // who looks down a few seconds later still sees it.
+        s.messages = s.messages || {};
+        const txt = (a.text || '').trim();
+        if (txt) s.messages[a.driverId] = { text: txt, at: now };
+        else delete s.messages[a.driverId];
+        break;
+      }
+
+      case 'race.lights': {
+        // Start-light sequence: 0 = off, 1..5 = that many red lights on, 6 = lights out
+        // (green). Drives the overlay's start gantry and the driver app's own light strip.
+        // Purely a visual cue the operator steps through; it never changes race.status.
+        s.race.lights = Math.max(0, Math.min(6, a.n | 0));
+        s.race.lightsAt = now;
+        break;
+      }
+
       case 'race.reset':
         s.race.startedAt = null;
         s.race.finishedAt = null;
         s.race.pausedAt = null;
         s.race.pausedTotal = 0;
         s.race.pitOpen = true;
+        s.race.lights = 0;
+        s.messages = {};
         s.race.status = 'idle';
         this.newSession(now);
         for (const d of s.drivers) resetDriverTiming(d, null);

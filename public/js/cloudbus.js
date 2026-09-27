@@ -272,6 +272,7 @@ export class CloudBus {
         short: d.short,
         team: d.team,
         color: d.color,
+        carClass: d.car_class || '',
         position: d.position,
         lapsDone: d.laps_done,
         lastLap: d.last_lap,
@@ -325,6 +326,7 @@ export class CloudBus {
         totalLaps: ev.total_laps,
         timeLimitSec: Number(settings.timeLimitSec || 0),
         pitOpen: settings.pitOpen !== false,
+        lights: Number(settings.lights || 0),
         predictOrder: settings.predictOrder !== false,
         startedAt: ms(ev.started_at),
         finishedAt: ms(ev.finished_at),
@@ -357,7 +359,8 @@ export class CloudBus {
       standings: settings.standings || [],
       records: settings.records || {},
       sessions: settings.sessions || [],
-      commentary: settings.commentary || {}
+      commentary: settings.commentary || {},
+      messages: settings.messages || {}
     };
   }
 

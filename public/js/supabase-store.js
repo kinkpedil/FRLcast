@@ -17,6 +17,7 @@ const DRIVER_COLS = {
   short: (d) => d.short || '',
   team: (d) => d.team || '',
   color: (d) => d.color,
+  car_class: (d) => d.carClass || '',
   // Set when a car is claimed by an accepted sign-in, null for one the operator typed in.
   account_id: (d) => d.accountId || null,
   position: (d) => d.position || 0,
@@ -71,6 +72,10 @@ function settingsOf(state) {
     // Pit lane open/closed rides in the blob too (no column of its own), so a hosted
     // event's overlay and driver phones learn it. Defaults open when absent.
     pitOpen: state.race.pitOpen !== false,
+    // Start-light gantry and per-driver phone notes ride in the blob too, so a hosted
+    // event's overlay and phones get them without new columns.
+    lights: state.race.lights || 0,
+    messages: state.messages || {},
     // The report's position graph on a hosted event.
     lapChart: state.race.lapChart || {},
     predictOrder: state.race.predictOrder !== false

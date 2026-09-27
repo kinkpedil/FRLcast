@@ -427,6 +427,14 @@ $$('.flagbtn').forEach((b) => { b.onclick = () => bus.action('race.flag', { flag
   if (pb) pb.onclick = () => bus.action('race.pit', { open: state.race.pitOpen === false });
 }
 
+// Start lights: step the reds up one at a time, drop them all for green, or clear.
+{
+  const add = $('#btnLightAdd'), go = $('#btnLightGo'), off = $('#btnLightOff');
+  if (add) add.onclick = () => bus.action('race.lights', { n: Math.min(5, (state.race.lights || 0) + 1) });
+  if (go) go.onclick = () => bus.action('race.lights', { n: 6 });
+  if (off) off.onclick = () => bus.action('race.lights', { n: 0 });
+}
+
 $('#btnResultCsv').onclick = () => {
   const rows = classification(state);
   const head = 'pos,num,name,team,car,laps,total,best,gap,penalty_s,pit_stops,dnf';
@@ -521,6 +529,11 @@ function renderRace() {
       pb.textContent = closed ? 'Open pit lane' : 'Close pit lane';
       pb.classList.toggle('on', closed);
     }
+    const dots = $('#lightDots');
+    if (dots) {
+      const n = r.lights || 0;
+      dots.textContent = n >= 6 ? '🟢🟢🟢🟢🟢' : '🔴'.repeat(n) + '⚫'.repeat(5 - n);
+    }
   }
 
   syncIfIdle('#evName', state.event.name);
@@ -589,6 +602,7 @@ function renderRace() {
           <button class="btn sm" data-act="pen">+5s</button>
           <button class="btn sm" data-act="dnf" title="Cycle: running, DNF, Retired">DNF</button>
           <button class="btn sm" data-act="focus">Focus</button>
+          <button class="btn sm" data-act="msg" title="Send a short note to this driver's phone.">Msg</button>
         </td>
       </tr>`).join('')}`;
 
@@ -604,6 +618,12 @@ function renderRace() {
       case 'pen': bus.action('driver.penalty', { driverId: id, seconds: 5 }); break;
       case 'dnf': bus.action('manual.dnf', { id }); break;
       case 'focus': bus.action('overlay.update', { patch: { focusDriverId: id } }); break;
+      case 'msg': {
+        const cur = (state.messages && state.messages[id] && state.messages[id].text) || '';
+        const txt = prompt(`Message to ${d ? d.name : 'driver'} (blank clears):`, cur);
+        if (txt !== null) bus.action('driver.message', { driverId: id, text: txt });
+        break;
+      }
     }
   };
 

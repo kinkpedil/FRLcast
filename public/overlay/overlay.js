@@ -850,7 +850,8 @@ function renderResults(rows) {
       <div class="pos">P${d.position}</div>
       <div class="bar"></div>
       <div class="num">${esc(d.num)}</div>
-      <div class="name">${esc(d.name)}<span style="color:var(--ink-mute);font-weight:500;font-size:13px"> ${esc(d.team || '')}</span></div>
+      <div class="name">${esc(d.name)}<span style="color:var(--ink-mute);font-weight:500;font-size:13px"> ${esc(d.team || '')}</span>${
+        !d.dnf && d.gained ? `<span style="font-weight:700;font-size:12px;margin-left:8px;color:${d.gained > 0 ? '#30d158' : '#ff6a5a'}">${d.gained > 0 ? '▲' : '▼'}${Math.abs(d.gained)}</span>` : ''}</div>
       <div class="t">${d.dnf ? (d.retired ? 'RET' : 'DNF') : d.position === 1 ? fmtTime(d.totalMs, { forceMinutes: true }) : esc(d.gap)}</div>
       <div class="t">${d.bestLap != null ? fmtTime(d.bestLap) : '--'}</div>
     </div>`).join('');
@@ -1609,7 +1610,7 @@ function renderSignature(rows) {
   for (const d of rows) {
     sig += `
 ${d.id}|${d.position}|${d.lapsDone}|${d.lastLap}|${d.bestLap}|${d.totalMs}` +
-           `|${d.gap}|${d.interval}|${d.pit}|${d.dnf}|${d.retired}|${d.num}|${d.name}|${d.short}|${d.team}|${d.car}|${d.color}|${d.carClass}|${d.photo}` +
+           `|${d.gap}|${d.interval}|${d.pit}|${d.dnf}|${d.retired}|${d.num}|${d.name}|${d.short}|${d.team}|${d.car}|${d.color}|${d.carClass}|${d.classPos}|${d.gained}|${d.photo}` +
            `|${(d.sectors || []).join('.')}|${(d.bestSectors || []).join('.')}|${d.stopped}` +
            // Position round the lap moves constantly, so it is only part of the
            // signature for the widgets that actually draw it. The head to head does:

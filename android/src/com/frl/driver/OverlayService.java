@@ -277,7 +277,14 @@ public class OverlayService extends Service {
     // not something that should sit behind a green.
     String personal = "";
     if (me != null) {
+      int lights = me.optInt("lights", 0);
+      String opMsg = me.optString("message", "");
       if (me.optBoolean("blackFlag")) personal = "BLACK FLAG — PIT NOW";
+      // The start gantry, so the grid sees the same countdown as the gantry and the overlay.
+      else if (lights >= 1 && lights <= 5) personal = "GET READY  " + lightDots(lights);
+      else if (lights >= 6) personal = "GO  " + lightDots(6);
+      // A note race control typed for this driver.
+      else if (!opMsg.isEmpty()) personal = opMsg;
       else if (me.optBoolean("blueFlag")) personal = "BLUE FLAG — LET THEM BY";
     }
 
@@ -322,9 +329,23 @@ public class OverlayService extends Service {
         b.append(String.format(java.util.Locale.US, "  %d:%02d LEFT", s / 60, s % 60));
       }
     }
+    // A drive-through waiting to be served, and how many laps before it becomes a black flag.
+    if (me.has("serveInLaps") && !me.isNull("serveInLaps")) {
+      int sl = me.optInt("serveInLaps", -1);
+      if (sl == 0) b.append("  SERVE DT NOW");
+      else if (sl > 0) b.append("  SERVE DT: ").append(sl).append(sl == 1 ? " LAP" : " LAPS");
+    }
     // Pit lane shut: the one pit state worth interrupting for. Open is the default and stays
     // silent so the strip is not cluttered every lap.
     if (me.has("pitOpen") && !me.optBoolean("pitOpen", true)) b.append("  PITS CLOSED");
+    return b.toString();
+  }
+
+  /** Start-light strip: n red lights lit (1..5), or all green at lights-out (6). */
+  static String lightDots(int n) {
+    if (n >= 6) return "🟢🟢🟢🟢🟢";
+    StringBuilder b = new StringBuilder();
+    for (int i = 0; i < 5; i++) b.append(i < n ? "🔴" : "⚫");
     return b.toString();
   }
 

@@ -97,6 +97,19 @@ const ID = {
     'Virtual safety car. Semua tahan kecepatan.',
     'VSC aktif. Jaga delta, jangan menyalip.'
   ],
+  white: [
+    'Bendera putih. Lap terakhir.',
+    'Putih berkibar, ini lap terakhir untuk {leader}.',
+    'Lap terakhir. Satu putaran lagi menentukan semuanya.'
+  ],
+  pitClosed: [
+    'Pit lane ditutup. Tidak ada yang boleh masuk pit sekarang.',
+    'Pit ditutup, semua tetap di trek.'
+  ],
+  pitOpen: [
+    'Pit lane dibuka kembali.',
+    'Pit sudah buka, boleh masuk untuk servis.'
+  ],
   formation: [
     'Lap formasi. Panaskan ban dan ambil posisi.',
     'Mereka berangkat untuk lap formasi.'
@@ -297,6 +310,19 @@ const EN = {
     'Safety car is out. The field closes up.',
     'Safety car on track, and every gap is gone.',
     'Safety car. The lead {leader} built has just evaporated.'
+  ],
+  white: [
+    'White flag. The last lap.',
+    'The white flag is out, last lap for {leader}.',
+    'Final lap. One to go and it settles here.'
+  ],
+  pitClosed: [
+    'The pit lane is closed. Nobody may come in now.',
+    'Pits closed, everyone stays out on track.'
+  ],
+  pitOpen: [
+    'The pit lane is open again.',
+    'Pits are open, they can come in for service.'
   ],
   vsc: [
     'Virtual safety car. Everybody off the throttle.',
@@ -594,7 +620,7 @@ export class Commentary {
      */
     if (!this.primed) {
       this.primed = true;
-      this.started = ['green', 'yellow', 'safety', 'vsc', 'formation'].includes(race.status);
+      this.started = ['green', 'yellow', 'safety', 'vsc', 'white', 'formation'].includes(race.status);
       this.ended = race.status === 'finished';
       for (const p of race.penalties || []) {
         this.seen.add(`pen:${p.id}`);
@@ -657,6 +683,14 @@ export class Commentary {
       }
       if (race.status === 'green') this.started = true;
       if (race.status === 'finished') this.ended = true;
+    }
+
+    // ---------------------------------------------------------------- pit lane open / closed
+    // Its own call, not a flag, so it is detected off race.pitOpen rather than the status.
+    if (prev && prev.race.pitOpen !== (race.pitOpen !== false)) {
+      const closed = race.pitOpen === false;
+      this.say(out, `pit:${closed ? 'closed' : 'open'}:${lap}`, P_HIGH,
+        closed ? 'pitClosed' : 'pitOpen', { lap }, 12000, 'pitlane');
     }
 
     // Nothing else is worth saying before the race has actually gone green: positions on a
@@ -872,7 +906,7 @@ function snapshot(state) {
   }
   const leader = (state.drivers || []).find((d) => d.position === 1 && !d.dnf);
   return {
-    race: { status: state.race.status, startedAt: state.race.startedAt },
+    race: { status: state.race.status, startedAt: state.race.startedAt, pitOpen: state.race.pitOpen !== false },
     drivers,
     leaderId: leader ? leader.id : null
   };

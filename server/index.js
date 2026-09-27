@@ -281,6 +281,18 @@ function pitBoard(s, d) {
   // Laps left only means something in a lap race. The session type decides, not a leftover
   // time limit (qualifying sets one, and it stays in the state when the session changes).
   const laps = (s.event.sessionType || 'race') === 'race' && s.race.totalLaps > 0;
+  // Laps left to serve a drive-through before it escalates to a black flag. Only the type
+  // autoFlags actually escalates, and only when the rule is on, so a driver sees the same
+  // countdown the automation is running. Null when nothing is pending or the rule is off.
+  let serveInLaps = null;
+  const unserved = Math.max(0, (s.race.flags && s.race.flags.blackFlagUnserved) || 0);
+  if (unserved) {
+    for (const p of s.race.penalties || []) {
+      if (p.driverId !== d.id || p.type !== 'drivethrough' || p.status !== 'applied' || p.served) continue;
+      const left = Math.max(0, unserved - ((d.lapsDone || 0) - (p.lap || 0)));
+      serveInLaps = serveInLaps == null ? left : Math.min(serveInLaps, left);
+    }
+  }
   // Endurance is timed, not lap counted: the phone shows the time left, worked out from
   // the green-flag stamp and any red-flag pauses, the same clock the overlay uses.
   let timeLeftMs = null;
@@ -300,7 +312,12 @@ function pitBoard(s, d) {
     ahead: car(ahead, d.interval),
     behind: car(behind, behind && behind.interval),
     lapsLeft: laps ? Math.max(0, s.race.totalLaps - (d.lapsDone || 0)) : null,
+    serveInLaps,
     timeLeftMs,
+    // A note race control pushed to this driver's phone (empty when none).
+    message: (s.messages && s.messages[d.id] && s.messages[d.id].text) || '',
+    // Start-light gantry, so the phone can show its own light strip on the grid.
+    lights: s.race.lights || 0,
     // Pit lane state is session wide, but it rides in the driver's own object so the phone
     // reads one payload. Defaults open on an older state that never set it.
     pitOpen: s.race.pitOpen !== false,

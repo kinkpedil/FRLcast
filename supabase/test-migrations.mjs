@@ -49,9 +49,10 @@ const db = await fresh(files);
 check('all migrations apply', true);
 await db.exec(fs.readFileSync(path.join(MIG, '20260925000000_league.sql'), 'utf8'));
 check('league migration re-runs (idempotent)', true);
-// The idempotency re-run above restores league's driver_state; put the later migration's
-// version back so the rest of the checks run against the newest function.
+// The idempotency re-run above restores league's driver_state; put the newest migration's
+// version back so the rest of the checks run against the current function.
 await db.exec(fs.readFileSync(path.join(MIG, '20260927000000_flags.sql'), 'utf8'));
+await db.exec(fs.readFileSync(path.join(MIG, '20260927100000_batch2.sql'), 'utf8'));
 
 // ---------------------------------------------------------------- 2. without playerid
 const noPlayer = files.filter((f) => !f.includes('playerid'));
@@ -147,6 +148,29 @@ st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
 check('endurance: laps left is null', st.me.lapsLeft === null, String(st.me.lapsLeft));
 check('endurance: time left ~ 20 min', st.me.timeLeftMs > 1180000 && st.me.timeLeftMs <= 1200000, String(st.me.timeLeftMs));
 await q(db, `update public.events set session_type = 'race', total_laps = 10, started_at = null where id = $1`, [ev]);
+
+// batch two: operator message + start lights ride in the settings blob; a drive-through
+// serve countdown reads the black-flag rule from settings.rules
+await q(db, `update public.events set settings = jsonb_set(jsonb_set(settings,
+  '{lights}', '3'), '{messages}', jsonb_build_object($2::text, jsonb_build_object('text', 'BOX THIS LAP', 'at', 1))) where id = $1`,
+  [ev, (await q(db, `select id from public.drivers where num = '55'`))[0].id]);
+st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
+check('op message reaches the phone', st.me.message === 'BOX THIS LAP', st.me.message);
+check('start lights reach the phone', st.me.lights === 3, String(st.me.lights));
+// a drive-through, 3 laps ago, black-flag rule = 5 laps -> 2 laps left to serve
+await q(db, `update public.events set settings = jsonb_set(settings, '{rules}', '{"blackFlagUnserved":5}') where id = $1`, [ev]);
+await q(db, `insert into public.penalties (event_id, driver_id, type, status, served, lap)
+  values ($1, (select id from public.drivers where num='55'), 'drivethrough', 'applied', false, 2)`, [ev]);
+await q(db, `update public.drivers set laps_done = 5 where num = '55'`);
+st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
+check('serve countdown reaches the phone', st.me.serveInLaps === 2, String(st.me.serveInLaps));
+await q(db, `delete from public.penalties where type = 'drivethrough'`);
+await q(db, `update public.drivers set laps_done = 5, car_class = 'GT3' where num = '55'`);
+check('car_class column mirrors', (await q(db, `select car_class from public.drivers where num='55'`))[0].car_class === 'GT3');
+// predictions table: anon can pick and read, one row per voter
+await q(db, `insert into public.predictions (event_id, voter, choice) values ($1, 'dev1', '55')`, [ev]);
+check('prediction stored', (await q(db, `select choice from public.predictions where voter='dev1'`))[0].choice === '55');
+await q(db, `update public.events set settings = jsonb_set(settings, '{lights}', '0') where id = $1`, [ev]);
 
 await q(db, `update public.events set session_type = 'qualifying' where id = $1`, [ev]);
 st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
