@@ -6,8 +6,4 @@
 -->
 ## en
 
-- Intro and outro bumpers: play a full-screen branded card (your logo, event, round) at the start, and a THANKS FOR WATCHING card at the end, from the Overlays page. It plays over any scene for about six seconds.
-
 ## id
-
-- Bumper intro dan outro: putar kartu full-screen berbranding (logo, event, ronde) di awal, dan kartu THANKS FOR WATCHING di akhir, dari halaman Overlays. Muncul di atas scene mana pun sekitar enam detik.
