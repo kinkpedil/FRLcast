@@ -189,6 +189,8 @@ function defaultState() {
       activeScene: 'race',
       // A full-screen branded bumper the operator plays on demand: { kind: 'intro'|'outro', at }.
       bumper: null,
+      // Starting-grid template: 'f1' (angled slots), 'wec' (class coloured), or 'classic'.
+      gridStyle: 'f1',
       transitionMs: 420,
       autoTicker: true,
       accent: '#00e0a4',
@@ -2031,7 +2033,7 @@ export class RaceState {
         const sc = this.scene(a.scene);
         if (a.patch && a.patch.show && sc) Object.assign(sc.show, a.patch.show);
         Object.assign(s.overlay, pick(a.patch || {}, [
-          'accent', 'focusDriverId', 'ticker', 'compact', 'editSelected', 'autoTicker', 'transitionMs', 'skin', 'nonce', 'towerTitle', 'radio', 'poll', 'pollHistory', 'sponsors', 'sponsorIndex', 'countdown', 'stinger'
+          'accent', 'focusDriverId', 'ticker', 'compact', 'editSelected', 'autoTicker', 'transitionMs', 'skin', 'nonce', 'towerTitle', 'radio', 'poll', 'pollHistory', 'sponsors', 'sponsorIndex', 'countdown', 'stinger', 'gridStyle'
         ]));
         this.syncScene();
         break;

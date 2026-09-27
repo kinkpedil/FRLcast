@@ -181,7 +181,7 @@ function build() {
       </div>`,
     grid: `
       <div class="widget" id="grid">
-        <div class="card">
+        <div class="gd-card" id="gdCard">
           <div class="grid-title"><h1>STARTING GRID</h1><p id="gdSub">--</p></div>
           <div class="gd" id="gdRows"></div>
         </div>
@@ -1060,30 +1060,45 @@ function renderBracket() {
  */
 function renderGrid() {
   const box = document.getElementById('gdRows');
+  const card = document.getElementById('gdCard');
   if (!box) return;
   const grid = state.race.grid || [];
   const byId = new Map((state.drivers || []).map((d) => [d.id, d]));
-  const sig = grid.join(',') + '|' + grid.map((id) => (byId.get(id) || {}).name).join(',');
+  // The style template: F1 (angled dark slots) or WEC (class coloured). Followed by the grid
+  // itself so a photo or name edit re-renders the reveal.
+  const style = ['f1', 'wec', 'classic'].includes(state.overlay.gridStyle) ? state.overlay.gridStyle : 'f1';
+  if (card) card.dataset.style = style;
+  const sig = style + '|' + grid.map((id) => { const d = byId.get(id) || {}; return `${d.name}:${d.num}:${d.color}:${d.carClass || ''}:${d.photo ? 1 : 0}`; }).join(',');
   if (box.dataset.sig === sig) return;
   box.dataset.sig = sig;
 
-  setText(document.getElementById('gdSub'),
-    grid.length ? `${grid.length} CARS` : 'NOT SET', 'value');
+  setText(document.getElementById('gdSub'), grid.length ? `${grid.length} CARS` : 'NOT SET', 'value');
 
-  if (!grid.length) {
-    box.innerHTML = '<div class="gd-empty">grid not set</div>';
-    return;
-  }
-  box.innerHTML = grid.map((id, i) => {
+  if (!grid.length) { box.innerHTML = '<div class="gd-empty">grid not set</div>'; return; }
+
+  const slot = (id, i) => {
     const d = byId.get(id);
     if (!d) return '';
-    return `<div class="gd-slot ${i % 2 ? 'right' : 'left'}">
+    const cc = style === 'wec' ? (wecClassColor(d.carClass) || null) : null;
+    const accent = cc ? cc[0] : (d.color || '#8e8e93');
+    const photo = d.photo
+      ? `<span class="gd-photo" style="background-image:url('${String(d.photo).replace(/'/g, "%27")}')"></span>`
+      : `<span class="gd-photo ph">${esc((d.short || d.name || '').slice(0, 2).toUpperCase())}</span>`;
+    return `<div class="gd-slot" style="--c:${accent};--i:${i}">
       <span class="gd-pos">${i + 1}</span>
-      <span class="gd-bar" style="background:${d.color}"></span>
-      <span class="gd-num">${esc(d.num)}</span>
-      <span class="gd-name">${esc(d.name)}</span>
+      ${photo}
+      <span class="gd-info">
+        <span class="gd-num">${esc(d.num)}</span>
+        <span class="gd-name">${esc(d.name)}</span>
+        <span class="gd-team">${esc(style === 'wec' ? (d.carClass || d.team || '') : (d.team || d.car || ''))}</span>
+      </span>
     </div>`;
-  }).join('');
+  };
+  // Two staggered columns, pole top-left, the right column dropped half a slot, like a real
+  // starting grid.
+  const left = [], right = [];
+  grid.forEach((id, i) => (i % 2 ? right : left).push(slot(id, i)));
+  box.innerHTML = `<div class="gd-col l">${left.join('')}</div><div class="gd-col r">${right.join('')}</div>`;
 }
 
 /**
@@ -1830,7 +1845,7 @@ function applyGapSeparator(rows) {
  */
 function renderSignature(rows) {
   const o = state.overlay, e = state.event, r = state.race;
-  let sig = `${JSON.stringify(o.layout)}|${JSON.stringify(o.style)}|${o.theme}|${o.skin}|${o.towerTitle || ''}|${o.nonce || 0}|${o.editSelected}|` +
+  let sig = `${JSON.stringify(o.layout)}|${JSON.stringify(o.style)}|${o.theme}|${o.skin}|${o.gridStyle || ''}|${o.towerTitle || ''}|${o.nonce || 0}|${o.editSelected}|` +
             `${r.status}|${r.pitOpen === false ? 'C' : 'O'}|${r.lights || 0}|${o.show.pit}${o.show.lights}${o.show.catching}${o.show.rivalry}${o.show.podium}${o.show.reactions}|${r.totalLaps}|${o.accent}|${o.focusDriverId}|` +
             `${o.show.leaderboard}${o.show.tower}${o.show.status}${o.show.lowerThird}${o.show.gap}${o.show.results}${o.show.fastlap}${o.show.sectors}${o.show.delta}${o.show.radio}|${JSON.stringify(o.radio||{})}|${(state.radio && state.radio[0] && state.radio[0].id) || 0}|${JSON.stringify(o.poll||{})}|${JSON.stringify(state.votes||{})}|${o.show.sponsor}${o.show.countdown}${o.show.intro}${o.show.qr}|${JSON.stringify(o.sponsors||[])}|${o.sponsorIndex}|${JSON.stringify(o.countdown||{})}|` +
             `${e.name}|${e.round}|${e.track}|${e.sessionType}|${e.sessionName}|${(o.ticker || []).join('~')}|` +

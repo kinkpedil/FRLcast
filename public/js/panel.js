@@ -2005,6 +2005,7 @@ function renderScenes() {
     $('#sceneTransVal').textContent = `${ms} ${t('ms cross-fade when a scene changes')}`;
   }
   if ($('#sceneStinger') && document.activeElement !== $('#sceneStinger')) $('#sceneStinger').checked = o.stinger !== false;
+  if ($('#gridStyle') && document.activeElement !== $('#gridStyle')) $('#gridStyle').value = o.gridStyle || 'f1';
 }
 
 $('#btnSceneAdd').onclick = () => {
@@ -2026,6 +2027,7 @@ $('#sceneTrans').onchange = (e) => bus.action('overlay.update', { patch: { trans
 if ($('#sceneStinger')) $('#sceneStinger').onchange = (e) => bus.action('overlay.update', { patch: { stinger: e.target.checked } });
 if ($('#btnBumpIntro')) $('#btnBumpIntro').onclick = () => bus.action('overlay.bumper', { kind: 'intro' });
 if ($('#btnBumpOutro')) $('#btnBumpOutro').onclick = () => bus.action('overlay.bumper', { kind: 'outro' });
+if ($('#gridStyle')) $('#gridStyle').onchange = (e) => bus.action('overlay.update', { patch: { gridStyle: e.target.value } });
 
 // ---------------------------------------------------------------- sessions and grid
 

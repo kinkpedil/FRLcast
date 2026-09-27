@@ -1009,40 +1009,53 @@ html.lite .widget > .wrap { transition-duration: .28s, .3s, 0s; }
 .bk-empty { padding: 18px; font-size: 12px; color: rgba(255, 255, 255, .35); }
 
 /* ---------------- starting grid ---------------- */
-#grid { left: 660px; top: 150px; width: 600px; }
-#grid:not(.on) > .wrap { transform: scale(.94); }
+#grid { left: 480px; top: 130px; width: 960px; }
 
-.grid-title { padding: 18px 22px 12px; text-align: center; }
-.grid-title h1 {
-  margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.01em;
-}
-.grid-title p {
-  margin: 4px 0 0; font-family: var(--mono); font-size: 10px;
-  letter-spacing: .2em; color: rgba(255, 255, 255, .4);
-}
+.gd-card { padding: 6px 12px 22px; border-radius: var(--radius, 12px); background: rgba(8,10,14,.86); }
+.grid-title { padding: 18px 22px 14px; text-align: center; }
+.grid-title h1 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.grid-title p { margin: 4px 0 0; font-family: var(--mono); font-size: 11px; letter-spacing: .24em; color: rgba(255,255,255,.45); }
 
-.gd { padding: 4px 22px 20px; }
-/* Offset columns: a flat list reads as a leaderboard, a stagger reads as a grid. */
+/* Two staggered columns: the right one dropped half a slot so it reads as a real grid. */
+.gd { display: flex; gap: 28px; padding: 4px 26px 12px; justify-content: center; }
+.gd-col { display: flex; flex-direction: column; gap: 12px; width: 400px; }
+.gd-col.r { margin-top: 44px; }
+
 .gd-slot {
-  display: flex; align-items: center; gap: 10px;
-  width: 62%; padding: 6px 10px; margin-bottom: 5px;
-  border-radius: 8px; background: rgba(255, 255, 255, .04);
+  display: flex; align-items: center; gap: 14px;
+  padding: 8px 14px 8px 10px; border-radius: 12px;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--c) 26%, #14171d), #14171d 62%);
+  box-shadow: inset 3px 0 0 var(--c);
 }
-.gd-slot.right { margin-left: auto; }
-.gd-pos {
-  font-family: var(--mono); font-size: 12px; font-weight: 700;
-  color: rgba(255, 255, 255, .45); width: 20px; text-align: right;
+.widget.on .gd-slot { animation: gdIn .55s var(--ease-out) backwards; animation-delay: calc(var(--i) * .06s); }
+@keyframes gdIn { from { opacity: 0; transform: translateX(-40px) skewX(-6deg); } to { opacity: 1; transform: none; } }
+
+.gd-pos { font-size: 30px; font-weight: 800; color: #fff; width: 46px; text-align: center; font-style: italic; }
+.gd-photo {
+  width: 62px; height: 62px; border-radius: 10px; flex: none;
+  background-size: cover; background-position: center top; background-color: #1a1d24;
+  border: 2px solid var(--c);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800; color: #fff;
 }
-.gd-bar { width: 4px; height: 20px; border-radius: 2px; flex: none; }
-.gd-num {
-  font-family: var(--mono); font-size: 12px; color: rgba(255, 255, 255, .5);
-  width: 22px;
-}
-.gd-name {
-  font-size: 15px; font-weight: 600;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.gd-empty { padding: 16px 0; font-size: 12px; color: rgba(255, 255, 255, .35); }
+.gd-photo.ph { color: color-mix(in srgb, var(--c) 70%, #fff); }
+.gd-info { min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+.gd-num { font-family: var(--mono); font-size: 13px; color: var(--c); font-weight: 700; }
+.gd-name { font-size: 20px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gd-team { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gd-empty { padding: 16px 0; text-align: center; font-size: 13px; color: rgba(255,255,255,.35); }
+
+/* F1 template: angled slots, italic positions, a darker slate card. */
+.gd-card[data-style="f1"] { background: linear-gradient(180deg, #14181f, #0b0d11); }
+.gd-card[data-style="f1"] .gd-slot { transform: skewX(-7deg); }
+.gd-card[data-style="f1"] .gd-slot > * { transform: skewX(7deg); }
+.gd-card[data-style="f1"] .grid-title h1 { font-style: italic; }
+
+/* WEC template: class-coloured, squarer endurance look. */
+.gd-card[data-style="wec"] { background: linear-gradient(180deg, #101319, #0a0c10); }
+.gd-card[data-style="wec"] .gd-slot { border-radius: 6px; box-shadow: inset 5px 0 0 var(--c); background: #14171d; }
+.gd-card[data-style="wec"] .gd-photo { border-radius: 6px; }
+.gd-card[data-style="wec"] .gd-pos { font-style: normal; }
 
 /* ---------------- scene transition ---------------- */
 /* One move for the whole stage rather than each widget animating separately: a scene
