@@ -467,6 +467,56 @@ html, body {
 #pit { left: 1616px; top: 470px; }
 #lights { left: 800px; top: 452px; }
 #catching { left: 1548px; top: 620px; }
+#rivalry { left: 1180px; top: 858px; }
+#podium { left: 480px; top: 250px; }
+#reactions { left: 60px; top: 720px; }
+
+/* Intro card: the season line under the name, revealed each time the card turns. */
+.intro-stats { font-size: 14px; letter-spacing: .08em; color: var(--ink-mute, #9aa3b2); margin-top: 4px; }
+.widget.intro-in > .wrap { animation: introIn .5s var(--ease-out); }
+@keyframes introIn { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+
+/* Rivalry / championship-battle card. */
+.rival-card { min-width: 560px; padding: 16px 20px; border-radius: var(--radius, 10px); background: rgba(10,12,16,var(--panel-alpha,.9)); }
+.rival-tag { font-size: 11px; font-weight: 800; letter-spacing: .18em; color: var(--accent, #00e0a4); }
+.rival-row { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+.rival-side { flex: 1; display: flex; align-items: baseline; gap: 8px; border-left: 4px solid var(--ca); padding-left: 10px; }
+.rival-side.r { border-left: 0; border-right: 4px solid var(--cb); padding-left: 0; padding-right: 10px; justify-content: flex-end; text-align: right; }
+.rival-pos { font-size: 15px; font-weight: 800; color: var(--ink-mute, #9aa3b2); }
+.rival-name { font-size: 24px; font-weight: 800; color: #fff; }
+.rival-pts { font-size: 14px; color: var(--ink-mute, #9aa3b2); }
+.rival-vs { font-size: 15px; font-weight: 800; color: var(--accent, #00e0a4); flex: 0 0 auto; }
+.rival-note { margin-top: 8px; font-size: 15px; color: #eef2f7; text-transform: uppercase; letter-spacing: .06em; }
+
+/* Podium celebration. */
+.podium-wrap { position: relative; width: 960px; padding: 20px; overflow: hidden; }
+.podium-title { text-align: center; font-size: 22px; font-weight: 800; letter-spacing: .14em; color: #fff; margin-bottom: 14px; }
+.podium-cols { display: flex; align-items: flex-end; justify-content: center; gap: 22px; }
+.pod-col { display: flex; flex-direction: column; align-items: center; width: 240px; }
+.pod-medal { font-size: 40px; }
+.pod-photo { width: 130px; height: 130px; border-radius: 12px; object-fit: cover; border: 4px solid var(--c); background: #1a1d24; }
+.pod-photo.ph { display: block; }
+.pod-name { font-size: 22px; font-weight: 800; color: #fff; margin-top: 8px; text-align: center; }
+.pod-team { font-size: 13px; color: var(--ink-mute, #9aa3b2); }
+.pod-block { margin-top: 10px; width: 100%; text-align: center; font-size: 26px; font-weight: 800; color: #05070a;
+  background: var(--c); border-radius: 8px 8px 0 0; padding: 10px 0; }
+.pod-col.p1 .pod-block { height: 120px; }
+.pod-col.p2 .pod-block { height: 84px; }
+.pod-col.p3 .pod-block { height: 60px; }
+.confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.confetti i { position: absolute; top: -20px; width: 9px; height: 14px; border-radius: 2px;
+  background: hsl(var(--h,150) 90% 60%); animation: confFall var(--d,2s) linear var(--dl,0s) infinite; }
+@keyframes confFall { 0% { transform: translateY(-20px) rotate(0); opacity: 1; } 100% { transform: translateY(640px) rotate(540deg); opacity: .9; } }
+
+/* Crowd reactions: a hype meter with emojis floating up past it. */
+.react-wrap { position: relative; width: 260px; height: 220px; }
+.react-float { position: absolute; inset: 0; overflow: visible; }
+.react-emoji { position: absolute; bottom: 40px; font-size: 30px; animation: reactUp var(--rd,3s) ease-out forwards; }
+@keyframes reactUp { 0% { transform: translateY(0) scale(.6); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-180px) scale(1.1); opacity: 0; } }
+.react-meter { position: absolute; left: 0; bottom: 16px; width: 14px; height: 180px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden; }
+.react-fill { position: absolute; left: 0; bottom: 0; width: 100%; height: 0; border-radius: 8px;
+  background: linear-gradient(to top, #30d158, #ffd60a, #ff375f); transition: height .6s var(--ease-out); }
+.react-label { position: absolute; left: 24px; bottom: 12px; font-size: 13px; font-weight: 800; letter-spacing: .12em; color: #fff; }
 
 /* Catching widget: who is reeling in the car ahead, and how fast. */
 .catch-card {

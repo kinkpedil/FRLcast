@@ -64,6 +64,10 @@
   .foot { margin-top: 30px; color: var(--ink-3); font-size: .78rem; }
   #loading { color: var(--ink-3); padding: 40px 0; text-align: center; }
   [hidden] { display: none !important; }
+  .reactbar { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; flex-wrap: wrap; }
+  .reactbar .reactlbl { font-size: 13px; color: var(--ink-mute, #8b93a2); text-transform: uppercase; letter-spacing: .08em; }
+  .reactbar button { font-size: 22px; line-height: 1; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line, #232833); background: var(--card, #12151c); cursor: pointer; transition: transform .1s ease; }
+  .reactbar button:active { transform: scale(.86); }
 </style>
 
 <div class="shell">
@@ -82,6 +86,15 @@
     </header>
 
     <div class="flagpill" id="flag"><i></i><span id="flagtext">—</span></div>
+
+    <div class="reactbar" id="reactbar" hidden>
+      <span class="reactlbl" data-t="react">React</span>
+      <button data-emoji="🔥">🔥</button>
+      <button data-emoji="👏">👏</button>
+      <button data-emoji="😮">😮</button>
+      <button data-emoji="😬">😬</button>
+      <button data-emoji="❤️">❤️</button>
+    </div>
 
     <div class="meta">
       <div class="m"><div class="lbl" data-t="session">Session</div><div class="val" id="session">—</div></div>
@@ -122,11 +135,11 @@
   const STR = {
     id: { session: 'Sesi', lap: 'Lap', fastest: 'Lap tercepat', classification: 'Klasemen',
           standings: 'Klasemen juara', foot: 'Langsung — diperbarui otomatis.', poll: 'Voting',
-          votes2: 'suara', tap: 'ketuk untuk memilih',
+          votes2: 'suara', tap: 'ketuk untuk memilih', react: 'Reaksi',
           POS: 'POS', DRIVER: 'PEMBALAP', GAP: 'GAP', BEST: 'TERBAIK', LAPS: 'LAP', PTS: 'POIN' },
     en: { session: 'Session', lap: 'Lap', fastest: 'Fastest lap', classification: 'Classification',
           standings: 'Championship', foot: 'Live — updates automatically.', poll: 'Poll',
-          votes2: 'votes', tap: 'tap to vote',
+          votes2: 'votes', tap: 'tap to vote', react: 'React',
           POS: 'POS', DRIVER: 'DRIVER', GAP: 'GAP', BEST: 'BEST', LAPS: 'LAPS', PTS: 'PTS' }
   };
   let lang = (localStorage.getItem('frl.lang') === 'id') ? 'id' : 'en';
@@ -224,6 +237,23 @@
   else {
     bus.on('state', render);
     bus.on('close', () => {});
+    // Crowd reactions: only once the event is resolved (so bus.sb + event id exist). Each tap
+    // inserts a row the broadcast overlay's hype meter reads. Throttled so a held finger does
+    // not flood, and it fails quietly on a page opened against a local (non-hosted) event.
+    bus.on('open', () => {
+      const bar = document.getElementById('reactbar');
+      if (!bar || !bus.sb || !bus.event) return;
+      bar.hidden = false;
+      let lastTap = 0;
+      bar.querySelectorAll('button[data-emoji]').forEach((b) => {
+        b.onclick = async () => {
+          const now = Date.now();
+          if (now - lastTap < 350) return;
+          lastTap = now;
+          try { await bus.sb.from('reactions').insert({ event_id: bus.event.id, emoji: b.dataset.emoji }); } catch (e) {}
+        };
+      });
+    });
     setTimeout(() => { if (!last) $('#loading').textContent = 'No event found for ' + code + '.'; }, 6000);
   }
   applyLang();

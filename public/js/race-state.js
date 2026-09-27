@@ -161,6 +161,9 @@ function defaultState() {
         pit: false,
         lights: false,
         catching: false,
+        rivalry: false,
+        podium: false,
+        reactions: false,
         ticker: false
       },
       /*
@@ -501,9 +504,10 @@ function defaultScenes() {
   const show = (...on) => { const s = {}; for (const k of keys) s[k] = on.includes(k); return s; };
   const L = (m) => m;   // just readability
   return [
-    { id: 'preshow', name: 'Pre-show', show: show('status', 'countdown', 'sponsor', 'qr', 'intro'),
+    { id: 'preshow', name: 'Pre-show', show: show('status', 'countdown', 'sponsor', 'qr', 'intro', 'rivalry'),
       layout: L({ countdown: { x: 810, y: 360, scale: 1 }, intro: { x: 48, y: 858, scale: 1 },
-                  sponsor: { x: 770, y: 1002, scale: 1 }, qr: { x: 1648, y: 812, scale: 1 } }) },
+                  sponsor: { x: 770, y: 1002, scale: 1 }, qr: { x: 1648, y: 812, scale: 1 },
+                  rivalry: { x: 1180, y: 858, scale: 1 } }) },
     { id: 'grid', name: 'Starting grid', show: show('status', 'grid', 'sponsor', 'qr', 'lights'),
       layout: L({ grid: { x: 610, y: 150, scale: 1 }, qr: { x: 1648, y: 150, scale: 1 },
                   sponsor: { x: 770, y: 1002, scale: 1 }, lights: { x: 812, y: 470, scale: 1 } }) },
@@ -514,10 +518,11 @@ function defaultScenes() {
       layout: L({ leaderboard: { x: 48, y: 150, scale: 1 }, tower: { x: 1312, y: 150, scale: 1 },
                   fastlap: { x: 760, y: 116, scale: 1 }, sectors: { x: 730, y: 900, scale: 1 },
                   delta: { x: 730, y: 730, scale: 1 } }) },
-    { id: 'race', name: 'Race', show: show('status', 'leaderboard', 'lowerThird', 'fastlap', 'radio', 'ticker', 'pit', 'catching'),
+    { id: 'race', name: 'Race', show: show('status', 'leaderboard', 'lowerThird', 'fastlap', 'radio', 'ticker', 'pit', 'catching', 'reactions'),
       layout: L({ leaderboard: { x: 48, y: 150, scale: 1 }, lowerthird: { x: 560, y: 878, scale: 1 },
                   fastlap: { x: 760, y: 116, scale: 1 }, radio: { x: 1572, y: 150, scale: 1 },
-                  pit: { x: 1616, y: 470, scale: 1 }, catching: { x: 1548, y: 620, scale: 1 } }) },
+                  pit: { x: 1616, y: 470, scale: 1 }, catching: { x: 1548, y: 620, scale: 1 },
+                  reactions: { x: 60, y: 720, scale: 1 } }) },
     { id: 'battles', name: 'Battles & poll', show: show('status', 'h2h', 'gap', 'poll'),
       layout: L({ h2h: { x: 610, y: 176, scale: 1 }, gap: { x: 730, y: 900, scale: 1 },
                   poll: { x: 1500, y: 176, scale: 1 } }) },
@@ -526,7 +531,9 @@ function defaultScenes() {
                   poll: { x: 48, y: 820, scale: 1 } }) },
     { id: 'results', name: 'Results', show: show('status', 'results', 'standings', 'sponsor', 'qr'),
       layout: L({ results: { x: 48, y: 150, scale: 1 }, standings: { x: 1190, y: 150, scale: 1 },
-                  qr: { x: 60, y: 830, scale: 1 }, sponsor: { x: 600, y: 1010, scale: 1 } }) }
+                  qr: { x: 60, y: 830, scale: 1 }, sponsor: { x: 600, y: 1010, scale: 1 } }) },
+    { id: 'podium', name: 'Podium', show: show('status', 'podium', 'sponsor'),
+      layout: L({ podium: { x: 480, y: 250, scale: 1 }, sponsor: { x: 770, y: 1010, scale: 1 } }) }
   ];
 }
 

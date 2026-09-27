@@ -41,7 +41,7 @@ if (params.get('motion') === 'full') document.documentElement.classList.add('mot
 const editing = params.get('edit') === '1';
 if (editing) document.documentElement.classList.add('edit');
 
-const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr', 'pit', 'lights', 'catching'];
+const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr', 'pit', 'lights', 'catching', 'rivalry', 'podium', 'reactions'];
 const LABELS = {
   status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower',
   lowerthird: 'Lower third', gap: 'Gap bar', results: 'Results',
@@ -49,7 +49,8 @@ const LABELS = {
   grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings', ticker: 'Ticker',
   fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta / time attack', radio: 'Team radio', poll: 'Audience poll',
   sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code',
-  pit: 'Pit lane', lights: 'Start lights', catching: 'Catching'
+  pit: 'Pit lane', lights: 'Start lights', catching: 'Catching',
+  rivalry: 'Rivalry', podium: 'Podium celebration', reactions: 'Crowd reactions'
 };
 const STAGE_W = 1920;
 const STAGE_H = 1080;
@@ -83,6 +84,7 @@ const cloud = cloudOptions();
 const bus = cloud ? new CloudBus('overlay', cloud) : new Bus('overlay');
 let state = null;
 let prev = new Map();       // driverId -> snapshot of the last render
+let latestRows = [];        // last classification, for timer-driven cyclers (intro reveal)
 let prevFlag = null;
 let prevGapMs = null;
 let lastClock = '';
@@ -265,7 +267,7 @@ function build() {
         <div class="card intro-card">
           <img class="intro-photo" id="inPhoto" alt="" hidden>
           <span class="intro-num" id="inNum">--</span>
-          <div class="intro-main"><div class="intro-name" id="inName">--</div><div class="intro-team" id="inTeam"></div></div>
+          <div class="intro-main"><div class="intro-name" id="inName">--</div><div class="intro-team" id="inTeam"></div><div class="intro-stats" id="inStats"></div></div>
           <div class="intro-pts" id="inPts"></div>
         </div>
       </div>`,
@@ -292,6 +294,34 @@ function build() {
           <div class="catch-tag">CATCHING</div>
           <div class="catch-line"><b id="catchWho">--</b> <span id="catchOn">--</span></div>
           <div class="catch-meta"><span id="catchRate">--</span><span id="catchLaps">--</span></div>
+        </div>
+      </div>`,
+    rivalry: `
+      <div class="widget" id="rivalry">
+        <div class="card rival-card">
+          <div class="rival-tag">CHAMPIONSHIP BATTLE</div>
+          <div class="rival-row">
+            <div class="rival-side"><span class="rival-pos" id="rvArank">--</span><span class="rival-name" id="rvAname">--</span><span class="rival-pts" id="rvApts">--</span></div>
+            <div class="rival-vs">VS</div>
+            <div class="rival-side r"><span class="rival-pos" id="rvBrank">--</span><span class="rival-name" id="rvBname">--</span><span class="rival-pts" id="rvBpts">--</span></div>
+          </div>
+          <div class="rival-note" id="rvNote">--</div>
+        </div>
+      </div>`,
+    podium: `
+      <div class="widget" id="podium">
+        <div class="podium-wrap">
+          <div class="confetti" id="podConfetti"></div>
+          <div class="podium-title" id="podTitle">RACE RESULT</div>
+          <div class="podium-cols" id="podCols"></div>
+        </div>
+      </div>`,
+    reactions: `
+      <div class="widget" id="reactions">
+        <div class="react-wrap">
+          <div class="react-float" id="reactFloat"></div>
+          <div class="react-meter"><div class="react-fill" id="reactFill"></div></div>
+          <div class="react-label" id="reactLabel">HYPE</div>
         </div>
       </div>`
   };
@@ -1423,6 +1453,122 @@ function renderCatching(c) {
   setText(document.getElementById('catchLaps'), c.laps === 1 ? 'next lap' : `~${c.laps} laps`, null);
 }
 
+/** Head-to-head record between two drivers across the season's scored rounds. */
+function seasonH2H(aId, bId) {
+  let a = 0, b = 0;
+  for (const round of (state.championship && state.championship.rounds) || []) {
+    const ra = (round.results || []).find((r) => r.driverId === aId);
+    const rb = (round.results || []).find((r) => r.driverId === bId);
+    if (!ra || !rb) continue;
+    const pa = ra.dnf ? 999 : ra.position, pb = rb.dnf ? 999 : rb.position;
+    if (pa < pb) a++; else if (pb < pa) b++;
+  }
+  return { a, b };
+}
+
+/** The tightest championship battle: the adjacent standings pair closest on points. */
+function pickRivalry() {
+  const s = (state.standings || []).filter((r) => r.rounds > 0);
+  if (s.length < 2) return null;
+  let best = null;
+  for (let i = 0; i < s.length - 1; i++) {
+    const gap = s[i].points - s[i + 1].points;
+    if (!best || gap < best.gap) best = { a: s[i], b: s[i + 1], gap };
+  }
+  return best;
+}
+
+function renderRivalry(r) {
+  const h = seasonH2H(r.a.driverId, r.b.driverId);
+  const sig = `${r.a.driverId}|${r.b.driverId}|${r.gap}|${h.a}-${h.b}`;
+  const box = document.getElementById('rivalry');
+  if (!box || box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  setText(document.getElementById('rvArank'), `P${r.a.rank}`, null);
+  setText(document.getElementById('rvAname'), r.a.name, 'value');
+  setText(document.getElementById('rvApts'), `${r.a.points} PTS`, null);
+  setText(document.getElementById('rvBrank'), `P${r.b.rank}`, null);
+  setText(document.getElementById('rvBname'), r.b.name, 'value');
+  setText(document.getElementById('rvBpts'), `${r.b.points} PTS`, null);
+  box.style.setProperty('--ca', r.a.color || '#00e0a4');
+  box.style.setProperty('--cb', r.b.color || '#ff6a5a');
+  const gapTxt = r.gap === 0 ? 'level on points' : `${r.gap} point${r.gap === 1 ? '' : 's'} apart`;
+  const h2h = (h.a || h.b) ? ` · head to head ${h.a}–${h.b} this season` : '';
+  setText(document.getElementById('rvNote'), gapTxt + h2h, null);
+}
+
+function renderPodium(rows) {
+  const top = rows.filter((d) => !d.dnf).slice(0, 3);
+  const sig = top.map((d) => d.id + d.position).join('|');
+  const cols = document.getElementById('podCols');
+  if (!cols || cols.dataset.sig === sig) return;
+  cols.dataset.sig = sig;
+  setText(document.getElementById('podTitle'), `${state.event.name || 'RACE'} — RESULT`.replace(' — ', ' · '), null);
+  // Visual order 2, 1, 3 so the winner's column stands in the middle and tallest.
+  const order = [top[1], top[0], top[2]].filter(Boolean);
+  cols.innerHTML = order.map((d) => {
+    const place = d.position;
+    return `<div class="pod-col p${place}" style="--c:${d.color || '#888'}">
+      <div class="pod-medal">${place === 1 ? '🥇' : place === 2 ? '🥈' : '🥉'}</div>
+      ${d.photo ? `<img class="pod-photo" src="${String(d.photo).replace(/"/g, '&quot;')}" alt="">` : '<div class="pod-photo ph"></div>'}
+      <div class="pod-name">${esc(d.name)}</div>
+      <div class="pod-team">${esc(d.team || '')}</div>
+      <div class="pod-block">P${place}</div>
+    </div>`;
+  }).join('');
+  const cf = document.getElementById('podConfetti');
+  if (cf && !cf.childElementCount) {
+    cf.innerHTML = Array.from({ length: 60 }, (_, i) =>
+      `<i style="left:${(i * 100 / 60).toFixed(1)}%;--d:${(Math.random() * 2.5 + 1).toFixed(2)}s;--dl:${(Math.random() * 2).toFixed(2)}s;--h:${Math.floor(Math.random() * 360)}"></i>`).join('');
+  }
+}
+
+// ---------------------------------------------------------------- crowd reactions
+const REACT_EMOJI = ['🔥', '👏', '😮', '😬', '❤️'];
+let reactWindow = [];   // recent reaction timestamps for the hype meter
+let reactMax = 8;       // rolling peak, so the meter is relative to this event's own high
+let reactSeen = new Set();
+
+async function pollReactions() {
+  if (!bus.sb || !bus.event || !bus.event.id) return;
+  try {
+    const since = new Date(Date.now() - 15000).toISOString();
+    const { data } = await bus.sb.from('reactions').select('id,emoji,created_at')
+      .eq('event_id', bus.event.id).gte('created_at', since).order('created_at', { ascending: true });
+    const rows = data || [];
+    reactWindow = rows.map((r) => Date.parse(r.created_at));
+    for (const r of rows) {
+      if (reactSeen.has(r.id)) continue;
+      reactSeen.add(r.id);
+      floatEmoji(r.emoji);
+    }
+    if (reactSeen.size > 500) reactSeen = new Set(rows.map((r) => r.id));
+  } catch (e) { /* hosted-only; quietly do nothing on a local event */ }
+}
+
+function floatEmoji(emoji) {
+  const box = document.getElementById('reactFloat');
+  if (!box) return;
+  const el = document.createElement('span');
+  el.textContent = emoji || '🔥';
+  el.className = 'react-emoji';
+  el.style.left = `${Math.random() * 80 + 5}%`;
+  el.style.setProperty('--rd', `${(Math.random() * 1.5 + 2).toFixed(2)}s`);
+  box.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function renderReactions() {
+  const now = Date.now();
+  const recent = reactWindow.filter((t) => now - t < 8000).length;
+  reactMax = Math.max(reactMax * 0.99, recent, 8);
+  const fill = Math.max(0, Math.min(1, recent / reactMax));
+  const bar = document.getElementById('reactFill');
+  if (bar) bar.style.width = `${(fill * 100).toFixed(0)}%`;
+  const label = document.getElementById('reactLabel');
+  if (label) label.textContent = recent > reactMax * 0.75 ? 'CROWD GOING WILD' : 'HYPE';
+}
+
 /** The sponsor rotator: shows one sponsor at a time; the console advances the index. */
 function renderSponsor() {
   const el = document.getElementById('spBody');
@@ -1449,9 +1595,27 @@ function renderCountdown() {
 }
 
 /** The driver intro card: the focus driver (or leader) big — number, name, team, points. */
+/** Season record for a driver from the standings counts, for the intro and rivalry cards. */
+function seasonStats(id) {
+  const s = (state.standings || []).find((r) => r.driverId === id);
+  if (!s) return null;
+  const c = s.counts || {};
+  let best = null;
+  for (const k in c) { const p = +k; if (best == null || p < best) best = p; }
+  return { wins: c[1] || 0, podiums: (c[1] || 0) + (c[2] || 0) + (c[3] || 0), best, points: s.points, rank: s.rank, rounds: s.rounds };
+}
+
 function renderIntro(rows) {
   const focus = state.overlay.focusDriverId;
-  const d = (focus && (rows || []).find((r) => r.id === focus)) || (rows || [])[0];
+  let d = focus && (rows || []).find((r) => r.id === focus);
+  // No focus: walk the grid one driver at a time, so the widget becomes a grid reveal.
+  if (!d) {
+    const grid = (rows || []).slice().sort((a, b) => {
+      const g = state.race.grid || []; const ia = g.indexOf(a.id), ib = g.indexOf(b.id);
+      return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || a.position - b.position;
+    });
+    if (grid.length) d = grid[Math.floor(Date.now() / 4500) % grid.length];
+  }
   const numEl = document.getElementById('inNum');
   const nameEl = document.getElementById('inName');
   const teamEl = document.getElementById('inTeam');
@@ -1465,11 +1629,19 @@ function renderIntro(rows) {
   if (teamEl) teamEl.textContent = d.team || d.car || '';
   const row = (state.standings || []).find((s) => s.driverId === d.id);
   if (ptsEl) ptsEl.textContent = row ? `${row.points} PTS` : '';
+  const statsEl = document.getElementById('inStats');
+  if (statsEl) {
+    const st = seasonStats(d.id);
+    statsEl.textContent = st && st.rounds ? `${st.wins} WIN${st.wins === 1 ? '' : 'S'} · ${st.podiums} PODIUM${st.podiums === 1 ? '' : 'S'}${st.best ? ` · BEST P${st.best}` : ''}` : '';
+  }
   const photo = document.getElementById('inPhoto');
   if (photo) {
     if (d.photo) { if (photo.getAttribute('src') !== d.photo) photo.setAttribute('src', d.photo); photo.hidden = false; }
     else { photo.hidden = true; photo.removeAttribute('src'); }
   }
+  // A reveal wipe each time the card turns to a new driver, so the grid reveal reads as a
+  // sequence of cards rather than text quietly swapping.
+  if (box.dataset.who !== d.id) { box.dataset.who = d.id; restart(box, 'intro-in'); }
 }
 
 /** The audience-poll card: the question and a live bar per option, from the vote tally. */
@@ -1659,7 +1831,7 @@ function applyGapSeparator(rows) {
 function renderSignature(rows) {
   const o = state.overlay, e = state.event, r = state.race;
   let sig = `${JSON.stringify(o.layout)}|${JSON.stringify(o.style)}|${o.theme}|${o.skin}|${o.towerTitle || ''}|${o.nonce || 0}|${o.editSelected}|` +
-            `${r.status}|${r.pitOpen === false ? 'C' : 'O'}|${r.lights || 0}|${o.show.pit}${o.show.lights}${o.show.catching}|${r.totalLaps}|${o.accent}|${o.focusDriverId}|` +
+            `${r.status}|${r.pitOpen === false ? 'C' : 'O'}|${r.lights || 0}|${o.show.pit}${o.show.lights}${o.show.catching}${o.show.rivalry}${o.show.podium}${o.show.reactions}|${r.totalLaps}|${o.accent}|${o.focusDriverId}|` +
             `${o.show.leaderboard}${o.show.tower}${o.show.status}${o.show.lowerThird}${o.show.gap}${o.show.results}${o.show.fastlap}${o.show.sectors}${o.show.delta}${o.show.radio}|${JSON.stringify(o.radio||{})}|${(state.radio && state.radio[0] && state.radio[0].id) || 0}|${JSON.stringify(o.poll||{})}|${JSON.stringify(state.votes||{})}|${o.show.sponsor}${o.show.countdown}${o.show.intro}${o.show.qr}|${JSON.stringify(o.sponsors||[])}|${o.sponsorIndex}|${JSON.stringify(o.countdown||{})}|` +
             `${e.name}|${e.round}|${e.track}|${e.sessionType}|${e.sessionName}|${(o.ticker || []).join('~')}|` +
             `${o.autoTicker}|${(state.feed || [])[0]?.t || 0}|${JSON.stringify(state.records?.bestSectors || [])}|` +
@@ -1709,6 +1881,7 @@ function renderInner() {
   if (!state.overlay || !state.overlay.show) return;
 
   const rows = classification(state);
+  latestRows = rows;
   const sig = renderSignature(rows);
   if (sig === lastSignature) return;
   lastSignature = sig;
@@ -1759,6 +1932,14 @@ function renderInner() {
   const catcher = pickCatch(rows);
   show('catching', vis.catching && !!catcher);
   if (shown.catching && catcher) renderCatching(catcher);
+  const rival = pickRivalry();
+  show('rivalry', vis.rivalry && !!rival);
+  if (shown.rivalry && rival) renderRivalry(rival);
+  const finished = state.race.status === 'finished';
+  show('podium', vis.podium && finished);
+  if (shown.podium && finished) renderPodium(rows);
+  show('reactions', vis.reactions && !!bus.sb);
+  if (shown.reactions) renderReactions();
   // A hidden widget still cost a full row diff on every state push. Nothing about it
   // is on screen, so skip the DOM entirely until it is shown again.
   // Class grouping (banners + per-class numbering) is shared by WEC and IMSA.
@@ -1848,7 +2029,14 @@ function tick() {
     const tw = document.getElementById('twSub');
     if (tw && shown.tower) tw.textContent = headerLine();
   }
+  // The intro card cycles through the grid on its own timer when no driver is in focus.
+  if (shown.intro && !state.overlay.focusDriverId) renderIntro(latestRows);
+  // The hype meter decays each tick even when no new reactions arrive.
+  if (shown.reactions) renderReactions();
 }
+
+// Poll the crowd reactions a couple of times a second while the widget is up (hosted only).
+setInterval(() => { if (shown.reactions) pollReactions(); }, 1500);
 
 /**
  * Rehearsal: replay every animation on demand without touching race state, so the
