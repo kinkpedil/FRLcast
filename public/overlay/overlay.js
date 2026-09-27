@@ -62,9 +62,9 @@ const FLAG_COLOR = {
   // Yellow-on-yellow would be indistinguishable from a local yellow at a glance, and the
   // two mean different things to a driver, so the VSC gets its own hue.
   vsc: ['#ffcc00', false],
-  // A slightly off-white so the white flag reads as a flag against the panel, with dark
-  // lettering. The chequered flag keeps pure white and light text (it is a different call).
-  white: ['#f2f2f7', true],
+  // A slightly off-white so the white flag reads as a flag against the panel. dark:false
+  // keeps the pill's default dark lettering, since white text on a near-white pill vanishes.
+  white: ['#f2f2f7', false],
   red: ['#ff3b30', true],
   finished: ['#ffffff', false]
 };
@@ -100,7 +100,6 @@ function build() {
             <div class="flag-pill" id="flagPill"><span class="flag-dot"></span><span class="label" id="flagText">STANDBY</span></div>
             <div class="brand-logo" id="brandLogo"><img alt="" id="brandImg" hidden><b id="brandName"></b></div>
           </div>
-          <div class="pit-pill" id="pitPill" hidden><span class="label">PITS CLOSED</span></div>
           <div class="seg event"><div class="k">Event</div><div class="v" id="stEvent">--</div></div>
           <div class="seg"><div class="k" id="stLapK">Lap</div><div class="v" id="stLap">--</div></div>
           <div class="seg"><div class="k" id="stClockK">Race time</div><div class="v" id="stClock">00:00</div></div>
@@ -758,14 +757,6 @@ function renderStatus(rows) {
   document.getElementById('flagText').textContent = FLAG_LABEL[state.race.status] || '--';
   if (prevFlag !== null && prevFlag !== state.race.status) restart(pill, 'wipe');
   prevFlag = state.race.status;
-
-  // Pits closed is its own badge next to the flag, since a race can be green with the
-  // pit lane shut. Absent (open) most of the time, so it only shows when it matters.
-  const pitPill = document.getElementById('pitPill');
-  if (pitPill) {
-    const closed = state.race.pitOpen === false;
-    if (pitPill.hidden === closed) { pitPill.hidden = !closed; if (closed) restart(pitPill, 'wipe'); }
-  }
 
   setText(document.getElementById('stEvent'), `${state.event.name} — ${state.event.round}`, 'value');
 

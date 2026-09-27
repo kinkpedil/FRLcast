@@ -335,9 +335,8 @@ public class OverlayService extends Service {
       if (sl == 0) b.append("  SERVE DT NOW");
       else if (sl > 0) b.append("  SERVE DT: ").append(sl).append(sl == 1 ? " LAP" : " LAPS");
     }
-    // Pit lane shut: the one pit state worth interrupting for. Open is the default and stays
-    // silent so the strip is not cluttered every lap.
-    if (me.has("pitOpen") && !me.optBoolean("pitOpen", true)) b.append("  PITS CLOSED");
+    // Pit lane state, both ways, so the driver can always read whether the pits are open.
+    if (me.has("pitOpen")) b.append(me.optBoolean("pitOpen", true) ? "  PIT OPEN" : "  PIT CLOSED");
     return b.toString();
   }
 

@@ -1,0 +1,54 @@
+<meta charset="utf-8">
+<title>FRL Overlay — pit lane</title>
+<style>
+  /*
+   * Pit lane open / closed, as its own OBS Browser Source.
+   *
+   * Deliberately separate from the status bar: a race can be green with the pits shut, and
+   * an operator wants to place and size this where it suits the layout, not wedged next to
+   * the flag. It shows both states so the audience is never left guessing, and pulses when
+   * it changes.
+   */
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; font-family: Inter, "Segoe UI", system-ui, sans-serif; }
+  body { display: flex; align-items: flex-start; }
+
+  .pit {
+    display: inline-flex; align-items: center; gap: 12px;
+    margin: 20px; padding: 12px 22px; border-radius: 12px;
+    font-size: 20px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+    color: #05070a; background: #30d158;
+    box-shadow: 0 12px 34px rgba(0,0,0,.4);
+    transition: background .3s var(--ease, ease), transform .3s var(--ease, ease);
+  }
+  .pit.closed { background: #ff9f0a; }
+  .pit .dot { width: 14px; height: 14px; border-radius: 50%; background: rgba(0,0,0,.55); }
+  .pit.flash { animation: flash .6s ease; }
+  @keyframes flash { 0% { transform: scale(1.08); filter: brightness(1.5); } 100% { transform: none; filter: none; } }
+</style>
+<body>
+<div class="pit" id="pit"><span class="dot"></span><span id="pitText">PIT OPEN</span></div>
+
+<script src="/supabase-config.js"></script>
+<script type="module">
+import { Bus } from '../js/shared.js';
+import { CloudBus, cloudOptions } from '../js/cloudbus.js';
+
+const cloud = cloudOptions();
+const bus = cloud ? new CloudBus('overlay', cloud) : new Bus('overlay');
+
+const pit = document.getElementById('pit');
+const text = document.getElementById('pitText');
+let prev = null;
+
+bus.on('state', (state) => {
+  const closed = state.race && state.race.pitOpen === false;
+  if (prev === closed) return;
+  prev = closed;
+  pit.classList.toggle('closed', closed);
+  text.textContent = closed ? 'PIT CLOSED' : 'PIT OPEN';
+  pit.classList.remove('flash'); void pit.offsetWidth; pit.classList.add('flash');
+});
+</script>
+</body>
+</html>
