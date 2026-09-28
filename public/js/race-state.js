@@ -1620,6 +1620,9 @@ export class RaceState {
         s.race.pausedAt = null;
         s.race.pausedTotal = 0;
         s.race.status = 'green';
+        // The lights go out at the green flag. Clearing them also stops a left-on gantry
+        // from sitting over the drivers' phones and hiding race-control messages there.
+        s.race.lights = 0;
         this.newSession(s.race.startedAt);
         // A new session hands the flag back to the automation: whatever the operator
         // overruled last time was about the last race.

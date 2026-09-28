@@ -258,7 +258,12 @@ export class CloudLink {
     };
     const feed = (s.feed || []).map((f) => ({ ...f, driverId: f.driverId ? U(f.driverId) : null }));
     const overlay = s.overlay && s.overlay.focusDriverId ? { ...s.overlay, focusDriverId: U(s.overlay.focusDriverId) } : s.overlay;
-    return { ...s, drivers, race, feed, overlay };
+    // These maps are keyed by driver id and ride in the settings blob, where driver_state
+    // reads them by the hosted (uuid) id. Without remapping the keys, an operator message or
+    // a stint would be filed under the local id and never reach the phone on a hosted event.
+    const remapKeys = (obj) => { const out = {}; for (const k of Object.keys(obj || {})) out[U(k)] = obj[k]; return out; };
+    return { ...s, drivers, race, feed, overlay,
+      messages: remapKeys(s.messages), stints: remapKeys(s.stints), crew: remapKeys(s.crew) };
   }
 
   // ---------------------------------------------------------------- link
