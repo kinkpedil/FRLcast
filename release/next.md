@@ -6,4 +6,8 @@
 -->
 ## en
 
+- Fixed: messages to all drivers and the radio soundboard now reach the driver app on a hosted (online) event. Also, the start lights clear at the green flag so a left-on gantry no longer hides messages on the phone.
+
 ## id
+
+- Perbaikan: pesan ke semua driver dan radio soundboard kini sampai ke aplikasi driver pada event hosted (online). Selain itu, start lights otomatis mati saat green flag agar gantry yang lupa dimatikan tidak menutup pesan di HP.
