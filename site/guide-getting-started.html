@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Run your first FR Legends broadcast · FRLcast guide</title>
+<meta name="description" content="A step-by-step guide to running your first FR Legends race broadcast with FRLcast: install, add drivers, start timing and put the overlay in OBS.">
+<link rel="canonical" href="https://www.frlcast.my.id/guide-getting-started">
+<meta name="theme-color" content="#0b0d11">
+<link rel="stylesheet" href="/content.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/">FRLcast</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/guide-getting-started">Getting started</a>
+      <a href="/guide-timing">Timing</a>
+      <a href="/guide-driver-app">Driver app</a>
+      <a href="/about">About</a>
+    </nav>
+    <span class="langbtns"><button data-lang="en">EN</button><button data-lang="id">ID</button></span>
+  </header>
+
+  <main>
+    <div data-lang-block="en">
+      <h1>Run your first FR Legends broadcast</h1>
+      <p class="lead">From nothing to a live timing overlay in OBS, in a handful of steps.</p>
+
+      <h2>1. Get FRLcast running</h2>
+      <p>You have two ways to run it. The <strong>desktop app</strong> is the full version: download it from the <a href="/changelog">releases</a>, unzip it anywhere and double-click <code>start.cmd</code>. Nothing needs to be installed. It opens the operator console in your browser at a local address. The <strong>hosted</strong> path at frlcast.my.id is the lighter option for online leagues, where drivers join with an event code.</p>
+
+      <h2>2. Set up the event and drivers</h2>
+      <p>On the <strong>Race control</strong> and <strong>Drivers</strong> pages, give the event a name and round, choose the session type (practice, qualifying, race or endurance), and add each driver with their race number, name, team colour and, ideally, a photo. Photos make the starting grid and driver intros look their best.</p>
+
+      <h2>3. Point the timing at the game</h2>
+      <p>FRLcast times laps by watching the in-game minimap. On the <strong>Vision / AI</strong> page you tell it where the minimap is and where the finish line sits, once per track. There is no machine-learning model to train. If your league uses the game's official timing API, you can enter your key there instead and skip the vision setup. See the <a href="/guide-timing">timing guide</a> for how this works.</p>
+
+      <h2>4. Add the overlay to OBS</h2>
+      <p>In OBS, add a single <strong>Browser Source</strong> pointing at the overlay's <code>all.html</code> address shown on the <strong>OBS setup</strong> page, at 1920×1080. Every graphic lives inside that one source, so there is nothing else to switch on the OBS side. Arrange the widgets on the <strong>Layout</strong> page and pick a scene on the <strong>Event scenes</strong> page (pre-show, grid, practice, qualifying, race, results).</p>
+
+      <h2>5. Go live</h2>
+      <p>Press <strong>Start race</strong> when the cars roll, and use the flag buttons for race control. The leaderboard, gaps and flags update on the stream in about a second. At the flag, export the results or post them to your league's Discord.</p>
+
+      <div class="card">
+        <p><strong>Tip:</strong> hand the drivers the Android app so every flag and penalty reaches their phone. See <a href="/guide-driver-app">setting up the driver app</a>.</p>
+      </div>
+
+      <a class="cta" href="/dashboard">Open the dashboard</a>
+    </div>
+
+    <div data-lang-block="id">
+      <h1>Menjalankan broadcast FR Legends pertamamu</h1>
+      <p class="lead">Dari nol sampai overlay timing langsung di OBS, dalam beberapa langkah.</p>
+
+      <h2>1. Jalankan FRLcast</h2>
+      <p>Ada dua cara. <strong>Desktop app</strong> adalah versi lengkap: unduh dari <a href="/changelog">releases</a>, ekstrak di mana saja, klik dua kali <code>start.cmd</code>. Tidak perlu instal apa pun. Ia membuka console operator di browser pada alamat lokal. Jalur <strong>hosted</strong> di frlcast.my.id adalah opsi ringan untuk liga online, tempat driver bergabung dengan kode event.</p>
+
+      <h2>2. Siapkan event dan driver</h2>
+      <p>Di halaman <strong>Race control</strong> dan <strong>Drivers</strong>, beri nama event dan ronde, pilih tipe sesi (practice, qualifying, race, atau endurance), dan tambahkan tiap driver dengan nomor, nama, warna tim, dan idealnya foto. Foto membuat starting grid dan intro driver tampil maksimal.</p>
+
+      <h2>3. Arahkan timing ke game</h2>
+      <p>FRLcast menghitung lap dengan mengamati minimap dalam game. Di halaman <strong>Vision / AI</strong> kamu menandai posisi minimap dan garis finish, sekali per track. Tidak ada model machine learning yang perlu dilatih. Jika ligamu memakai API timing resmi game, masukkan key di sana dan lewati setup vision. Lihat <a href="/guide-timing">panduan timing</a>.</p>
+
+      <h2>4. Tambahkan overlay ke OBS</h2>
+      <p>Di OBS, tambahkan satu <strong>Browser Source</strong> yang mengarah ke alamat overlay <code>all.html</code> (ada di halaman <strong>OBS setup</strong>), ukuran 1920×1080. Semua grafik ada di dalam satu source itu, jadi tidak ada yang perlu diganti di sisi OBS. Atur widget di halaman <strong>Layout</strong> dan pilih scene di halaman <strong>Event scenes</strong> (pre-show, grid, practice, qualifying, race, hasil).</p>
+
+      <h2>5. Live</h2>
+      <p>Tekan <strong>Start race</strong> saat mobil berjalan, dan pakai tombol flag untuk race control. Leaderboard, gap, dan flag terupdate di stream dalam ~1 detik. Saat finish, ekspor hasil atau posting ke Discord ligamu.</p>
+
+      <div class="card">
+        <p><strong>Tips:</strong> berikan driver aplikasi Android agar setiap flag dan penalti sampai ke HP mereka. Lihat <a href="/guide-driver-app">setup aplikasi driver</a>.</p>
+      </div>
+
+      <a class="cta" href="/dashboard">Buka dashboard</a>
+    </div>
+  </main>
+
+  <footer class="site">
+    <span>FRLcast by kinkpedil12</span>
+    <a href="/about">About</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/changelog">Changelog</a>
+    <a class="sp" href="/">frlcast.my.id</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var lang = 'en';
+  try { if (localStorage.getItem('frl.lang') === 'id') lang = 'id'; } catch(e){}
+  function apply(){
+    document.querySelectorAll('[data-lang-block]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang-block') === lang); });
+    document.querySelectorAll('[data-lang]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang') === lang); });
+    document.documentElement.lang = lang;
+  }
+  document.querySelectorAll('[data-lang]').forEach(function(b){
+    b.onclick = function(){ lang = b.getAttribute('data-lang'); try { localStorage.setItem('frl.lang', lang); } catch(e){} apply(); };
+  });
+  apply();
+})();
+</script>
+</body>
+</html>

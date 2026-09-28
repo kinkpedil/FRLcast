@@ -1,0 +1,38 @@
+/* Shared style for the written content pages (about, privacy, guides). Readable article
+   layout on the FRLcast dark theme. */
+:root{
+  --bg:#0b0d11; --panel:#12151c; --ink:#eef2f7; --mute:#9aa3b2; --line:#232833;
+  --accent:#00e0a4; --link:#35e3ad;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font:400 17px/1.7 Inter,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--link);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{display:flex;align-items:center;gap:16px;padding:22px 0;border-bottom:1px solid var(--line)}
+header.site .brand{font-weight:800;font-size:20px;letter-spacing:.02em;color:#fff}
+header.site nav{margin-left:auto;display:flex;gap:18px;flex-wrap:wrap}
+header.site nav a{color:var(--mute);font-size:14px}
+header.site nav a:hover{color:var(--ink)}
+.langbtns{display:flex;gap:6px;margin-left:8px}
+.langbtns button{background:none;border:1px solid var(--line);color:var(--mute);border-radius:8px;padding:4px 9px;font-size:12px;cursor:pointer}
+.langbtns button.on{color:var(--ink);border-color:var(--accent)}
+main{padding:34px 0 60px}
+h1{font-size:34px;line-height:1.2;margin:0 0 6px;color:#fff}
+.lead{color:var(--mute);font-size:18px;margin:0 0 26px}
+h2{font-size:23px;margin:34px 0 10px;color:#fff}
+h3{font-size:18px;margin:22px 0 6px;color:#fff}
+p{margin:0 0 14px}
+ul,ol{margin:0 0 16px;padding-left:22px}
+li{margin:5px 0}
+.updated{color:var(--mute);font-size:13px}
+code{background:#171b22;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:20px 0}
+.cta{display:inline-block;background:var(--accent);color:#04120d;font-weight:800;padding:11px 20px;border-radius:12px;margin-top:8px}
+.cta:hover{text-decoration:none;filter:brightness(1.05)}
+footer.site{border-top:1px solid var(--line);padding:26px 0 50px;color:var(--mute);font-size:13px;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+footer.site a{color:var(--mute)}
+footer.site .sp{margin-left:auto}
+[data-lang-block]{display:none}
+[data-lang-block].on{display:block}

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How automatic lap timing works in FR Legends · FRLcast guide</title>
+<meta name="description" content="How FRLcast times FR Legends laps automatically from the in-game minimap with computer vision, and how the official timing API fits in. No ML model required.">
+<link rel="canonical" href="https://www.frlcast.my.id/guide-timing">
+<meta name="theme-color" content="#0b0d11">
+<link rel="stylesheet" href="/content.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/">FRLcast</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/guide-getting-started">Getting started</a>
+      <a href="/guide-timing">Timing</a>
+      <a href="/guide-driver-app">Driver app</a>
+      <a href="/about">About</a>
+    </nav>
+    <span class="langbtns"><button data-lang="en">EN</button><button data-lang="id">ID</button></span>
+  </header>
+
+  <main>
+    <div data-lang-block="en">
+      <h1>How automatic lap timing works</h1>
+      <p class="lead">Timing an FR Legends race without a timing loop, an ML model or a spreadsheet.</p>
+
+      <h2>The idea</h2>
+      <p>FR Legends draws a small minimap with a dot for each car. FRLcast watches that minimap and works out where every car is, then times a lap each time a car crosses the finish line you marked. It runs entirely on your machine, so it works offline and costs nothing to run.</p>
+
+      <h2>The vision pipeline, in plain terms</h2>
+      <ol>
+        <li><strong>Colour lookup.</strong> Each car's dot has a colour. A prebuilt colour cube turns every minimap pixel into a driver in a single fast pass, with no neural network to train or run.</li>
+        <li><strong>Blob tracking.</strong> The coloured pixels are grouped into blobs, one per car, and a tracker follows each blob frame to frame. If a dot is briefly hidden, the tracker dead-reckons it forward so the car does not disappear.</li>
+        <li><strong>Line crossing.</strong> When a car crosses the finish line, the exact moment is interpolated between frames, and that becomes a lap. Every lap goes through a debounce so a noisy frame never invents a lap.</li>
+      </ol>
+      <p>From those crossings FRLcast derives lap times, best and last lap, gaps to the leader and to the car ahead, sectors, and the live running order.</p>
+
+      <h2>Setting it up per track</h2>
+      <p>On the <strong>Vision / AI</strong> page you draw a box over the minimap and mark the finish line, once for a given track and layout. Register each driver's number and colour so the tracker can tell the cars apart. That is all the calibration a track needs.</p>
+
+      <h2>The official timing API</h2>
+      <p>The FR Legends developer provides an official timing API for partner broadcasters. If your league has a key, FRLcast can poll it instead of watching the minimap: you enter the key and a room key on the timing card, and the same leaderboard, gaps and sectors follow. Because players are identified by an in-game id that changes every room, FRLcast matches players to your drivers by name at event time, the same way the vision path does.</p>
+
+      <h2>Manual mode</h2>
+      <p>For a low-spec setup with no camera, manual mode lets the operator set the order and add laps by hand, so a broadcast is always possible even without the vision pipeline.</p>
+
+      <a class="cta" href="/guide-getting-started">Back to getting started</a>
+    </div>
+
+    <div data-lang-block="id">
+      <h1>Cara kerja timing lap otomatis</h1>
+      <p class="lead">Menghitung balapan FR Legends tanpa timing loop, model ML, atau spreadsheet.</p>
+
+      <h2>Idenya</h2>
+      <p>FR Legends menampilkan minimap kecil dengan titik untuk tiap mobil. FRLcast mengamati minimap itu, mengetahui posisi tiap mobil, lalu menghitung lap setiap kali mobil melewati garis finish yang kamu tandai. Semua jalan di komputermu, jadi bekerja offline dan gratis.</p>
+
+      <h2>Pipeline vision, sederhananya</h2>
+      <ol>
+        <li><strong>Lookup warna.</strong> Titik tiap mobil punya warna. Sebuah color cube siap-pakai mengubah tiap piksel minimap menjadi driver dalam satu pass cepat, tanpa jaringan saraf yang perlu dilatih.</li>
+        <li><strong>Tracking blob.</strong> Piksel berwarna dikelompokkan jadi blob, satu per mobil, dan tracker mengikuti tiap blob antar-frame. Jika titik sempat tertutup, tracker memperkirakan posisinya agar mobil tidak hilang.</li>
+        <li><strong>Line crossing.</strong> Saat mobil melewati garis finish, momen tepatnya diinterpolasi antar-frame dan menjadi satu lap. Tiap lap melewati debounce agar frame yang berisik tidak mengarang lap.</li>
+      </ol>
+      <p>Dari crossing itu FRLcast menurunkan lap time, best/last lap, gap ke pemimpin dan ke mobil depan, sektor, dan urutan langsung.</p>
+
+      <h2>Setup per track</h2>
+      <p>Di halaman <strong>Vision / AI</strong> kamu menggambar kotak di atas minimap dan menandai garis finish, sekali per track dan layout. Daftarkan nomor dan warna tiap driver agar tracker bisa membedakan mobil. Itu saja kalibrasi yang dibutuhkan.</p>
+
+      <h2>API timing resmi</h2>
+      <p>Developer FR Legends menyediakan API timing resmi untuk partner broadcaster. Jika ligamu punya key, FRLcast bisa polling API itu daripada mengamati minimap: masukkan key dan room key di kartu timing, dan leaderboard, gap, serta sektor yang sama akan mengikuti. Karena pemain diidentifikasi dengan id dalam game yang berubah tiap room, FRLcast mencocokkan pemain ke driver-mu berdasarkan nama saat event, sama seperti jalur vision.</p>
+
+      <h2>Mode manual</h2>
+      <p>Untuk setup spek rendah tanpa kamera, mode manual memungkinkan operator mengatur urutan dan menambah lap secara manual, jadi broadcast tetap mungkin walau tanpa pipeline vision.</p>
+
+      <a class="cta" href="/guide-getting-started">Kembali ke getting started</a>
+    </div>
+  </main>
+
+  <footer class="site">
+    <span>FRLcast by kinkpedil12</span>
+    <a href="/about">About</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/changelog">Changelog</a>
+    <a class="sp" href="/">frlcast.my.id</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var lang = 'en';
+  try { if (localStorage.getItem('frl.lang') === 'id') lang = 'id'; } catch(e){}
+  function apply(){
+    document.querySelectorAll('[data-lang-block]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang-block') === lang); });
+    document.querySelectorAll('[data-lang]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang') === lang); });
+    document.documentElement.lang = lang;
+  }
+  document.querySelectorAll('[data-lang]').forEach(function(b){
+    b.onclick = function(){ lang = b.getAttribute('data-lang'); try { localStorage.setItem('frl.lang', lang); } catch(e){} apply(); };
+  });
+  apply();
+})();
+</script>
+</body>
+</html>

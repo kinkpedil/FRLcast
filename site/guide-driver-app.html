@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Set up the FRLcast driver app for FR Legends · guide</title>
+<meta name="description" content="Install and use the FRLcast Android driver app: get flags, a pit board and penalties on each driver's phone, join by event code, and send team radio.">
+<link rel="canonical" href="https://www.frlcast.my.id/guide-driver-app">
+<meta name="theme-color" content="#0b0d11">
+<link rel="stylesheet" href="/content.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/">FRLcast</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/guide-getting-started">Getting started</a>
+      <a href="/guide-timing">Timing</a>
+      <a href="/guide-driver-app">Driver app</a>
+      <a href="/about">About</a>
+    </nav>
+    <span class="langbtns"><button data-lang="en">EN</button><button data-lang="id">ID</button></span>
+  </header>
+
+  <main>
+    <div data-lang-block="en">
+      <h1>Set up the driver app</h1>
+      <p class="lead">Put every flag, a pit board and penalties on each driver's phone, in about a second.</p>
+
+      <h2>What it does</h2>
+      <p>A phone in a pocket is no use mid-corner, so the FRLcast Android app draws its own small floating window over the game. It shows the driver the session flag, any flag meant for them alone (blue, black, or a penalty), a pit board with their position and gaps, the start lights, and pit-lane and endurance information. Drivers can also report an incident and send team radio without leaving the game.</p>
+
+      <h2>Installing it</h2>
+      <p>Download the driver APK from the <a href="/">site</a> or the download link your league shares, then install it on Android. Because it is distributed directly rather than through a store, allow installation from your browser or files app when Android asks. The app needs permission to draw over other apps so its window can float above the game.</p>
+
+      <h2>Joining an event</h2>
+      <ol>
+        <li><strong>On the same network (LAN):</strong> the operator's console shows an address to type into the app to connect to the local server.</li>
+        <li><strong>Online:</strong> open <code>frlcast.my.id/join</code> or the app and enter the event code the operator gives you, then register with your race number. Signing in also checks you in for the day.</li>
+      </ol>
+
+      <h2>Reading the window</h2>
+      <ul>
+        <li>The big colour and label are the session flag. A flag meant only for you, like a blue or black flag, takes over the window when it applies.</li>
+        <li>The strip along the bottom is your pit board: position, the gap to the car ahead and behind, laps or time left, a drive-through serve countdown, and whether the pit lane is open.</li>
+        <li>Penalties arrive with the steward's exact wording, so you read the same sentence race control wrote.</li>
+      </ul>
+
+      <h2>Tips</h2>
+      <p>Drag the window anywhere and drag its corner to resize it, so it sits where it does not cover your racing line. Keep your registered name unique in the league, because timing matches you to your car by name.</p>
+
+      <a class="cta" href="/dashboard">Open the dashboard</a>
+    </div>
+
+    <div data-lang-block="id">
+      <h1>Setup aplikasi driver</h1>
+      <p class="lead">Tampilkan setiap flag, pit board, dan penalti di HP tiap driver, dalam ~1 detik.</p>
+
+      <h2>Apa fungsinya</h2>
+      <p>HP di saku tidak berguna saat menikung, jadi aplikasi Android FRLcast menggambar jendela mengambang kecil di atas game. Ia menampilkan flag sesi, flag khusus untuk driver itu saja (blue, black, atau penalti), pit board berisi posisi dan gap, start lights, serta info pit lane dan endurance. Driver juga bisa melaporkan insiden dan mengirim team radio tanpa keluar dari game.</p>
+
+      <h2>Cara instal</h2>
+      <p>Unduh APK driver dari <a href="/">situs</a> atau tautan unduh yang dibagikan ligamu, lalu instal di Android. Karena disebar langsung (bukan lewat store), izinkan instalasi dari browser atau aplikasi file saat Android meminta. Aplikasi butuh izin menggambar di atas aplikasi lain agar jendelanya bisa mengambang di atas game.</p>
+
+      <h2>Bergabung ke event</h2>
+      <ol>
+        <li><strong>Di jaringan yang sama (LAN):</strong> console operator menampilkan alamat untuk diketik di aplikasi agar terhubung ke server lokal.</li>
+        <li><strong>Online:</strong> buka <code>frlcast.my.id/join</code> atau aplikasi, masukkan kode event dari operator, lalu daftar dengan nomor balapmu. Login sekaligus check-in untuk hari itu.</li>
+      </ol>
+
+      <h2>Membaca jendela</h2>
+      <ul>
+        <li>Warna dan label besar adalah flag sesi. Flag khusus untukmu, seperti blue atau black flag, mengambil alih jendela saat berlaku.</li>
+        <li>Strip di bawah adalah pit board: posisi, gap ke mobil depan dan belakang, sisa lap atau waktu, hitung mundur serve drive-through, dan status pit lane.</li>
+        <li>Penalti datang dengan kata-kata persis dari steward, jadi kamu membaca kalimat yang sama dengan race control.</li>
+      </ul>
+
+      <h2>Tips</h2>
+      <p>Geser jendela ke mana saja dan tarik sudutnya untuk mengubah ukuran, agar tidak menutupi racing line. Jaga nama terdaftarmu unik di liga, karena timing mencocokkanmu ke mobil berdasarkan nama.</p>
+
+      <a class="cta" href="/dashboard">Buka dashboard</a>
+    </div>
+  </main>
+
+  <footer class="site">
+    <span>FRLcast by kinkpedil12</span>
+    <a href="/about">About</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/changelog">Changelog</a>
+    <a class="sp" href="/">frlcast.my.id</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var lang = 'en';
+  try { if (localStorage.getItem('frl.lang') === 'id') lang = 'id'; } catch(e){}
+  function apply(){
+    document.querySelectorAll('[data-lang-block]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang-block') === lang); });
+    document.querySelectorAll('[data-lang]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang') === lang); });
+    document.documentElement.lang = lang;
+  }
+  document.querySelectorAll('[data-lang]').forEach(function(b){
+    b.onclick = function(){ lang = b.getAttribute('data-lang'); try { localStorage.setItem('frl.lang', lang); } catch(e){} apply(); };
+  });
+  apply();
+})();
+</script>
+</body>
+</html>
