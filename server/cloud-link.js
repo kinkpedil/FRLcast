@@ -251,10 +251,14 @@ export class CloudLink {
       // would be a row update per car per second. Positions still follow every crossing.
       progress: 0
     }));
+    // Only cars that are actually on the grid become rows on the hosted event. A penalty (or
+    // a grid slot) that points at a driver who is not among them would break the foreign key,
+    // so those are dropped from the mirror rather than sent and rejected on every write.
+    const liveIds = new Set(s.drivers.map((d) => d.id));
     const race = {
       ...s.race,
-      penalties: (s.race.penalties || []).map((p) => ({ ...p, id: U(p.id), driverId: U(p.driverId) })),
-      grid: Array.isArray(s.race.grid) ? s.race.grid.map((g) => (typeof g === 'string' ? U(g) : g)) : s.race.grid
+      penalties: (s.race.penalties || []).filter((p) => liveIds.has(p.driverId)).map((p) => ({ ...p, id: U(p.id), driverId: U(p.driverId) })),
+      grid: Array.isArray(s.race.grid) ? s.race.grid.filter((g) => typeof g !== 'string' || liveIds.has(g)).map((g) => (typeof g === 'string' ? U(g) : g)) : s.race.grid
     };
     const feed = (s.feed || []).map((f) => ({ ...f, driverId: f.driverId ? U(f.driverId) : null }));
     const overlay = s.overlay && s.overlay.focusDriverId ? { ...s.overlay, focusDriverId: U(s.overlay.focusDriverId) } : s.overlay;
