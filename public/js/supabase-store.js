@@ -76,6 +76,8 @@ function settingsOf(state) {
     // event's overlay and phones get them without new columns.
     lights: state.race.lights || 0,
     messages: state.messages || {},
+    crew: state.crew || {},
+    stints: state.stints || {},
     // The report's position graph on a hosted event.
     lapChart: state.race.lapChart || {},
     predictOrder: state.race.predictOrder !== false

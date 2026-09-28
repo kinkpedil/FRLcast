@@ -104,6 +104,11 @@
                 <button class="btn" id="btnBcastSend">Send to all</button>
                 <button class="btn ghost" id="btnBcastClear">Clear</button>
               </div>
+              <div class="flags" id="soundboard" style="margin-top:8px;align-items:center">
+                <span style="font-size:12px;color:var(--ink-mute)">Radio</span>
+                <span id="sbButtons" style="display:contents"></span>
+                <button class="btn sm ghost" id="btnSbEdit" title="Edit the quick radio presets">Edit</button>
+              </div>
             </div>
           </div>
 
@@ -119,6 +124,14 @@
             <div class="body">
               <p class="hint" style="margin-bottom:10px">For a low-spec setup with no camera. Drag a driver to change position, or use ▲▼. Add a lap with the current time, or type a lap time first. Order and laps are set entirely by hand.</p>
               <div id="manualList" class="manuallist"></div>
+            </div>
+          </div>
+
+          <div class="card" id="stintCard">
+            <h3>Endurance stints</h3>
+            <div class="body">
+              <p class="hint" style="margin-bottom:10px">Driver swaps for endurance. Set each car's crew, then tap a name when they take over. The lower third and report follow the current driver.</p>
+              <div id="stintList"></div>
             </div>
           </div>
         </div>

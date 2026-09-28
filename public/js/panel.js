@@ -177,6 +177,43 @@ function parseLap(str) {
 const swState = new Map();   // driver id -> stopwatch start epoch, console-side only
 function swElapsed(id) { return swState.has(id) ? Date.now() - swState.get(id) : 0; }
 
+function renderStints() {
+  const card = $('#stintCard'), box = $('#stintList');
+  if (!card || !box || !state) return;
+  // Endurance only: a lap race has one driver per car.
+  const endurance = (state.event.sessionType || 'race') === 'endurance';
+  card.style.display = endurance ? '' : 'none';
+  if (!endurance) return;
+  const stints = state.stints || {}, crews = state.crew || {};
+  const cars = (state.drivers || []).slice().sort((a, b) => a.position - b.position);
+  const sig = cars.map((d) => d.id + d.name + (crews[d.id] || []).join('~') + (stints[d.id] || []).length).join('|');
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  box.innerHTML = cars.map((d) => {
+    const crew = crews[d.id] || [];
+    const log = stints[d.id] || [];
+    const current = log.length ? log[log.length - 1].name : d.name;
+    const names = (crew.length ? crew : [d.name]).map((n) =>
+      `<button class="btn sm ${n === current ? 'primary' : ''}" data-stint="${d.id}" data-name="${String(n).replace(/"/g, '&quot;')}">${String(n).replace(/</g, '&lt;')}</button>`).join(' ');
+    return `<div class="mrow" style="align-items:center;gap:8px;flex-wrap:wrap">
+      <b style="min-width:120px">#${esc(d.num)} ${esc(d.name)}</b>
+      <span style="font-size:12px;color:var(--ink-mute)">now: ${esc(current)}</span>
+      <span>${names}</span>
+      <button class="btn sm ghost" data-crew="${d.id}">Crew</button>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('button[data-stint]').forEach((b) => {
+    b.onclick = () => bus.action('driver.stint', { driverId: b.dataset.stint, name: b.dataset.name });
+  });
+  box.querySelectorAll('button[data-crew]').forEach((b) => {
+    b.onclick = () => {
+      const id = b.dataset.crew, cur = (crews[id] || []).join(', ');
+      const next = prompt('Co-drivers for this car (comma separated):', cur);
+      if (next !== null) bus.action('driver.crew', { driverId: id, crew: next.split(',').map((s) => s.trim()).filter(Boolean) });
+    };
+  });
+}
+
 function renderManual() {
   const box = $('#manualList');
   if (!box || !state) return;
@@ -442,6 +479,25 @@ $$('.flagbtn').forEach((b) => { b.onclick = () => bus.action('race.flag', { flag
   if (send) send.onclick = () => { const t = (inp.value || '').trim(); if (t) { bus.action('driver.broadcast', { text: t }); inp.value = ''; } };
   if (inp) inp.onkeydown = (e) => { if (e.key === 'Enter') send.click(); };
   if (clear) clear.onclick = () => bus.action('driver.broadcast', { text: '' });
+
+  // Radio soundboard: one-tap preset messages broadcast to every driver's phone. The presets
+  // are the operator's own, kept in this browser so each league can word them their way.
+  const DEFAULT_PRESETS = ['2 MIN TO START', 'GREEN IN 30s', 'BOX THIS LAP', 'TRACK LIMITS', 'SLOW DOWN', 'HOLD POSITION'];
+  const loadPresets = () => { try { return JSON.parse(localStorage.getItem('frl.radio.presets')) || DEFAULT_PRESETS; } catch (e) { return DEFAULT_PRESETS; } };
+  const drawSoundboard = () => {
+    const box = $('#sbButtons');
+    if (!box) return;
+    box.innerHTML = loadPresets().filter(Boolean).map((t) =>
+      `<button class="btn sm" data-radio="${String(t).replace(/"/g, '&quot;')}">${String(t).replace(/</g, '&lt;')}</button>`).join('');
+    box.querySelectorAll('button[data-radio]').forEach((b) => { b.onclick = () => bus.action('driver.broadcast', { text: b.dataset.radio }); });
+  };
+  const edit = $('#btnSbEdit');
+  if (edit) edit.onclick = () => {
+    const cur = loadPresets().join('\n');
+    const next = prompt('Radio presets, one per line:', cur);
+    if (next !== null) { try { localStorage.setItem('frl.radio.presets', JSON.stringify(next.split('\n').map((s) => s.trim()).filter(Boolean))); } catch (e) {} drawSoundboard(); }
+  };
+  drawSoundboard();
 }
 
 $('#btnResultCsv').onclick = () => {
@@ -3974,6 +4030,7 @@ bus.on('state', (s) => {
   renderScenes();
   renderSceneStrip();
   renderManual();
+  renderStints();
   renderMarkers();
   renderRaceControl();
   renderIncidents();

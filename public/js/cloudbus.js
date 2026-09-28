@@ -360,7 +360,9 @@ export class CloudBus {
       records: settings.records || {},
       sessions: settings.sessions || [],
       commentary: settings.commentary || {},
-      messages: settings.messages || {}
+      messages: settings.messages || {},
+      crew: settings.crew || {},
+      stints: settings.stints || {}
     };
   }
 

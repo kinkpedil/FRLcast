@@ -232,6 +232,20 @@ export function buildReport(state) {
     change: rankBefore.has(e.driverId) ? rankBefore.get(e.driverId) - e.rank : null
   }));
 
+  // Endurance driver changes: per car, who drove and (roughly) how long each stint ran.
+  const stints = state.stints || {};
+  report.stints = drivers.map((d) => {
+    const log = stints[d.id] || [];
+    if (!log.length) return null;
+    const end = race.finishedAt || Date.now();
+    const changes = log.map((s, i) => ({
+      name: s.name,
+      at: s.at,
+      durationMs: Math.max(0, (i + 1 < log.length ? log[i + 1].at : end) - s.at)
+    }));
+    return { num: d.num, car: d.name, changes };
+  }).filter(Boolean);
+
   return report;
 }
 
@@ -416,6 +430,12 @@ export function classificationHtml(report, lang = 'en') {
     ? `<p class="fast">${T.fastest}: <b>#${esc(report.fastest.num)} ${esc(report.fastest.name)}</b> — ${esc(report.fastest.bestText)}</p>`
     : '';
 
+  const dur = (ms) => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const stintsSection = (report.stints && report.stints.length)
+    ? `<h2>${id ? 'Pergantian pembalap' : 'Driver changes'}</h2><ul>` + report.stints.map((c) =>
+        `<li><b>#${esc(c.num)} ${esc(c.car)}</b>: ` + c.changes.map((s) => `${esc(s.name)} (${dur(s.durationMs)})`).join(' → ') + '</li>').join('') + '</ul>'
+    : '';
+
   return `<!doctype html><html lang="${id ? 'id' : 'en'}"><head><meta charset="utf-8">
 <title>${esc([ev.name, ev.round].filter(Boolean).join(' '))} — ${title}</title>
 <style>
@@ -456,6 +476,7 @@ export function classificationHtml(report, lang = 'en') {
     <tbody>${body}</tbody>
   </table>
   ${fastest}
+  ${stintsSection}
   <h2>${T.stewards}</h2>
   ${stewards}
   <div class="sign">

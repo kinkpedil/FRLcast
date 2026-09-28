@@ -839,8 +839,12 @@ function renderLowerThird(rows) {
   const bar = document.getElementById('l3bar');
   bar.style.background = d.color;
   bar.style.setProperty('--c', d.color);
-  setText(document.getElementById('l3kicker'), `P${d.position} · ${d.team || state.event.track}`, 'value');
-  setText(document.getElementById('l3name'), d.name, 'value');
+  // In endurance, the car may be handed between co-drivers. Show whoever is driving now,
+  // with the car/team as the kicker, so the lower third names the person on track.
+  const st = state.stints && state.stints[d.id];
+  const current = (st && st.length) ? st[st.length - 1].name : null;
+  setText(document.getElementById('l3kicker'), current ? `P${d.position} · ${d.name}` : `P${d.position} · ${d.team || state.event.track}`, 'value');
+  setText(document.getElementById('l3name'), current || d.name, 'value');
 
   const meta = document.getElementById('l3meta');
   const html = [
@@ -1893,7 +1897,8 @@ function renderSignature(rows) {
             `${(state.race.grid || []).join(',')}|` +
             `${JSON.stringify(state.overlay.h2h || null)}|` +
             `${state.overlay.theme}|${JSON.stringify(state.overlay.brand || null)}|` +
-            `${(state.standings || []).map((r) => r.driverId + r.points).join(',')}`;
+            `${(state.standings || []).map((r) => r.driverId + r.points).join(',')}|` +
+            `${JSON.stringify(state.stints || {})}`;
   for (const d of rows) {
     sig += `
 ${d.id}|${d.position}|${d.lapsDone}|${d.lastLap}|${d.bestLap}|${d.totalMs}` +

@@ -426,6 +426,11 @@ function defaultState() {
     // { id, at, fromNum, fromName, againstNum, againstName, lap, text, status, cloud }
     // status: open | reviewed | dismissed. Race control decides; a report is never a penalty.
     incidents: [],
+    // Endurance driver-swaps. crew[driverId] = [co-driver names]; stints[driverId] = a log of
+    // [{ name, at }] driver changes. The current driver of a car is the last stint's name, or
+    // the car's own name before any change. Held in the blob so a hosted event gets them too.
+    crew: {},
+    stints: {},
     // Free-text notes race control pushes to one driver's phone, keyed by driver id:
     // { [driverId]: { text, at } }. Held (not auto-expired) until changed or cleared, and
     // mirrored to a hosted event through the settings blob so it reaches phones there too.
@@ -1677,6 +1682,18 @@ export class RaceState {
         break;
       }
 
+      case 'driver.crew':
+        // The roster of co-drivers for one car (endurance). Names only.
+        s.crew = s.crew || {};
+        s.crew[a.driverId] = (a.crew || []).map((n) => String(n).trim()).filter(Boolean);
+        break;
+
+      case 'driver.stint':
+        // Log a driver change: from now, this car is driven by a.name.
+        s.stints = s.stints || {};
+        if (a.name) (s.stints[a.driverId] = s.stints[a.driverId] || []).push({ name: String(a.name).trim(), at: now });
+        break;
+
       case 'driver.broadcast': {
         // The same note to every driver's phone at once ("race starts in 2 min"). It reuses
         // the per-driver message channel, so it reaches a hosted event's phones with no
@@ -1707,6 +1724,7 @@ export class RaceState {
         s.race.pitOpen = true;
         s.race.lights = 0;
         s.messages = {};
+        s.stints = {};
         s.race.status = 'idle';
         this.newSession(now);
         for (const d of s.drivers) resetDriverTiming(d, null);
