@@ -121,6 +121,7 @@
       <button class="btn primary" id="btnCopy">Copy for Discord</button>
       <button class="btn" id="btnShow">Show the text</button>
       <button class="btn" id="btnPrint">Print or save as PDF</button>
+      <button class="btn" id="btnOfficial">Official classification</button>
     </div>
     <pre class="paste" id="paste" hidden></pre>
   </div>
@@ -137,7 +138,7 @@
  */
 import { Bus } from './js/shared.js';
 import { CloudBus, cloudOptions } from './js/cloudbus.js';
-import { buildReport, reportAsText, lapTime } from './js/race-report.js';
+import { buildReport, reportAsText, lapTime, classificationHtml } from './js/race-report.js';
 import { fmtGap } from './js/timing.js';
 
 const $ = (s) => document.querySelector(s);
@@ -147,8 +148,10 @@ const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) =>
 const cloud = cloudOptions();
 const bus = cloud ? new CloudBus('overlay', cloud) : new Bus('overlay');
 let text = '';
+let lastState = null;
 
 bus.on('state', (state) => {
+  lastState = state;
   const r = buildReport(state);
   text = reportAsText(r);
   render(r);
@@ -312,4 +315,10 @@ $('#btnShow').onclick = () => {
   $('#paste').hidden = !$('#paste').hidden;
 };
 $('#btnPrint').onclick = () => window.print();
+$('#btnOfficial').onclick = () => {
+  if (!lastState) return;
+  const lang = (localStorage.getItem('frl.lang') === 'id') ? 'id' : 'en';
+  const w = window.open('', '_blank');
+  if (w) { w.document.open(); w.document.write(classificationHtml(buildReport(lastState), lang)); w.document.close(); }
+};
 </script>
