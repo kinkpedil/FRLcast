@@ -1589,6 +1589,38 @@ const PEN_KIND = { time: 'Time', warning: 'Warning', drivethrough: 'Drive throug
  * operator can see what was already handled.
  */
 let incSeen = null;
+function renderAppeals() {
+  const card = $('#appealCard'), box = $('#appealList'), count = $('#appealCount');
+  if (!card || !box || !state) return;
+  const appeals = state.appeals || [];
+  card.hidden = appeals.length === 0;
+  if (!appeals.length) return;
+  const open = appeals.filter((a) => a.status === 'open').length;
+  if (count) count.textContent = open ? `${open} open` : 'reviewed';
+  const sig = appeals.map((a) => a.id + a.status + a.ruling).join('|');
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  const label = { open: 'OPEN', upheld: 'UPHELD', overturned: 'OVERTURNED' };
+  box.innerHTML = appeals.map((a) => {
+    const pen = (state.race.penalties || []).find((p) => p.id === a.penaltyId);
+    const penTxt = pen ? `${pen.type}${pen.seconds ? ' ' + pen.seconds + 's' : ''}${pen.reason ? ' — ' + esc(pen.reason) : ''}` : (a.penaltyId ? 'penalty' : 'no specific penalty');
+    return `<div class="incrow" style="border-bottom:1px solid var(--line);padding:8px 0">
+      <div><b>#${esc(a.num)} ${esc(a.name)}</b> <span class="tag ${a.status}">${label[a.status] || a.status}</span></div>
+      <div style="font-size:12px;color:var(--ink-mute)">vs ${penTxt}</div>
+      <div style="margin:4px 0">"${esc(a.reason)}"</div>
+      ${a.status === 'open'
+        ? `<div class="row" style="gap:6px"><button class="btn sm" data-appeal-uphold="${a.id}">Uphold</button><button class="btn sm danger" data-appeal-overturn="${a.id}">Overturn</button></div>`
+        : `<div style="font-size:12px;color:var(--ink-mute)">Ruling: ${esc(a.ruling || '(none)')}</div>`}
+    </div>`;
+  }).join('');
+  const decide = (id, status) => {
+    const ruling = prompt(`Ruling / note for this ${status === 'overturned' ? 'overturn' : 'decision'}:`, '') || '';
+    bus.action('appeal.decide', { id, status, ruling });
+  };
+  box.querySelectorAll('[data-appeal-uphold]').forEach((b) => { b.onclick = () => decide(b.dataset.appealUphold, 'upheld'); });
+  box.querySelectorAll('[data-appeal-overturn]').forEach((b) => { b.onclick = () => decide(b.dataset.appealOverturn, 'overturned'); });
+}
+
 function renderIncidents() {
   if (!state) return;
   const all = state.incidents || [];
@@ -4034,6 +4066,7 @@ bus.on('state', (s) => {
   renderMarkers();
   renderRaceControl();
   renderIncidents();
+  renderAppeals();
   renderRegistrations();
   renderCommentary();
   renderChampionship();

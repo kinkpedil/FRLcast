@@ -336,11 +336,15 @@ app.get('/api/driver/me', (req, res) => {
   const team = (d && d.team) || who.team || '';
   const rmsg = team ? teamRadio.get(teamKeyOf(team)) : null;
   const radio = (rmsg && Date.now() - rmsg.at < 120000) ? rmsg : null;
+  // This driver's most recent penalty appeal and the steward's ruling, so the app can show
+  // whether it is still open, upheld or overturned.
+  const myAppeal = d ? (s.appeals || []).find((x) => x.driverId === d.id) || null : null;
   res.json({
     ok: true,
     driver: who,
     team,
     radio,
+    appeal: myAppeal ? { status: myAppeal.status, reason: myAppeal.reason, ruling: myAppeal.ruling } : null,
     status: reg ? reg.status : 'pending',
     flag: s.race.status,
     event: { name: s.event.name, round: s.event.round, session: s.event.sessionName },
@@ -405,6 +409,20 @@ app.post('/api/driver/report', (req, res) => {
     lap: d ? d.lapsDone : null,
     text
   });
+  res.json({ ok: true });
+});
+
+app.post('/api/driver/appeal', (req, res) => {
+  const body = req.body || {};
+  const who = auth.whoIs(body.token);
+  if (!who) return res.status(401).json({ ok: false, error: 'Signed out' });
+  const reason = String(body.reason || '').trim();
+  if (!reason) return res.status(400).json({ ok: false, error: 'Say why you are appealing' });
+  const s = race.state;
+  const reg = s.registrations.find((r) => r.accountId === who.id) || null;
+  const d = reg && reg.driverId ? race.driver(reg.driverId) : null;
+  if (!d) return res.status(400).json({ ok: false, error: 'No car for this driver' });
+  race.apply({ type: 'appeal.add', driverId: d.id, penaltyId: body.penaltyId || null, reason });
   res.json({ ok: true });
 });
 

@@ -37,7 +37,8 @@ import org.json.JSONObject;
  */
 public class MainActivity extends Activity {
 
-  private EditText fHost, fNick, fNum, fTeam, fPlayerId, fPass, fRadio, fAgainst, fReport;
+  private EditText fHost, fNick, fNum, fTeam, fPlayerId, fPass, fRadio, fAgainst, fReport, fAppeal;
+  private Button appealSend;
   private TextView status, hint, formLede, nickLabel, radioLabel;
   private Button go, swap, floatBtn, permBtn, signOut, radioSend, reportSend;
   private LinearLayout sizeRow, settings, form, radioBox, reportBox;
@@ -215,6 +216,26 @@ public class MainActivity extends Activity {
     reportRow.addView(reportSend);
     reportBox.addView(reportRow);
     reportBox.addView(fine("Only race control sees this. They decide what happens: a report is not a penalty."));
+
+    // Appeal a penalty: the reason goes to the stewards, who uphold or overturn it.
+    LinearLayout appealBox = new LinearLayout(this);
+    appealBox.setOrientation(LinearLayout.VERTICAL);
+    root.addView(appealBox);
+    appealBox.addView(label("APPEAL A PENALTY"));
+    LinearLayout appealRow = new LinearLayout(this);
+    appealRow.setOrientation(LinearLayout.HORIZONTAL);
+    fAppeal = field("Why you are appealing", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+    appealRow.addView(fAppeal, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+    appealSend = new Button(this);
+    appealSend.setText("Appeal");
+    appealSend.setAllCaps(false);
+    appealSend.setTextSize(15);
+    appealSend.setTextColor(Color.WHITE);
+    appealSend.setBackgroundColor(0xFFB3001B);
+    appealSend.setOnClickListener(v -> sendAppeal());
+    appealRow.addView(appealSend);
+    appealBox.addView(appealRow);
+    appealBox.addView(fine("Appeals your most recent penalty. The stewards decide; an overturned penalty is removed."));
 
     permBtn = button("Allow drawing over other apps", 0xFFFFD60A, Color.parseColor("#05070a"));
     permBtn.setOnClickListener(v -> askOverlay());
@@ -637,6 +658,33 @@ public class MainActivity extends Activity {
       ui.post(() -> {
         radioSend.setEnabled(true);
         if (good) fRadio.setText("");
+        toast(m);
+      });
+    }).start();
+  }
+
+  private void sendAppeal() {
+    final String reason = fAppeal.getText().toString().trim();
+    if (reason.isEmpty()) { toast("Say why you are appealing"); return; }
+    final String host = Api.host(this);
+    final String token = Api.token(this);
+    if (host.isEmpty() || token.isEmpty()) return;
+    appealSend.setEnabled(false);
+    new Thread(() -> {
+      String msg;
+      boolean ok = false;
+      try {
+        JSONObject o = Backend.forTarget(host).appeal(token, reason);
+        ok = o.optBoolean("ok");
+        msg = ok ? "Appeal sent to the stewards" : o.optString("error", "Could not send");
+      } catch (Exception e) {
+        msg = "Cannot reach the server";
+      }
+      final String m = msg;
+      final boolean good = ok;
+      ui.post(() -> {
+        appealSend.setEnabled(true);
+        if (good) fAppeal.setText("");
         toast(m);
       });
     }).start();

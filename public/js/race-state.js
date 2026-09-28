@@ -426,6 +426,10 @@ function defaultState() {
     // { id, at, fromNum, fromName, againstNum, againstName, lap, text, status, cloud }
     // status: open | reviewed | dismissed. Race control decides; a report is never a penalty.
     incidents: [],
+    // Penalty appeals a driver filed from the app. Each: { id, penaltyId, driverId, num,
+    // name, reason, at, status: 'open'|'upheld'|'overturned', ruling, cloud }. A steward
+    // upholds (penalty stands) or overturns (the penalty is dropped) with a note.
+    appeals: [],
     // Endurance driver-swaps. crew[driverId] = [co-driver names]; stints[driverId] = a log of
     // [{ name, at }] driver changes. The current driver of a car is the last stint's name, or
     // the car's own name before any change. Held in the blob so a hosted event gets them too.
@@ -1682,6 +1686,42 @@ export class RaceState {
         break;
       }
 
+      case 'appeal.add': {
+        // A driver appeals a penalty. Attach to a specific penalty if given, else the
+        // driver's most recent applied, un-appealed one. Deduped by cloud id from a hosted
+        // event so the same appeal is not added twice.
+        s.appeals = s.appeals || [];
+        if (a.cloud && s.appeals.some((x) => x.cloud === a.cloud)) break;
+        const d = this.driver(a.driverId);
+        let pen = a.penaltyId ? (s.race.penalties || []).find((p) => p.id === a.penaltyId) : null;
+        if (!pen) {
+          pen = (s.race.penalties || []).filter((p) => p.driverId === a.driverId && p.status === 'applied')
+            .filter((p) => !s.appeals.some((x) => x.penaltyId === p.id))
+            .sort((x, y) => (y.at || 0) - (x.at || 0))[0] || null;
+        }
+        s.appeals.unshift({
+          id: a.cloud || `ap${Date.now()}${Math.floor(Math.random() * 1000)}`,
+          penaltyId: pen ? pen.id : null, driverId: a.driverId,
+          num: d ? d.num : (a.num || ''), name: d ? d.name : (a.name || ''),
+          reason: (a.reason || '').slice(0, 300), at: now, status: 'open', ruling: '', cloud: a.cloud || null
+        });
+        break;
+      }
+
+      case 'appeal.decide': {
+        // A steward rules on an appeal. Overturning drops the penalty.
+        const ap = (s.appeals || []).find((x) => x.id === a.id);
+        if (ap && ap.status === 'open') {
+          ap.status = a.status === 'overturned' ? 'overturned' : 'upheld';
+          ap.ruling = (a.ruling || '').slice(0, 300);
+          if (ap.status === 'overturned' && ap.penaltyId) {
+            const pen = (s.race.penalties || []).find((p) => p.id === ap.penaltyId);
+            if (pen) pen.status = 'dropped';
+          }
+        }
+        break;
+      }
+
       case 'driver.crew':
         // The roster of co-drivers for one car (endurance). Names only.
         s.crew = s.crew || {};
@@ -1725,6 +1765,7 @@ export class RaceState {
         s.race.lights = 0;
         s.messages = {};
         s.stints = {};
+        s.appeals = [];
         s.race.status = 'idle';
         this.newSession(now);
         for (const d of s.drivers) resetDriverTiming(d, null);

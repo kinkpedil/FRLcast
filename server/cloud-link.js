@@ -417,19 +417,27 @@ export class CloudLink {
   async pull() {
     if (!this.event) return;
     // Look again now and then: the owner may have run the migration while this was linked.
-    if ((this.noCheckin || this.noIncidents) && Date.now() - (this.noAt || 0) > 10 * 60 * 1000) {
-      this.noCheckin = false; this.noIncidents = false;
+    if ((this.noCheckin || this.noIncidents || this.noAppeals) && Date.now() - (this.noAt || 0) > 10 * 60 * 1000) {
+      this.noCheckin = false; this.noIncidents = false; this.noAppeals = false;
     }
     const ev = this.event.id;
     const regCols = 'id,account_id,nick,num,team,status,driver_id,created_at' + (this.noCheckin ? '' : ',checked_in_at');
-    const [regs, radio, reports] = await Promise.all([
+    const [regs, radio, reports, appeals] = await Promise.all([
       this.from('registrations').select(regCols).eq('event_id', ev).order('created_at', { ascending: true }),
       this.from('team_radio').select('id,team,from_nick,from_num,text,created_at')
         .eq('event_id', ev).gt('created_at', this.radioCursor).order('created_at', { ascending: true }),
       this.noIncidents ? Promise.resolve({ data: null, error: null })
         : this.from('incident_reports').select('id,from_nick,from_num,against_num,lap,text,status,created_at')
+          .eq('event_id', ev).order('created_at', { ascending: false }).limit(100),
+      this.noAppeals ? Promise.resolve({ data: null, error: null })
+        : this.from('appeals').select('id,num,name,reason,status,created_at')
           .eq('event_id', ev).order('created_at', { ascending: false }).limit(100)
     ]);
+    if (appeals.error && this.missing(appeals.error)) {
+      this.noAppeals = true; this.noAt = Date.now();   // run the appeals migration
+    } else if (appeals.data) {
+      this.applyAppeals(appeals.data);
+    }
     if (regs.error && !this.noCheckin && this.missing(regs.error)) {
       this.noCheckin = true; this.noAt = Date.now();   // run the league migration for check-in times
       return this.pull();
@@ -526,8 +534,30 @@ export class CloudLink {
     this.race.apply({ type: 'incident.sync', rows });
   }
 
+  /** Penalty appeals drivers filed through the hosted event. Attached to a local penalty by
+   *  driver (the hosted penalty id does not map to a local one), status decided by the console. */
+  applyAppeals(data) {
+    const known = new Set((this.race.state.appeals || []).filter((x) => x.cloud).map((x) => x.cloud));
+    const byNum = new Map(this.race.state.drivers.map((d) => [String(d.num), d.id]));
+    for (const r of data) {
+      if (known.has(r.id)) continue;
+      const driverId = byNum.get(String(r.num)) || null;
+      if (!this.quiet) this.race.apply({ type: 'feed.push', kind: 'penalty', text: `APPEAL FROM #${r.num} ${r.name || ''}` });
+      this.race.apply({ type: 'appeal.add', cloud: r.id, driverId, num: r.num, name: r.name, reason: r.reason });
+    }
+  }
+
   /** Accept / refuse / forget a hosted sign-in. Returns true when it was one. */
   intercept(a) {
+    if (a && a.type === 'appeal.decide' && this.event && !this.noAppeals) {
+      const ap = (this.race.state.appeals || []).find((x) => x.id === a.id);
+      if (ap && ap.cloud) {
+        this.race.apply(a);
+        this.from('appeals').update({ status: a.status === 'overturned' ? 'overturned' : 'upheld', ruling: (a.ruling || '').slice(0, 300) }).eq('id', ap.cloud)
+          .then(({ error }) => { if (error) this.lastError = `Could not save the appeal ruling: ${error.message}`; });
+        return true;
+      }
+    }
     if (a && a.type === 'incident.set' && this.event && !this.noIncidents) {
       const r = (this.race.state.incidents || []).find((x) => x.id === a.id);
       if (r && r.cloud) {

@@ -54,6 +54,9 @@ public interface Backend {
    */
   JSONObject report(String token, String againstNum, String text) throws Exception;
 
+  /** Appeal a penalty: the reason goes to the stewards, who uphold or overturn it. */
+  JSONObject appeal(String token, String reason) throws Exception;
+
   /** For the one error message a driver ever sees about connectivity. */
   String describe();
 
@@ -115,6 +118,11 @@ public interface Backend {
     @Override public JSONObject report(String token, String againstNum, String text) throws Exception {
       return Api.post(url("/api/driver/report"), new JSONObject()
           .put("token", token).put("against", againstNum).put("text", text));
+    }
+
+    @Override public JSONObject appeal(String token, String reason) throws Exception {
+      return Api.post(url("/api/driver/appeal"), new JSONObject()
+          .put("token", token).put("reason", reason));
     }
 
     @Override public String describe() { return host; }
@@ -188,6 +196,17 @@ public interface Backend {
       if (!o.optBoolean("ok") && (err.contains("driver_report") || err.contains("function"))) {
         return new JSONObject().put("ok", false)
             .put("error", "This event cannot take reports yet. Tell race control directly.");
+      }
+      return o;
+    }
+
+    @Override public JSONObject appeal(String token, String reason) throws Exception {
+      JSONObject o = rpc("driver_appeal", new JSONObject()
+          .put("p_token", token).put("p_reason", reason));
+      String err = o.optString("error", "").toLowerCase();
+      if (!o.optBoolean("ok") && (err.contains("driver_appeal") || err.contains("function"))) {
+        return new JSONObject().put("ok", false)
+            .put("error", "This event cannot take appeals yet. Tell race control directly.");
       }
       return o;
     }
