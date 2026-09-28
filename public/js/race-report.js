@@ -466,3 +466,78 @@ export function classificationHtml(report, lang = 'en') {
 </div>
 </body></html>`;
 }
+
+/**
+ * Printable achievement certificates for the podium, one A4 landscape page each, from the
+ * same report. The winner (and optionally P2/P3) gets a decorated certificate with their
+ * name, placement, the event and the date, plus signature lines. Open in a new window and
+ * print or save as PDF. Bilingual EN/ID.
+ */
+export function certificateHtml(report, lang = 'en', positions = [1, 2, 3]) {
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const id = lang === 'id';
+  const ev = report.event || {};
+  const finishers = (report.classification || []).filter((r) => !r.dnf);
+  const medal = { 1: '🥇', 2: '🥈', 3: '🥉' };
+  const gold = { 1: '#c9a227', 2: '#8c8c96', 3: '#b06a2c' };
+  const ordinal = (n) => id ? `Juara ${n}` : (n === 1 ? '1st Place' : n === 2 ? '2nd Place' : n === 3 ? '3rd Place' : `${n}th Place`);
+  const when = new Date().toLocaleDateString(id ? 'id-ID' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const pages = positions
+    .map((pos) => finishers.find((r) => r.position === pos))
+    .filter(Boolean)
+    .map((r) => {
+      const c = gold[r.position] || '#c9a227';
+      const where = [ev.round, ev.track].filter(Boolean).join(' · ');
+      return `<section class="cert" style="--c:${c}">
+        <div class="frame">
+          <div class="kick">${esc(ev.name || 'FRLcast')}</div>
+          <div class="medal">${medal[r.position] || '🏆'}</div>
+          <div class="title">${id ? 'SERTIFIKAT PENGHARGAAN' : 'CERTIFICATE OF ACHIEVEMENT'}</div>
+          <div class="pre">${id ? 'Diberikan kepada' : 'This is proudly presented to'}</div>
+          <div class="name">${esc(r.name)}</div>
+          <div class="place">${ordinal(r.position)}${r.num ? ` · #${esc(r.num)}` : ''}</div>
+          <div class="desc">${id ? 'atas pencapaian di' : 'for the achievement at'} <b>${esc(where || ev.name || '')}</b></div>
+          <div class="sign">
+            <div class="line">${id ? 'Race Director' : 'Race Director'}</div>
+            <div class="date">${esc(when)}</div>
+            <div class="line">${id ? 'Penyelenggara' : 'Organiser'}</div>
+          </div>
+          <div class="foot">FRLcast · frlcast.my.id</div>
+        </div>
+      </section>`;
+    }).join('');
+
+  const empty = `<section class="cert"><div class="frame"><div class="title">${id ? 'Belum ada pemenang' : 'No winner yet'}</div><div class="desc">${id ? 'Finish balapan dulu.' : 'Finish the race first.'}</div></div></section>`;
+
+  return `<!doctype html><html lang="${id ? 'id' : 'en'}"><head><meta charset="utf-8">
+<title>${esc(ev.name || 'FRLcast')} — ${id ? 'Sertifikat' : 'Certificate'}</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Georgia, "Times New Roman", serif; color: #1a1a1a; }
+  .cert { width: 297mm; height: 210mm; padding: 12mm; page-break-after: always; display: flex; }
+  .frame {
+    flex: 1; border: 3px solid var(--c, #c9a227); border-radius: 6px; position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    padding: 18mm 24mm; box-shadow: inset 0 0 0 6px #fff, inset 0 0 0 8px var(--c, #c9a227);
+    background:
+      radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--c) 10%, #fff), #fff 60%);
+  }
+  .kick { position: absolute; top: 14mm; font-size: 15px; letter-spacing: .28em; text-transform: uppercase; color: #555; }
+  .medal { font-size: 64px; line-height: 1; }
+  .title { font-size: 30px; letter-spacing: .18em; font-weight: 700; color: var(--c, #c9a227); margin-top: 8px; }
+  .pre { font-size: 16px; color: #666; margin-top: 20px; font-style: italic; }
+  .name { font-size: 52px; font-weight: 700; margin: 6px 0; border-bottom: 2px solid var(--c, #c9a227); padding: 0 20px 8px; }
+  .place { font-size: 22px; letter-spacing: .12em; text-transform: uppercase; color: var(--c, #c9a227); font-weight: 700; margin-top: 12px; }
+  .desc { font-size: 17px; color: #333; margin-top: 12px; }
+  .sign { position: absolute; bottom: 16mm; left: 24mm; right: 24mm; display: flex; align-items: flex-end; justify-content: space-between; }
+  .sign .line { width: 34%; border-top: 1px solid #444; padding-top: 5px; font-size: 12px; color: #555; }
+  .sign .date { font-size: 13px; color: #333; }
+  .foot { position: absolute; bottom: 7mm; font-size: 10px; letter-spacing: .1em; color: #999; }
+  @media screen { body { background: #e9ecf1; padding: 16px; } .cert { margin: 0 auto 16px; background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,.2); } }
+</style></head>
+<body onload="setTimeout(function(){window.print();},300)">
+${pages || empty}
+</body></html>`;
+}

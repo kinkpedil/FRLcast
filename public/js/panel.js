@@ -8,7 +8,7 @@ import { Detector } from './detector.js';
 import { SETTING_FIELDS, applyVisionSettings, toInputValue } from './settings.js';
 import { Speaker } from './speaker.js';
 import { ObsWs } from './obsws.js';
-import { buildReport, recapText, classificationHtml } from './race-report.js';
+import { buildReport, recapText, classificationHtml, certificateHtml } from './race-report.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -462,6 +462,17 @@ $('#btnResultCsv').onclick = () => {
   if (cb) cb.onclick = () => {
     const lang = (localStorage.getItem('frl.lang') === 'id') ? 'id' : 'en';
     const html = classificationHtml(buildReport(state), lang);
+    const w = window.open('', '_blank');
+    if (w) { w.document.open(); w.document.write(html); w.document.close(); }
+  };
+}
+
+// Printable podium certificates for the round winners.
+{
+  const cb = $('#btnCertPdf');
+  if (cb) cb.onclick = () => {
+    const lang = (localStorage.getItem('frl.lang') === 'id') ? 'id' : 'en';
+    const html = certificateHtml(buildReport(state), lang);
     const w = window.open('', '_blank');
     if (w) { w.document.open(); w.document.write(html); w.document.close(); }
   };
