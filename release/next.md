@@ -6,8 +6,4 @@
 -->
 ## en
 
-- Winner certificates: a printable A4 certificate for each podium finisher (gold, silver, bronze) with the driver's name, placement, event and date. Open from "Certificates" on Race control or the report page, then print or save as PDF.
-
 ## id
-
-- Sertifikat pemenang: sertifikat A4 siap cetak untuk tiap peraih podium (emas, perak, perunggu) berisi nama driver, peringkat, event, dan tanggal. Buka dari "Certificates" di Race control atau halaman report, lalu cetak atau simpan sebagai PDF.
