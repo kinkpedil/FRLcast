@@ -109,6 +109,16 @@
                 <span id="sbButtons" style="display:contents"></span>
                 <button class="btn sm ghost" id="btnSbEdit" title="Edit the quick radio presets">Edit</button>
               </div>
+              <div id="sbEditor" hidden style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2,rgba(255,255,255,.03))">
+                <p class="hint" style="margin-bottom:8px">One box per button. Type anything you want, add or remove buttons, then Save.</p>
+                <div id="sbRows" style="display:flex;flex-direction:column;gap:6px"></div>
+                <div class="row" style="gap:8px;margin-top:8px">
+                  <button class="btn sm ghost" id="btnSbAdd">+ Add button</button>
+                  <span style="flex:1"></span>
+                  <button class="btn sm ghost" id="btnSbCancel">Cancel</button>
+                  <button class="btn sm primary" id="btnSbSave">Save</button>
+                </div>
+              </div>
             </div>
           </div>
 

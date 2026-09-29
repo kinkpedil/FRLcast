@@ -491,11 +491,46 @@ $$('.flagbtn').forEach((b) => { b.onclick = () => bus.action('race.flag', { flag
       `<button class="btn sm" data-radio="${String(t).replace(/"/g, '&quot;')}">${String(t).replace(/</g, '&lt;')}</button>`).join('');
     box.querySelectorAll('button[data-radio]').forEach((b) => { b.onclick = () => bus.action('driver.broadcast', { text: b.dataset.radio }); });
   };
+  const savePresets = (list) => { try { localStorage.setItem('frl.radio.presets', JSON.stringify(list)); } catch (e) {} };
+
+  // Inline editor: one text box per button, freely retyped, plus add/remove — no native
+  // prompt() dialog, so every preset's own wording is visible and editable at once.
+  const editorBox = $('#sbEditor'), rowsBox = $('#sbRows');
+  const addRow = (value) => {
+    if (!rowsBox) return;
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.style.gap = '6px';
+    row.innerHTML = `<input type="text" class="sb-row-input" style="flex:1" value="${String(value || '').replace(/"/g, '&quot;')}">` +
+      `<button class="btn sm ghost" data-sb-remove title="Remove this button">✕</button>`;
+    row.querySelector('[data-sb-remove]').onclick = () => row.remove();
+    rowsBox.appendChild(row);
+    return row;
+  };
+  const openEditor = () => {
+    if (!editorBox || !rowsBox) return;
+    rowsBox.innerHTML = '';
+    loadPresets().forEach((t) => addRow(t));
+    editorBox.hidden = false;
+    if ($('#soundboard')) $('#soundboard').hidden = true;
+  };
+  const closeEditor = () => {
+    if (editorBox) editorBox.hidden = true;
+    if ($('#soundboard')) $('#soundboard').hidden = false;
+  };
+
   const edit = $('#btnSbEdit');
-  if (edit) edit.onclick = () => {
-    const cur = loadPresets().join('\n');
-    const next = prompt('Radio presets, one per line:', cur);
-    if (next !== null) { try { localStorage.setItem('frl.radio.presets', JSON.stringify(next.split('\n').map((s) => s.trim()).filter(Boolean))); } catch (e) {} drawSoundboard(); }
+  if (edit) edit.onclick = openEditor;
+  const add = $('#btnSbAdd');
+  if (add) add.onclick = () => { const row = addRow(''); if (row) row.querySelector('input').focus(); };
+  const cancel = $('#btnSbCancel');
+  if (cancel) cancel.onclick = closeEditor;
+  const save = $('#btnSbSave');
+  if (save) save.onclick = () => {
+    const list = rowsBox ? [...rowsBox.querySelectorAll('.sb-row-input')].map((el) => el.value.trim()).filter(Boolean) : [];
+    savePresets(list);
+    drawSoundboard();
+    closeEditor();
   };
   drawSoundboard();
 }
