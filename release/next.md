@@ -6,4 +6,8 @@
 -->
 ## en
 
+- Added a proper FRLcast icon: browser tabs (console, live timing, control room, report) now show a real favicon instead of a blank page icon.
+
 ## id
+
+- Menambahkan ikon FRLcast yang sebenarnya: tab browser (console, live timing, control room, report) kini menampilkan favicon asli, bukan ikon halaman kosong.
