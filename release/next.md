@@ -6,4 +6,8 @@
 -->
 ## en
 
+- Radio soundboard presets now edit inline, one text box per button — add, remove or retype any of them freely, no more single-textarea prompt.
+
 ## id
+
+- Preset radio soundboard kini diedit langsung di panel, satu kotak teks per tombol — tambah, hapus, atau ganti teksnya sebebas mungkin, tanpa lagi lewat kotak dialog tunggal.
