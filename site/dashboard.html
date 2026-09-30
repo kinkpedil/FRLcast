@@ -8,91 +8,138 @@
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
-<title>Your events</title>
+<title>Events · FRLcast</title>
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0b0d11">
 <link rel="stylesheet" href="/styles.css">
 <style>
-  .wrap { padding: 40px 0 96px; }
-  .head { display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
-  .who { font-family: var(--mono); font-size: .8125rem; color: var(--ink-3); }
+  /*
+   * A work screen, not a landing page: an operator opens this twenty minutes before a race
+   * to find a code, copy an OBS link or let a driver in. So it is sized like a tool (15px
+   * text, 36px controls, one column of cards), the events come first and the form to make
+   * a new one stays folded away until it is asked for.
+   */
+  body { font-size: 15px; }
+  .shell { max-width: 1080px; }
 
-  .panel {
-    border: 1px solid var(--line); border-radius: var(--r-lg);
-    background: var(--panel); padding: 24px 22px; margin-top: 20px;
+  .top { position: sticky; top: 0; z-index: 40; height: 60px; display: flex; align-items: center;
+         background: rgba(11,13,17,.9); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+  .top .shell { display: flex; align-items: center; gap: 16px; }
+  .mark { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 700; font-size: 1rem; letter-spacing: -.01em; }
+  .mark i { width: 26px; height: 26px; border-radius: 7px; background: var(--accent); color: var(--accent-ink);
+            display: grid; place-items: center; font: 800 .875rem/1 var(--sans); font-style: normal; }
+  .top .nav { gap: 12px; }
+  .who { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+         font-size: .8125rem; color: var(--ink-3); }
+  @media (max-width: 640px) { .who { display: none; } }
+
+  .btn { height: 36px; padding: 0 14px; font-size: .875rem; border-radius: 8px; }
+  .btn-sm { height: 30px; padding: 0 11px; font-size: .8125rem; border-radius: 7px; }
+  .btn svg { width: 14px; height: 14px; flex: none; }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  main { padding: 36px 0 96px; }
+
+  .pagehead { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+  .pagehead h1 { font-size: 1.625rem; letter-spacing: -.02em; line-height: 1.2; }
+  .pagehead .count { margin-top: 2px; font-size: .875rem; color: var(--ink-3); }
+
+  .card { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+  .card + .card { margin-top: 16px; }
+
+  /* ---------------------------------------------------------------- new event */
+
+  .create { margin-bottom: 24px; padding: 20px 24px 22px; }
+  .create-head { margin-bottom: 18px; }
+  .create-head h2 { font-size: 1.0625rem; letter-spacing: -.01em; line-height: 1.3; }
+  .create-head p { margin-top: 4px; font-size: .8125rem; color: var(--ink-3); }
+  .fields { display: grid; gap: 14px 16px; grid-template-columns: minmax(0,1fr); }
+  @media (min-width: 720px) {
+    .fields { grid-template-columns: repeat(6, minmax(0,1fr)); }
+    .f-name { grid-column: span 4; } .f-code { grid-column: span 2; }
+    .f-round, .f-track { grid-column: span 2; } .f-laps { grid-column: span 2; }
   }
-  .panel h2 { font-size: 1.25rem; margin-bottom: 4px; }
-  .panel .body { font-size: .9375rem; margin-bottom: 18px; }
+  .f > span { display: block; margin-bottom: 6px; font-size: .8125rem; font-weight: 500; color: var(--ink-2); }
+  .f input { width: 100%; height: 40px; padding: 0 12px; font: 400 .9375rem var(--sans); color: var(--ink);
+             background: var(--bg); border: 1px solid var(--line-strong); border-radius: 8px; }
+  .f input::placeholder { color: var(--ink-3); }
+  .f input:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  .f-code input { font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+  .f small { display: block; margin-top: 6px; font-size: .75rem; color: var(--ink-3); line-height: 1.4; }
+  .create-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
-  .row { display: grid; gap: 14px; grid-template-columns: minmax(0,1fr); }
-  @media (min-width: 720px) { .row.two { grid-template-columns: repeat(2, minmax(0,1fr)); }
-                              .row.three { grid-template-columns: 1fr 1fr 1fr; } }
-
-  label.f { display: block; }
-  label.f > span {
-    display: block; margin-bottom: 6px;
-    font-family: var(--mono); font-size: .6875rem; letter-spacing: .14em;
-    text-transform: uppercase; color: var(--ink-3);
-  }
-  label.f input, label.f select {
-    width: 100%; height: 44px; padding: 0 13px;
-    font: 400 .9375rem var(--sans); color: var(--ink);
-    background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--r-md);
-  }
-  label.f input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-
-  .msg { margin: 14px 0 0; padding: 11px 13px; border-radius: var(--r-md); font-size: .875rem; line-height: 1.5; }
+  .msg { margin-top: 14px; padding: 10px 12px; border-radius: 8px; font-size: .875rem; line-height: 1.5; }
   .msg.bad { background: rgba(255,69,58,.12); color: #ff9a80; }
-  .msg.ok  { background: rgba(0,224,164,.1); color: var(--accent); }
 
-  .event { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--panel); padding: 22px; margin-top: 16px; }
-  .event header { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between; }
-  .event h3 { font-size: 1.125rem; }
-  .code {
-    font-family: var(--mono); font-size: 1.25rem; font-weight: 500;
-    letter-spacing: .1em; color: var(--accent);
-  }
-  .meta { font-size: .875rem; color: var(--ink-2); margin-top: 4px; }
+  /* ---------------------------------------------------------------- one event */
 
-  .urls { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
-  .row-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
-  .url { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
-  .url .tag {
-    flex: 0 0 52px;
-    font-family: var(--mono); font-size: .625rem; letter-spacing: .1em;
-    color: var(--ink-3);
-  }
-  .url code {
-    flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap;
-    font-family: var(--mono); font-size: .75rem; color: var(--ink-2);
-    background: var(--bg); border: 1px solid var(--line);
-    border-radius: var(--r-sm); padding: 8px 10px;
-  }
+  .ev-head { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 20px 24px; }
+  .ev-title { flex: 1 1 280px; min-width: 0; }
+  .ev-title h3 { font-size: 1.0625rem; font-weight: 650; letter-spacing: -.01em; line-height: 1.3;
+                 overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .facts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 6px;
+           font-size: .8125rem; color: var(--ink-2); }
+  .facts .none { color: var(--ink-3); }
+  .flag { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px 0 7px;
+          border: 1px solid var(--line); border-radius: 6px; font-size: .75rem; font-weight: 500; color: var(--ink); }
+  .flag::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--c, var(--ink-3)); }
+  .ev-actions { display: flex; align-items: center; gap: 10px; }
+  .code { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px 0 12px;
+          border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg); cursor: pointer;
+          font: 600 .9375rem/1 var(--mono); letter-spacing: .08em; color: var(--accent); }
+  .code:hover { border-color: rgba(255,255,255,.28); }
+  .code svg { width: 13px; height: 13px; color: var(--ink-3); }
 
-  .queue { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
-  .queue h4 { margin: 0 0 10px; font-size: .8125rem; font-family: var(--mono);
-              letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
-  .sig { display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
-         padding: 9px 0; border-bottom: 1px solid var(--line); font-size: .9375rem; }
+  .ev-body { display: grid; grid-template-columns: minmax(0,1fr); border-top: 1px solid var(--line); }
+  @media (min-width: 880px) { .ev-body { grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); }
+                              .ev-body > section + section { border-left: 1px solid var(--line); border-top: 0; } }
+  .ev-body > section { padding: 16px 24px 20px; min-width: 0; }
+  .ev-body > section + section { border-top: 1px solid var(--line); }
+  .sec-head { display: flex; align-items: center; gap: 8px; height: 30px; margin-bottom: 6px;
+              font-size: .8125rem; font-weight: 600; color: var(--ink-2); }
+  .badge { height: 20px; padding: 0 7px; border-radius: 10px; display: inline-flex; align-items: center;
+           font-size: .6875rem; font-weight: 600; background: rgba(0,224,164,.14); color: var(--accent); }
+
+  .link { display: grid; grid-template-columns: 136px minmax(0,1fr) auto; align-items: center; gap: 12px;
+          min-height: 44px; border-bottom: 1px solid var(--line); }
+  .link:last-child { border-bottom: 0; }
+  .link .name { font-size: .8125rem; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .link .url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+               font: 400 .75rem var(--mono); color: var(--ink-3); }
+  .link .do { display: flex; gap: 6px; }
+  .icon-btn { width: 30px; padding: 0; }
+
+  .sig { display: grid; grid-template-columns: 40px minmax(0,1fr) auto; align-items: center; gap: 12px;
+         min-height: 48px; border-bottom: 1px solid var(--line); }
   .sig:last-child { border-bottom: 0; }
-  .sig b { font-weight: 600; }
-  .sig .num { font-family: var(--mono); color: var(--ink-3); }
-  .sig .team {
-    font-size: .75rem; letter-spacing: .06em; text-transform: uppercase;
-    color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px;
+  .sig .num { font: 500 .8125rem var(--mono); color: var(--ink-3); }
+  .sig .who2 { min-width: 0; }
+  .sig .nick { font-size: .9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sig .team { font-size: .75rem; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sig .do { display: flex; gap: 6px; }
+  .sig .state { font-size: .75rem; color: var(--ink-3); }
+  .sig .state.approved { color: var(--accent); }
+  .empty { padding: 10px 0 4px; font-size: .875rem; color: var(--ink-3); line-height: 1.5; }
+  .empty b { font-family: var(--mono); font-weight: 600; color: var(--ink-2); letter-spacing: .06em; }
+
+
+  .loading { padding: 40px 0; font-size: .875rem; color: var(--ink-3); }
+
+  @media (max-width: 560px) {
+    .ev-head, .ev-body > section, .create { padding-left: 16px; padding-right: 16px; }
+    .ev-actions { width: 100%; } .ev-actions .btn-primary { flex: 1; }
+    .link { grid-template-columns: minmax(0,1fr) auto; gap: 2px 12px; padding: 8px 0; }
+    .link .name { grid-column: 1; } .link .url { grid-column: 1; grid-row: 2; } .link .do { grid-row: 1 / 3; grid-column: 2; }
   }
-  .sig .spacer { flex: 1; }
-  .sig .state { font-family: var(--mono); font-size: .75rem; color: var(--ink-3); }
-  .empty { font-size: .875rem; color: var(--ink-3); }
 
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 
-<header class="header">
+<header class="top">
   <div class="shell">
-    <a class="brand" href="/"><span class="live" aria-hidden="true"></span>FRL BROADCAST</a>
+    <a class="mark" href="/"><i aria-hidden="true">F</i>FRLcast</a>
     <nav class="nav">
       <span class="who" id="who"></span>
       <button class="btn btn-ghost btn-sm" id="out" type="button">Sign out</button>
@@ -100,47 +147,53 @@
   </div>
 </header>
 
-<main class="wrap">
+<main>
   <div class="shell">
 
-    <div id="loading" class="empty">Loading your events…</div>
+    <p id="loading" class="loading">Loading your events…</p>
 
     <div id="app" hidden>
-      <div class="head">
-        <h1>Your events</h1>
+      <div class="pagehead">
+        <div>
+          <h1>Events</h1>
+          <p class="count" id="count" data-i18n-skip></p>
+        </div>
+        <button class="btn btn-primary" id="newBtn" type="button">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
+          New event
+        </button>
       </div>
-      <p class="lede">One event is one room. Two leagues racing the same night never see each
-        other's timing.</p>
 
-      <div class="panel">
-        <h2>New event</h2>
-        <p class="body">The code is what drivers type into the app and what the overlays take
-          in their URL. Keep it unambiguous: no letter O next to a zero.</p>
-        <form id="make">
-          <div class="row two">
-            <label class="f"><span>Event name</span>
-              <input id="fName" maxlength="60" placeholder="NUSANTARA DRIFT LEAGUE" required>
-            </label>
-            <label class="f"><span>Code</span>
-              <input id="fCode" maxlength="12" placeholder="NDL3" required
-                     pattern="[A-Za-z0-9]{4,12}" title="4 to 12 letters and digits">
-            </label>
-          </div>
-          <div class="row three" style="margin-top:14px">
-            <label class="f"><span>Round</span>
-              <input id="fRound" maxlength="30" placeholder="ROUND 1">
-            </label>
-            <label class="f"><span>Track</span>
-              <input id="fTrack" maxlength="40" placeholder="EBISU MINAMI">
-            </label>
-            <label class="f"><span>Total laps</span>
-              <input id="fLaps" type="number" min="0" max="999" value="24">
-            </label>
-          </div>
-          <p class="msg bad" id="err" hidden></p>
-          <button class="btn btn-primary" id="go" type="submit" style="margin-top:16px">Create event</button>
-        </form>
-      </div>
+      <form class="card create" id="make" hidden>
+        <div class="create-head">
+          <h2>New event</h2>
+          <p>Each event gets its own code for the driver app and its own OBS links.</p>
+        </div>
+        <div class="fields">
+          <label class="f f-name"><span>Event name</span>
+            <input id="fName" maxlength="60" placeholder="NUSANTARA DRIFT LEAGUE" required>
+          </label>
+          <label class="f f-code"><span>Code</span>
+            <input id="fCode" maxlength="12" placeholder="NDL3" required autocomplete="off"
+                   pattern="[A-Za-z0-9]{4,12}" title="4 to 12 letters and digits">
+            <small>Drivers type this into the app. 4 to 12 letters and digits.</small>
+          </label>
+          <label class="f f-round"><span>Round</span>
+            <input id="fRound" maxlength="30" placeholder="ROUND 1">
+          </label>
+          <label class="f f-track"><span>Track</span>
+            <input id="fTrack" maxlength="40" placeholder="EBISU MINAMI">
+          </label>
+          <label class="f f-laps"><span>Total laps</span>
+            <input id="fLaps" type="number" min="0" max="999" value="24">
+          </label>
+        </div>
+        <p class="msg bad" id="err" hidden></p>
+        <div class="create-foot">
+          <button class="btn btn-ghost" id="cancel" type="button">Cancel</button>
+          <button class="btn btn-primary" id="go" type="submit">Create event</button>
+        </div>
+      </form>
 
       <div id="events"></div>
     </div>
@@ -162,28 +215,53 @@ const $ = (s) => document.querySelector(s);
 /*
  * A word at a time, for the lines that are assembled rather than written.
  *
- * "ROUND 1 · EBISU MINAMI · 12 laps · flag: idle" is one string with a number in the middle
- * of it, so it can never match a dictionary keyed by sentences. The fix is to translate the
- * words and let the interpolation put them back together — not to add every possible
- * combination of lap count and flag to the dictionary.
+ * "ROUND 1, 12 laps" is built around a number, so it can never match a dictionary keyed by
+ * sentences. The words are translated as they are built and the element is marked
+ * data-i18n-skip so the page walker leaves it alone.
  */
 const t = (en) => (window.FRL_I18N ? window.FRL_I18N.t(en) : en);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-if (!cfg.url || !cfg.anonKey) {
-  $('#loading').textContent = 'This site has no Supabase project configured yet.';
-} else {
+const ICON = {
+  copy: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1.5 1.5 0 0 0 9 2H3.5A1.5 1.5 0 0 0 2 3.5V9a1.5 1.5 0 0 0 1.5 1.5H5"/></svg>',
+  open: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h4v4M13 3 7.5 8.5M11.5 9.5V13H3V4.5h3.5"/></svg>'
+};
+// The flag an event last had, as the colour an operator already knows it by.
+const FLAG = { green: '#30d158', yellow: '#ffd60a', safety: '#ffd60a', red: '#ff453a',
+               formation: '#3b9eff', finished: '#f4f6f8', idle: '' };
+
+async function copy(btn, text) {
+  try { await navigator.clipboard.writeText(text); } catch (e) { return; }
+  const label = btn.querySelector('span');
+  if (!label) return;
+  const was = label.textContent;
+  label.textContent = t('Copied');
+  setTimeout(() => { label.textContent = was; }, 1400);
+}
+
+async function main() {
   const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
   const sb = createClient(cfg.url, cfg.anonKey);
 
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { location.replace('/login'); }
+  if (!session) { location.replace('/login'); return; }
 
   $('#who').textContent = session.user.email;
   $('#out').onclick = async () => { await sb.auth.signOut(); location.replace('/login'); };
 
   // ---------------------------------------------------------------- creating
+
+  let count = 0;
+  const openForm = (on) => {
+    $('#make').hidden = !on;
+    $('#newBtn').hidden = on;
+    // With no events the form is the whole page, so there is nothing to cancel back to.
+    $('#cancel').hidden = !count;
+    if (on) $('#fName').focus();
+  };
+  $('#newBtn').onclick = () => openForm(true);
+  $('#cancel').onclick = () => { $('#make').reset(); $('#err').hidden = true; openForm(false); };
 
   $('#make').onsubmit = async (ev) => {
     ev.preventDefault();
@@ -202,25 +280,61 @@ if (!cfg.url || !cfg.anonKey) {
       // The one collision worth naming: codes are unique across the whole install, so a
       // popular one may be taken by a league you have never heard of.
       $('#err').textContent = /duplicate|unique/i.test(error.message)
-        ? 'That code is already taken. Pick another.'
+        ? t('That code is already taken. Pick another.')
         : error.message;
       $('#err').hidden = false;
       return;
     }
     $('#make').reset();
     $('#fLaps').value = 24;
-    load();
+    await load();
+    openForm(false);
   };
 
   // ---------------------------------------------------------------- listing
+
+  const link = (name, url) => `
+    <div class="link">
+      <span class="name">${name}</span>
+      <span class="url" data-i18n-skip title="${esc(url)}">${esc(url.replace(/^https?:\/\//, ''))}</span>
+      <span class="do">
+        <button class="btn btn-ghost btn-sm" type="button" data-copy="${esc(url)}">${ICON.copy}<span>Copy</span></button>
+        <a class="btn btn-ghost btn-sm icon-btn" href="${esc(url)}" target="_blank" rel="noopener"
+           title="Open" aria-label="Open">${ICON.open}</a>
+      </span>
+    </div>`;
+
+  const signin = (r) => `
+    <div class="sig">
+      <span class="num" data-i18n-skip>#${esc(r.num)}</span>
+      <div class="who2" data-i18n-skip>
+        <div class="nick">${esc(r.nick)}</div>
+        ${r.team ? `<div class="team">${esc(r.team)}</div>` : ''}
+      </div>
+      ${r.status === 'pending' ? `
+        <span class="do">
+          <button class="btn btn-ghost btn-sm" type="button" data-reject="${r.id}">No</button>
+          <button class="btn btn-primary btn-sm" type="button" data-accept="${r.id}">Accept</button>
+        </span>`
+      : `<span class="state ${esc(r.status)}" data-i18n-skip>${t(r.status)}</span>`}
+    </div>`;
+
+  // Waiting drivers first: they are the only rows that need anything from the operator.
+  const ORDER = { pending: 0, approved: 1, rejected: 2 };
 
   async function load() {
     const { data: events } = await sb.from('events').select('*')
       .eq('owner', session.user.id).order('created_at', { ascending: false });
 
+    count = (events || []).length;
+    $('#count').textContent = count === 1 ? t('1 event') : `${count} ${t('events')}`;
+    $('#count').hidden = !count;
+
     const box = $('#events');
-    if (!events || !events.length) {
-      box.innerHTML = '<p class="empty" style="margin-top:22px">No events yet. Make one above.</p>';
+    if (!count) {
+      box.innerHTML = '';
+      openForm(true);
+      if (window.FRL_I18N) window.FRL_I18N.apply();
       return;
     }
 
@@ -230,73 +344,59 @@ if (!cfg.url || !cfg.anonKey) {
 
     const origin = location.origin;
     box.innerHTML = events.map((e) => {
-      const mine = (queue || []).filter((r) => r.event_id === e.id);
-      const waiting = mine.filter((r) => r.status === 'pending');
+      const code = esc(e.code);
+      const mine = (queue || []).filter((r) => r.event_id === e.id)
+        .sort((a, b) => (ORDER[a.status] ?? 3) - (ORDER[b.status] ?? 3));
+      const waiting = mine.filter((r) => r.status === 'pending').length;
+      const status = e.status || 'idle';
+      const facts = [
+        e.round ? `<span>${esc(e.round)}</span>` : '',
+        e.track ? `<span>${esc(e.track)}</span>` : '',
+        e.total_laps ? `<span>${e.total_laps} ${t('laps')}</span>` : ''
+      ].join('');
       return `
-      <div class="event">
-        <header>
-          <div>
+      <article class="card">
+        <div class="ev-head">
+          <div class="ev-title">
             <h3 data-i18n-skip>${esc(e.name)}</h3>
-            <div class="meta" data-i18n-skip>${esc(e.round || t('no round set'))} ·
-              ${esc(e.track || t('no track'))} ·
-              ${e.total_laps || 0} ${t('laps')} · ${t('flag')}: ${t(e.status)}</div>
+            <div class="facts" data-i18n-skip>
+              <span class="flag" style="--c:${FLAG[status] || 'var(--ink-3)'}">${t(status)}</span>
+              ${facts || `<span class="none">${t('No round or track set')}</span>`}
+            </div>
           </div>
-          <span class="code">${esc(e.code)}</span>
-        </header>
-
-        <div class="urls">
-          <div class="row-btns">
-            <a class="btn btn-primary" href="/console.html?event=${esc(e.code)}">Open race control</a>
-            <a class="btn btn-ghost" href="/report.html?event=${esc(e.code)}" target="_blank"
-               rel="noopener">Race report</a>
-          </div>
-
-          <div class="url">
-            <span class="tag">REPORT</span>
-            <code>${origin}/report.html?event=${esc(e.code)}</code>
-            <button class="btn btn-ghost btn-sm" data-copy="${origin}/report.html?event=${esc(e.code)}">Copy</button>
-          </div>
-          <div class="url">
-            <span class="tag">OBS</span>
-            <code>${origin}/overlay/all.html?event=${esc(e.code)}</code>
-            <button class="btn btn-ghost btn-sm" data-copy="${origin}/overlay/all.html?event=${esc(e.code)}">Copy</button>
-          </div>
-          <div class="url">
-            <span class="tag">ENTRY</span>
-            <code>${origin}/join?event=${esc(e.code)}</code>
-            <button class="btn btn-ghost btn-sm" data-copy="${origin}/join?event=${esc(e.code)}">Copy</button>
-          </div>
-          <div class="url">
-            <span class="tag">APP</span>
-            <code>drivers type <b style="color:var(--accent)">${esc(e.code)}</b> into the driver app</code>
+          <div class="ev-actions">
+            <button class="code" type="button" data-copy-code="${code}" title="${t('Copy the event code')}"
+                    data-i18n-skip>${code}${ICON.copy}</button>
+            <a class="btn btn-primary" href="/console.html?event=${code}">Open race control</a>
           </div>
         </div>
 
-        <div class="queue">
-          <h4 data-i18n-skip>${t('Driver sign-ins')}${waiting.length ? ` · ${waiting.length} ${t('waiting')}` : ''}</h4>
-          ${mine.length ? mine.map((r) => `
-            <div class="sig">
-              <b data-i18n-skip>${esc(r.nick)}</b><span class="num">#${esc(r.num)}</span>${r.team ? `<span class="team">${esc(r.team)}</span>` : ''}
-              <span class="spacer"></span>
-              ${r.status === 'pending' ? `
-                <button class="btn btn-primary btn-sm" data-accept="${r.id}">Accept</button>
-                <button class="btn btn-ghost btn-sm" data-reject="${r.id}">No</button>
-              ` : `<span class="state" data-i18n-skip>${t(r.status)}</span>`}
-            </div>`).join('')
-            : '<p class="empty">Nobody has signed in yet.</p>'}
+        <div class="ev-body">
+          <section>
+            <div class="sec-head">Links</div>
+            ${link(t('OBS overlay'), `${origin}/overlay/all.html?event=${code}`)}
+            ${link(t('Entry page'), `${origin}/join?event=${code}`)}
+            ${link(t('Race report'), `${origin}/report.html?event=${code}`)}
+          </section>
+          <section>
+            <div class="sec-head"><span>Sign-ins</span>${waiting
+              ? `<span class="badge" data-i18n-skip>${waiting} ${t('waiting')}</span>` : ''}</div>
+            ${mine.length ? mine.map(signin).join('')
+              : `<p class="empty" data-i18n-skip>${t('Nobody has signed in yet. Drivers type')} <b>${code}</b> ${t('into the driver app.')}</p>`}
+          </section>
         </div>
-      </div>`;
+      </article>`;
     }).join('');
 
     // Rebuilt markup is new English. Translate it before anybody reads it.
     if (window.FRL_I18N) window.FRL_I18N.apply();
 
-    box.querySelectorAll('[data-copy]').forEach((b) => {
+    box.querySelectorAll('[data-copy]').forEach((b) => { b.onclick = () => copy(b, b.dataset.copy); });
+    box.querySelectorAll('[data-copy-code]').forEach((b) => {
       b.onclick = async () => {
-        await navigator.clipboard.writeText(b.dataset.copy);
-        const was = b.textContent;
-        b.textContent = window.FRL_I18N ? window.FRL_I18N.t('Copied') : 'Copied';
-        setTimeout(() => { b.textContent = was; }, 1400);
+        try { await navigator.clipboard.writeText(b.dataset.copyCode); } catch (e) { return; }
+        b.style.borderColor = 'var(--accent)';
+        setTimeout(() => { b.style.borderColor = ''; }, 900);
       };
     });
 
@@ -332,6 +432,12 @@ if (!cfg.url || !cfg.anonKey) {
   sb.channel('queue')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, load)
     .subscribe();
+}
+
+if (!cfg.url || !cfg.anonKey) {
+  $('#loading').textContent = t('This site has no Supabase project configured yet.');
+} else {
+  main();
 }
 </script>
 <script src="/js/i18n-core.js?v=20260930164112"></script>

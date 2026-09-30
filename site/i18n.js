@@ -170,6 +170,23 @@
 
     // ---------------------------------------------------------------- dashboard
     'Your events': 'Event kamu',
+    'Events': 'Event',
+    'events': 'event',
+    '1 event': '1 event',
+    'Each event gets its own code for the driver app and its own OBS links.':
+      'Tiap event punya kode sendiri untuk aplikasi driver dan link OBS sendiri.',
+    'Drivers type this into the app. 4 to 12 letters and digits.':
+      'Driver mengetik kode ini di aplikasi. 4 sampai 12 huruf dan angka.',
+    'Cancel': 'Batal',
+    'Links': 'Link',
+    'OBS overlay': 'Overlay OBS',
+    'Entry page': 'Halaman pendaftaran',
+    'Open': 'Buka',
+    'Sign-ins': 'Pendaftaran',
+    'No round or track set': 'Ronde dan trek belum diisi',
+    'Copy the event code': 'Salin kode event',
+    'Nobody has signed in yet. Drivers type': 'Belum ada yang mendaftar. Driver mengetik',
+    'into the driver app.': 'di aplikasi driver.',
     'Loading your events…': 'Memuat event kamu…',
     'One event is one room. Two leagues racing the same night never see each other’s timing.':
       'Satu event adalah satu ruang. Dua liga yang balapan di malam yang sama tidak akan pernah melihat timing satu sama lain.',
