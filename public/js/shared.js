@@ -47,7 +47,7 @@ export function ordinal(n) {
 export class Bus {
   constructor(role = 'client') {
     this.role = role;
-    // A stable id for this page load. Detection has to run on exactly one machine —
+    // A stable id for this page load. Detection has to run on exactly one machine:
     // two nodes watching the same track would each report the same lap.
     this.clientId = `${role}-${Math.random().toString(36).slice(2, 8)}`;
     this.state = null;

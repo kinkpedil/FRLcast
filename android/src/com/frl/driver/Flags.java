@@ -18,7 +18,7 @@ public final class Flags {
    *
    * A red flag means the session has stopped and everyone slows down. A penalty means one
    * driver has been given something. Painting them the same red asks a driver at speed to
-   * tell two unrelated orders apart by reading — so this is a deeper crimson, dark enough
+   * tell two unrelated orders apart by reading, so this is a deeper crimson, dark enough
    * to be obviously a different thing when the two are seen minutes apart.
    *
    * Red flag is #ff3b30. This must never be set to that.
@@ -61,14 +61,14 @@ public final class Flags {
     if (flag == null) return "";
     switch (flag) {
       case "idle":      return "Wait for the start";
-      case "formation": return "Formation lap — hold position";
-      case "green":     return "Racing — go";
+      case "formation": return "Formation lap: hold position";
+      case "green":     return "Racing: go";
       case "yellow":    return "Slow down, no overtaking";
-      case "safety":    return "Safety car — slow, no overtaking";
-      case "vsc":       return "Virtual safety car — slow, hold the gap";
+      case "safety":    return "Safety car: slow, no overtaking";
+      case "vsc":       return "Virtual safety car: slow, hold the gap";
       case "white":     return "Last lap, one to go";
-      case "red":       return "Session stopped — slow down and return to the pits";
-      case "finished":  return "Chequered flag — race over";
+      case "red":       return "Session stopped: slow down and return to the pits";
+      case "finished":  return "Chequered flag: race over";
       default:          return "";
     }
   }

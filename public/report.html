@@ -94,7 +94,7 @@
   <div id="report" hidden>
     <header class="top">
       <div class="kicker" id="kicker">RACE REPORT</div>
-      <h1 id="title">—</h1>
+      <h1 id="title">-</h1>
       <div class="where" id="where"></div>
       <div class="flagnote" id="provisional" hidden>
         Provisional. This race has not been flagged finished, so everything below can still change.
@@ -137,8 +137,8 @@
 /*
  * The report, rendered.
  *
- * Reads the event the way every overlay does — the socket on a local league, Supabase on a
- * hosted one — so a link to this page works for anybody, with no login. The timing data is
+ * Reads the event the way every overlay does: the socket on a local league, Supabase on a
+ * hosted one, so a link to this page works for anybody, with no login. The timing data is
  * public by design: it is being broadcast.
  */
 import { Bus } from './js/shared.js';
@@ -212,7 +212,7 @@ function render(r) {
     return;
   }
 
-  document.title = `${r.event.name} — race report`;
+  document.title = `${r.event.name} · race report`;
   $('#kicker').textContent = r.event.round ? esc(r.event.round).toUpperCase() : 'RACE REPORT';
   $('#title').textContent = r.event.name;
   $('#where').textContent = [r.event.track, r.event.session,
@@ -247,7 +247,7 @@ function render(r) {
       <th class="num r">Laps</th><th class="num r">Best</th><th class="num r">Gap</th>
     </tr>` + r.classification.map((d) => `
     <tr class="${d.dnf ? 'out' : ''}">
-      <td class="num">${d.dnf ? '—' : d.position}</td>
+      <td class="num">${d.dnf ? '-' : d.position}</td>
       <td class="num">${esc(d.num)}</td>
       <td><span class="swatch" style="background:${esc(d.color)}"></span>${esc(d.name)}
         ${d.team ? `<span class="team">${esc(d.team)}</span>` : ''}
@@ -255,12 +255,12 @@ function render(r) {
       ${grid ? `<td class="num">${d.startedAt
         ? d.startedAt + (d.gained > 0 ? ` <span class="gain">+${d.gained}</span>`
             : d.gained < 0 ? ` <span class="drop">${d.gained}</span>` : '')
-        : '—'}</td>` : ''}
+        : '-'}</td>` : ''}
       <td class="num r">${d.laps}</td>
-      <td class="num r">${d.bestText ? esc(d.bestText) : '—'}</td>
+      <td class="num r">${d.bestText ? esc(d.bestText) : '-'}</td>
       <td class="num r">${d.dnf ? 'DNF'
         : d.position === 1 ? 'WINNER'
-        : d.gapMs == null ? '—' : '+' + esc(fmtGap(d.gapMs))}</td>
+        : d.gapMs == null ? '-' : '+' + esc(fmtGap(d.gapMs))}</td>
     </tr>`).join('');
 
   // ---------------------------------------------------------------- stewards
@@ -269,7 +269,7 @@ function render(r) {
   if (r.lapChart) $('#lapChart').innerHTML = lapChartSvg(r.lapChart);
 
   $('#steward').innerHTML = r.penalties.map((p) => `
-    <li><span class="pen">${esc(p.headline)}</span> — <b>${esc(p.driver)}</b>
+    <li><span class="pen">${esc(p.headline)}</span> · <b>${esc(p.driver)}</b>
       <span class="num">#${esc(p.num)}</span>, lap ${p.lap}
       ${p.open ? '<span class="open">UNDER INVESTIGATION</span>' : ''}
       <div class="why">${esc(p.reason)}</div></li>`).join('');
@@ -308,7 +308,7 @@ $('#btnCopy').onclick = async () => {
     $('#btnCopy').textContent = 'Copied';
     setTimeout(() => { $('#btnCopy').textContent = 'Copy for Discord'; }, 1500);
   } catch {
-    // Clipboard access is refused in plenty of ordinary situations — an insecure origin,
+    // Clipboard access is refused in plenty of ordinary situations: an insecure origin,
     // a browser that wants a gesture it did not see. Showing the text is the fallback that
     // always works, so it is offered rather than an error.
     $('#paste').textContent = text;

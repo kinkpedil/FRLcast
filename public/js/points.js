@@ -3,8 +3,8 @@
  *
  * Lifted out of RaceState so that more than one thing can ask the question. The console
  * needs it to build the table; the post-race report needs it to answer the question an
- * operator is actually asked in the Discord channel afterwards — "so where does that leave
- * the title?" — which means scoring a round that has not been added to the championship yet
+ * operator is actually asked in the Discord channel afterwards: "so where does that leave
+ * the title?", which means scoring a round that has not been added to the championship yet
  * and running the table both with and without it.
  *
  * Written here once rather than twice on purpose. The same shortcut was taken earlier in
@@ -13,7 +13,7 @@
  * the broadcast about what they had been given. Points are worse, because nobody notices
  * until somebody is handed the wrong trophy.
  *
- * Pure. No browser, no Node, no state object — only the rows and the rules.
+ * Pure. No browser, no Node, no state object: only the rows and the rules.
  */
 
 /**
@@ -47,7 +47,7 @@ export function scoreRound(rows, points = {}) {
 /**
  * The table, from every round scored so far.
  *
- * Ties are broken by countback — most wins, then most seconds, and so on — which is how
+ * Ties are broken by countback (most wins, then most seconds, and so on) which is how
  * every real series settles them. Total points alone would leave two drivers level with
  * nothing to separate them, and a championship that ends in a shrug is worse than one
  * decided by a rule nobody likes.

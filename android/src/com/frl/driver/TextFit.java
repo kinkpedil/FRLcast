@@ -62,7 +62,7 @@ public final class TextFit {
    * The same, but cutting through a word when it cannot fit any other way.
    *
    * Reserved for the last resort. Splitting "CHEQUERED" across two lines looks wrong, and
-   * a driver should never see it in a window of a sensible size — but in a sliver the
+   * a driver should never see it in a window of a sensible size, but in a sliver the
    * choice is between an ugly break and a flag name running off both edges unread, and the
    * break wins.
    */
@@ -91,7 +91,7 @@ public final class TextFit {
    * on a phone that is also running a game.
    *
    * Words are kept whole while any size at all can hold them. Only when the floor size
-   * still overflows the width — a window dragged to a sliver — does it fall back to
+   * still overflows the width (a window dragged to a sliver) does it fall back to
    * cutting through a word, and then the width is honoured absolutely.
    */
   public static Block fit(String s, float maxW, float maxH, boolean bold, Measurer m) {

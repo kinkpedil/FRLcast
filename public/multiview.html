@@ -9,7 +9,7 @@
 <style>
   /*
    * A second-screen control room: the live program (the all-in-one overlay) next to a data
-   * readout — flag, session clock, classification and fastest lap — so an operator can watch
+   * readout (flag, session clock, classification and fastest lap) so an operator can watch
    * everything on one monitor. Read-only; it drives nothing.
    */
   :root {
@@ -59,7 +59,7 @@
 <div class="room" id="room" hidden>
   <div class="program">
     <div class="proghead">
-      <span class="k">Program · <b id="evname">—</b></span>
+      <span class="k">Program · <b id="evname">-</b></span>
       <div class="langbtns"><button data-lang="id">ID</button><button data-lang="en" class="on">EN</button></div>
     </div>
     <div class="screen"><iframe id="prog" title="Program"></iframe></div>
@@ -67,11 +67,11 @@
   </div>
   <div class="side">
     <div class="box">
-      <div class="flagpill" id="flag"><i></i><span id="flagtext">—</span></div>
+      <div class="flagpill" id="flag"><i></i><span id="flagtext">-</span></div>
       <div class="meta">
-        <div><div class="lbl" data-t="session">Session</div><div class="val" id="session">—</div></div>
-        <div><div class="lbl" data-t="time">Time</div><div class="val mono" id="clock">—</div></div>
-        <div><div class="lbl" data-t="fastest">Fastest</div><div class="val mono" id="fastest">—</div></div>
+        <div><div class="lbl" data-t="session">Session</div><div class="val" id="session">-</div></div>
+        <div><div class="lbl" data-t="time">Time</div><div class="val mono" id="clock">-</div></div>
+        <div><div class="lbl" data-t="fastest">Fastest</div><div class="val mono" id="fastest">-</div></div>
       </div>
     </div>
     <div class="box"><h2 data-t="classification">Classification</h2><table id="cls"></table></div>
@@ -125,13 +125,13 @@
     else if (s.race.totalLaps > 0) $('#clock').textContent = `L ${Math.min(leaderLap(s) + 1, s.race.totalLaps)}/${s.race.totalLaps}`;
     else $('#clock').textContent = fmtClock(elapsed(s));
     const fl = fastestLap(s);
-    $('#fastest').textContent = fl && fl.bestLap != null ? fmtTime(fl.bestLap) : '—';
+    $('#fastest').textContent = fl && fl.bestLap != null ? fmtTime(fl.bestLap) : '-';
 
     const rows = classification(s).slice(0, 12);
     $('#cls').innerHTML = rows.map((d) =>
       `<tr><td class="pos">${d.dnf ? 'DNF' : d.position}</td>` +
       `<td><span class="cbar" style="background:${d.color || '#666'}"></span>${esc(d.name)}</td>` +
-      `<td class="gap">${d.position === 1 ? '—' : (d.predicted ? '~' : '') + (d.gap || '')}</td></tr>`).join('');
+      `<td class="gap">${d.position === 1 ? '-' : (d.predicted ? '~' : '') + (d.gap || '')}</td></tr>`).join('');
 
     const sc = s.overlay.scenes || [];
     $('#scenes').innerHTML = sc.map((x) => `<span class="sc ${x.id === s.overlay.activeScene ? 'on' : ''}">${esc(x.name)}</span>`).join('');

@@ -14,7 +14,7 @@ import java.net.URL;
 /**
  * Everything this app knows about the race server.
  *
- * Deliberately thin — the endpoints already exist and are already used by the web page, so
+ * Deliberately thin: the endpoints already exist and are already used by the web page, so
  * there is nothing to design here. What matters is that it never blocks the main thread and
  * that a dropped wifi frame is an ordinary event rather than an error the driver has to
  * read about mid-corner.
@@ -33,7 +33,7 @@ public final class Api {
   public static final String K_TEAM = "team";
   // FR Legends player ID. The stable key the timing API joins a driver by; captured here so
   // race control does not have to type it. Empty when the driver leaves it blank or the app
-  // predates the field — every path downstream treats '' as "unknown", never an error.
+  // predates the field: every path downstream treats '' as "unknown", never an error.
   public static final String K_GAMEID = "gameId";
 
   // Overlay geometry, remembered so a driver sets it once and never again.
@@ -105,7 +105,7 @@ public final class Api {
   /**
    * The body, whatever the status was.
    *
-   * A 401 from /api/driver/me is not a transport failure — it is the server saying this
+   * A 401 from /api/driver/me is not a transport failure: it is the server saying this
    * token is finished, and the app needs to read that answer rather than treat it as a
    * broken connection. So the error stream is parsed exactly like the normal one.
    */

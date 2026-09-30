@@ -43,7 +43,7 @@ public interface Backend {
 
   /**
    * Send a team-radio message. Every driver on the same team sees it on their next poll;
-   * nobody on another team does. Only the laptop server carries this — a hosted event has
+   * nobody on another team does. Only the laptop server carries this: a hosted event has
    * no radio endpoint yet, so the cloud backend answers a plain "not supported".
    */
   JSONObject sendRadio(String token, String text) throws Exception;

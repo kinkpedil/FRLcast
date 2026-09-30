@@ -1,4 +1,4 @@
-/* FR Legends broadcast overlays — designed for a 1920x1080 transparent OBS source. */
+/* FR Legends broadcast overlays: designed for a 1920x1080 transparent OBS source. */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
 
@@ -56,7 +56,7 @@ html, body {
 .widget > .wrap {
   opacity: 0;
   visibility: hidden;
-  /* opacity + transform only — both run on the compositor, no repaint per frame */
+  /* opacity + transform only: both run on the compositor, no repaint per frame */
   transition:
     opacity .42s var(--ease),
     transform .55s var(--ease-out),
@@ -200,7 +200,7 @@ html, body {
   inset: 0;
   pointer-events: none;
   opacity: 0;
-  /* behind the row's own text, but still above the card background — `isolation`
+  /* behind the row's own text, but still above the card background: `isolation`
      on the row keeps this z-index local instead of sinking under the card */
   z-index: -1;
 }
@@ -303,7 +303,7 @@ html, body {
 }
 
 /* The WEC-skin team box and the tower's car number are markup every row now carries, but
-   only that skin lays them out — hidden everywhere else so they take no grid cell. */
+   only that skin lays them out: hidden everywhere else so they take no grid cell. */
 .lb-row .logo, .tw-row .logo, .tw-row .num { display: none; }
 
 .lb-row .name {
@@ -434,7 +434,7 @@ html, body {
 
 .status-bar .seg.event .v { font-family: var(--sans); font-size: 17px; letter-spacing: .1em; }
 
-/* seconds tick — tiny breath so the clock reads as live */
+/* seconds tick: tiny breath so the clock reads as live */
 @keyframes secTick {
   0%   { transform: translateY(2px); opacity: .55; }
   100% { transform: none; opacity: 1; }
@@ -774,7 +774,7 @@ html, body {
 html.disconnected .stage { filter: grayscale(.4); }
 
 /* Ambient loops only. Event-driven motion (position swaps, value changes, flag
-   wipes) always stays on — that motion carries information. Add ?motion=calm to an
+   wipes) always stays on, that motion carries information. Add ?motion=calm to an
    overlay URL to switch the loops off in OBS. */
 html.calm .card::after,
 html.calm .card-head::after,
@@ -839,7 +839,7 @@ html.edit .widget.dragging { cursor: grabbing; }
  * widgets sit on top of what you are trying to place. A widget the scene does not show is
  * not part of that scene's layout, so it has no business being in the way.
  *
- * Widgets hidden by the layout's own `hidden` flag stay visible at low opacity — those
+ * Widgets hidden by the layout's own `hidden` flag stay visible at low opacity: those
  * are part of the scene and have to remain selectable to be brought back.
  */
 html.edit .widget:not(.on) { display: none; }
@@ -931,8 +931,8 @@ html.edit #hud { display: flex; }
 .tm circle { transition: cx .28s linear, cy .28s linear; }
 
 /* ---------------- lite mode (low-end GPU) ----------------
-   Kills every animation that runs forever. Event-driven motion — position swaps,
-   value changes, flag wipes, entrances — all still play, because those carry
+   Kills every animation that runs forever. Event-driven motion: position swaps,
+   value changes, flag wipes, entrances: all still play, because those carry
    information. What goes is the decoration that costs GPU time on every frame
    whether anything is happening or not. */
 
@@ -1126,7 +1126,7 @@ html.lite .widget > .wrap { transition-duration: .28s, .3s, 0s; }
 .hh-gap i.closing { color: #30d158; }
 .hh-gap i.opening { color: #ff453a; }
 
-/* Three columns so the two times sit either side of what they are comparing — a table
+/* Three columns so the two times sit either side of what they are comparing: a table
    with the label in the middle reads as a duel, one with it on the left reads as a list. */
 .hh-row {
   display: grid; grid-template-columns: 1fr 92px 1fr; align-items: center;
@@ -1178,7 +1178,7 @@ html.lite .widget > .wrap { transition-duration: .28s, .3s, 0s; }
  *
  * Each template is a set of tokens, nothing more. Every widget already draws itself
  * from these, so a theme restyles the whole broadcast without any widget knowing
- * themes exist — and a widget written next month inherits all ten for free.
+ * themes exist, and a widget written next month inherits all ten for free.
  *
  * Only tokens are redefined here. The moment a theme needs a rule of its own, it stops
  * being a theme and becomes a fork of the stylesheet.
@@ -1291,7 +1291,7 @@ html[data-theme="broadcast"] {
  * A timer that toggles a class works until it meets the render loop: state arrives
  * several times a second, and anything that touches these elements restarts the
  * transition mid-fade. Two counter-phased keyframe animations on one shared period have
- * no such coupling — they keep their own clock, they cannot be interrupted by a lap
+ * no such coupling: they keep their own clock, they cannot be interrupted by a lap
  * being scored, and the browser runs them on the compositor for free.
  */
 /*
@@ -1302,14 +1302,14 @@ html[data-theme="broadcast"] {
  */
 /*
  * Stretched vertically, not centred. The status bar is a flex row with align-items:
- * stretch, so the flag pill has always filled its full height — that solid block of
+ * stretch, so the flag pill has always filled its full height, that solid block of
  * colour edge to edge is what makes a flag read as a flag. Centring the grid items
  * shrank it to the height of its own text and left it floating in the bar.
  */
 .brand-slot { display: grid; align-items: stretch; --brand-slide: 8px; }
 /*
  * Stacked, but not stretched. A grid item fills its cell by default, which made the flag
- * pill inherit the width of the league name sitting behind it — a "RED FLAG" badge three
+ * pill inherit the width of the league name sitting behind it: a "RED FLAG" badge three
  * times wider than its own text. The cell still sizes to the wider of the two so nothing
  * spills into the event title; each child just keeps its own width inside it.
  */
@@ -1330,7 +1330,7 @@ html[data-theme="broadcast"] {
 /*
  * Beside the flag: two columns, both on screen the whole time.
  *
- * This is the default because it is the honest use of the space — the logo is always
+ * This is the default because it is the honest use of the space: the logo is always
  * readable, and the flag never has to disappear for branding to be seen. Alternating
  * gives each of them a larger slot, which is worth having when the bar is tight, but it
  * means the flag is absent half the time and the flag is the more urgent of the two.
@@ -1366,7 +1366,7 @@ html[data-theme="broadcast"] {
 /*
  * Lite keeps the alternation, and drops only the slide.
  *
- * Lite exists to cull animation that runs continuously for decoration — a shimmer sweep
+ * Lite exists to cull animation that runs continuously for decoration: a shimmer sweep
  * repainting at 60fps costs real GPU on a weak machine. This is not that: one opacity
  * cross-fade every few seconds, on two small elements, composited. It also carries
  * information the operator deliberately switched on. Culling it here was over-applying
@@ -1382,7 +1382,7 @@ html.lite .brand-slot { --brand-slide: 0px; }
    ----------------------------------------------------------------------------
    A second look for the same widgets, selected with data-skin="motogp". It only
    reshapes; the colours still come from the active theme, so any theme works
-   under it. The classic look is the default and is never touched — everything
+   under it. The classic look is the default and is never touched: everything
    is scoped under html[data-skin="motogp"].
 
    Modelled on a modern motorsport timing tower: a tilted number chip in the
@@ -1527,7 +1527,7 @@ html[data-skin="motogp"] .lb-row .name {
   font-weight: 700;
   letter-spacing: .03em;
 }
-/* the vertical tower reference is pos · name · number chip — no gap column; the timing
+/* the vertical tower reference is pos · name · number chip, no gap column; the timing
    tower widget is where the gaps and lap times live */
 html[data-skin="motogp"] .lb-row .gap { display: none; }
 html[data-skin="motogp"] .lb-row .num { order: 4; flex: 0 0 auto; }
@@ -1621,7 +1621,7 @@ html[data-skin="motogp"] .lb-gap .lg-v {
    countdown, class banners (HYPERCAR / LMGT3 …) grouping the field, rows of
    position · team-colour box · car number · surname. The leaderboard is the compact
    name tower; the timing tower keeps every driver's last/best/interval, themed to match.
-   Colours and layout only — the timing underneath is untouched.
+   Colours and layout only: the timing underneath is untouched.
    Reference: referensi UI/WEC/WEC tower.png
 */
 html[data-skin="wec"] { --accent: #38bdf8; }   /* WEC cyan for the ticks/underlines everywhere */
@@ -1708,7 +1708,7 @@ html[data-skin="wec"] .lb-row {
   height: 40px;
   padding: 0 14px;
 }
-/* timing tower: same identity, but the per-driver timing stays — last · best · interval */
+/* timing tower: same identity, but the per-driver timing stays: last · best · interval */
 html[data-skin="wec"] .tw-row {
   grid-template-columns: 22px 38px 32px 1fr 78px 78px 60px;
   height: 42px;
@@ -1717,7 +1717,7 @@ html[data-skin="wec"] .tw-row {
 html[data-skin="wec"] .lb-row.focus,
 html[data-skin="wec"] .tw-row.focus { background: rgba(120, 160, 255, .12); }
 
-/* hidden bits — the tower KEEPS its time cells, so they are not listed here */
+/* hidden bits: the tower KEEPS its time cells, so they are not listed here */
 html[data-skin="wec"] .lb-row .bar,
 html[data-skin="wec"] .tw-row .bar,
 html[data-skin="wec"] .lb-row .gap,
@@ -2276,7 +2276,7 @@ html[data-skin="dtm"] .ticker-tag { background: var(--dtm-yellow); color: #12140
 
 /* ================================================================ Formula E skin
    Minimal black panel with a blue/purple edge glow, a centred session title over a blue lap
-   line, and rows of position · team-colour badge · full surname. No gap column — the clean
+   line, and rows of position · team-colour badge · full surname. No gap column: the clean
    running order the reference shows. References: referensi UI/NewTheme/Formula E theme.jpg
 */
 html[data-skin="fe"] { --fe-blue: #24c1e0; --fe-purple: #7a2ff2; --radius: 2px; }
@@ -2701,7 +2701,7 @@ html[data-skin="nascar"] .status-bar::before { content:''; position:absolute; le
 html[data-skin="nascar"] .status-bar { position: relative; }
 
 /* fix: order-based towers (IMSA, GTWC) only lay out 2 time columns, so the interval cell
-   must be hidden — otherwise it has no grid order and jumps to the front, shoving the
+   must be hidden: otherwise it has no grid order and jumps to the front, shoving the
    number and name out of place */
 html[data-skin="imsa"] .tw-row .t.int,
 html[data-skin="gtwc"] .tw-row .t.int { display: none; }

@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>FRL Overlay — commentary</title>
+<title>FRLcast overlay: commentary</title>
 <style>
   /*
    * A page that is mostly sound.
@@ -92,8 +92,8 @@ const speaker = new Speaker({ enabled: false, onchange: paint });
 /*
  * Team radio, read aloud.
  *
- * Its own voice and its own queue, separate from the commentary: radio is always spoken —
- * even with commentary switched off — and in the voice the operator asked for (Microsoft
+ * Its own voice and its own queue, separate from the commentary: radio is always spoken: 
+ * even with commentary switched off, and in the voice the operator asked for (Microsoft
  * Mark), not whatever the commentary is set to. A driver's "BOX BOX BOX" is urgent, so it
  * cuts in ahead of anything the commentator is mid-sentence on.
  */
@@ -114,7 +114,7 @@ const CEILING = { calm: P_HIGH, normal: P_NORMAL, busy: P_COLOUR };
  * The words follow the voice, not the setting.
  *
  * Asking for Indonesian on a machine with no Indonesian voice gets an English one, and
- * Indonesian read by an English voice is not accented — it is unintelligible. So whichever
+ * Indonesian read by an English voice is not accented: it is unintelligible. So whichever
  * voice was actually resolved decides which language the sentences are written in.
  */
 function resolveVoice() {

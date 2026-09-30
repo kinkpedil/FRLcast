@@ -17,7 +17,7 @@ import java.util.List;
  * This is the whole point of the app. The web version had to hand a video to Android and
  * accept whatever window size the system felt like giving back; here the window is ours,
  * so the driver drags the corner and it becomes exactly as small as they want. Nothing in
- * this class imposes a size — it draws to fill whatever it is given, down to a thumbnail.
+ * this class imposes a size: it draws to fill whatever it is given, down to a thumbnail.
  */
 public class FlagView extends View {
 
@@ -126,7 +126,7 @@ public class FlagView extends View {
     // without its reason is the half of the message worth arguing about.
     String body = penalty ? penReason : (personal.isEmpty() ? Flags.action(flag) : "");
 
-    // How the space is divided. Measure first, draw second — laying the name out against a
+    // How the space is divided. Measure first, draw second: laying the name out against a
     // fixed fraction and then squeezing the rest in is what made the web version silently
     // drop its instruction line on short windows.
     float topH = 0;
@@ -217,7 +217,7 @@ public class FlagView extends View {
   /**
    * TextFit measuring through the real Paint.
    *
-   * Setting the size and weight before measuring is the whole job — Paint carries that
+   * Setting the size and weight before measuring is the whole job: Paint carries that
    * state, and a measurement taken at the wrong size is silently wrong rather than an
    * error.
    */

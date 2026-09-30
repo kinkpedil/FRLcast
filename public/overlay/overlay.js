@@ -5,18 +5,18 @@ import { CloudBus, cloudOptions } from '../js/cloudbus.js';
 /*
  * Self-update, so OBS never runs stale code again.
  *
- * A Browser Source loads the page once and then never asks the server for anything again —
+ * A Browser Source loads the page once and then never asks the server for anything again:
  * so a fix shipped to the server sits unused until someone reloads the source by hand, which
  * is exactly the trap that kept old overlay code live on stream. This checks a tiny version
  * stamp every 30s; when the deploy behind it changes, the page reloads itself. The stamp is
  * carried on this module's own URL (`overlay.js?v=VER`) and written to /version.txt by the
  * deploy, so the two only differ when a newer build is live. No URL to change, no manual
- * refresh — the source picks up the next deploy on its own within half a minute.
+ * refresh: the source picks up the next deploy on its own within half a minute.
  */
 (function autoUpdate() {
   let mine = '';
   try { mine = new URL(import.meta.url).searchParams.get('v') || ''; } catch (e) { /* no query */ }
-  if (!mine) return;   // running unversioned (local dev) — nothing to compare against
+  if (!mine) return;   // running unversioned (local dev): nothing to compare against
   setInterval(async () => {
     try {
       const r = await fetch('/version.txt', { cache: 'no-store' });
@@ -243,7 +243,7 @@ function build() {
     poll: `
       <div class="widget" id="poll">
         <div class="card poll-card">
-          <div class="poll-q" id="pollQ">—</div>
+          <div class="poll-q" id="pollQ">-</div>
           <div class="poll-bars" id="pollBars"></div>
           <div class="poll-foot"><b id="pollTotal">0</b> <span id="pollVotesLbl">votes</span></div>
         </div>
@@ -252,7 +252,7 @@ function build() {
       <div class="widget" id="sponsor">
         <div class="card sponsor-card">
           <span class="sp-k">SPONSOR</span>
-          <span class="sp-body" id="spBody">—</span>
+          <span class="sp-body" id="spBody">-</span>
         </div>
       </div>`,
     countdown: `
@@ -349,7 +349,7 @@ function build() {
   if (editing) {
     stage.insertAdjacentHTML('beforeend',
       '<div id="guides"></div>' +
-      '<div id="hud"><span id="hudName">—</span><span id="hudPos">—</span>' +
+      '<div id="hud"><span id="hudName">-</span><span id="hudPos">-</span>' +
       '<span>drag to move · handle to resize · arrows nudge · shift+arrows ×10</span></div>');
   }
 }
@@ -366,7 +366,7 @@ function applyLayout() {
     const l = L[id];
     el.classList.toggle('layout-hidden', !!(l && l.hidden));
     if (!l) {
-      // entry was reset — drop every inline placement so the stylesheet default
+      // entry was reset: drop every inline placement so the stylesheet default
       // takes over again instead of the last dragged position sticking around
       el.style.cssText = '';
       continue;
@@ -390,7 +390,7 @@ function applyStyle() {
   const theme = (state.overlay && state.overlay.theme) || 'midnight';
   if (root.dataset.theme !== theme) root.dataset.theme = theme;
   // The skin reshapes the widgets; it is separate from the theme's colours, so both apply
-  // at once. Written as a data attribute for the same reason the theme is — one swap.
+  // at once. Written as a data attribute for the same reason the theme is: one swap.
   const skin = (state.overlay && state.overlay.skin) || 'classic';
   if (root.dataset.skin !== skin) root.dataset.skin = skin;
   root.style.setProperty('--panel-alpha', String(st.panelOpacity ?? 0.88));
@@ -429,7 +429,7 @@ function applyBrand() {
   if (name && name.textContent !== (b.name || '')) name.textContent = b.name || '';
 
   // Everything else is two class writes. When it alternates, the alternation itself is a
-  // CSS animation, so nothing here can interrupt it — see the note in overlay.css.
+  // CSS animation, so nothing here can interrupt it: see the note in overlay.css.
   const on = !!(b.logoUrl || b.name) && b.showLogo !== false;
   const alternate = on && b.placement === 'alternate';
   slot.classList.toggle('beside', on && !alternate);
@@ -456,7 +456,7 @@ document.addEventListener('animationend', (ev) => {
 
 // `restart` needs a forced reflow to replay a CSS animation. That is a synchronous
 // layout, so it is reserved for the handful of highlights that fire a few times a
-// minute — never for per-cell value changes.
+// minute: never for per-cell value changes.
 function restart(el, cls) {
   el.classList.remove(cls);
   void el.offsetWidth;
@@ -469,7 +469,7 @@ const POP_KF = [{ transform: 'scale(1)' }, { transform: 'scale(1.16)', offset: .
 /**
  * Write text only when it changed, and animate it when it does.
  * `anim` is 'value' | 'pop' | null. Both use WAAPI: opacity/transform only, and no
- * forced reflow — a row of cells updating no longer costs a layout flush each.
+ * forced reflow: a row of cells updating no longer costs a layout flush each.
  */
 function setText(el, value, anim = 'value') {
   const v = String(value ?? '');
@@ -484,7 +484,7 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
-/** Staggered entrance for a list of rows — used when a widget is switched on. */
+/** Staggered entrance for a list of rows: used when a widget is switched on. */
 function replayEnter(container, dir = -1) {
   if (!container) return;
   [...container.children].forEach((row, i) => {
@@ -517,7 +517,7 @@ class KeyedList {
 
     // FIRST: where is every existing row right now.
     // getBoundingClientRect forces a layout flush, so it is skipped whenever the
-    // widget is hidden — there is nothing to see sliding anyway.
+    // widget is hidden: there is nothing to see sliding anyway.
     const first = new Map();
     if (animate) {
       for (const [id, el] of this.nodes) {
@@ -537,7 +537,7 @@ class KeyedList {
         fresh.push(el);
       }
       this.update(el, item, prev.get(item.id));
-      c.appendChild(el);      // appendChild on an existing node moves it — this is the reorder
+      c.appendChild(el);      // appendChild on an existing node moves it: this is the reorder
     }
 
     // rows for drivers that vanished from the classification
@@ -580,7 +580,7 @@ function tagsHTML(d, isFl, isPb) {
   /*
    * INV and the served-penalty badge exist so the live order is never mistaken for the
    * result. A car under investigation, or carrying five seconds it has not yet paid, is
-   * still shown where it physically is — the badge is what tells the viewer that place
+   * still shown where it physically is: the badge is what tells the viewer that place
    * may not survive the flag.
    */
   // Black first: it outranks everything else a row can say about a driver.
@@ -807,7 +807,7 @@ function renderStatus(rows) {
   if (prevFlag !== null && prevFlag !== state.race.status) restart(pill, 'wipe');
   prevFlag = state.race.status;
 
-  setText(document.getElementById('stEvent'), `${state.event.name} — ${state.event.round}`, 'value');
+  setText(document.getElementById('stEvent'), `${state.event.name} · ${state.event.round}`, 'value');
 
   const lapSeg = (document.getElementById('stLap') || {}).closest ? document.getElementById('stLap').closest('.seg') : null;
   const clockK = document.getElementById('stClockK');
@@ -908,7 +908,7 @@ function renderResults(rows) {
 
 /**
  * Live circuit map: the racing line the operator drew, with every car placed by the
- * progress the tracker reports. Cheap to draw — one polyline plus one dot per car.
+ * progress the tracker reports. Cheap to draw: one polyline plus one dot per car.
  */
 let tmPathSig = '';
 
@@ -1049,8 +1049,8 @@ function renderBracket() {
       <h5>${esc(r.name)}</h5>
       ${r.pairs.map((p) => `
         <div class="bk-pair">
-          <div class="${p.winner === p.a ? 'w' : ''}"><i style="background:${colour(p.a)}"></i>${esc(name(p.a) || '—')}</div>
-          <div class="${p.winner === p.b ? 'w' : ''}"><i style="background:${colour(p.b)}"></i>${esc(name(p.b) || (p.a ? 'BYE' : '—'))}</div>
+          <div class="${p.winner === p.a ? 'w' : ''}"><i style="background:${colour(p.a)}"></i>${esc(name(p.a) || '-')}</div>
+          <div class="${p.winner === p.b ? 'w' : ''}"><i style="background:${colour(p.b)}"></i>${esc(name(p.b) || (p.a ? 'BYE' : '-'))}</div>
         </div>`).join('')}
     </div>`).join('');
 }
@@ -1146,7 +1146,7 @@ function renderGrid() {
  *
  * A gap on its own says who is ahead and tells the viewer nothing about why. The split
  * times do: one car gains three tenths through the first sector and gives two back in the
- * last, and now the fight has a shape. Everything shown here is already measured — this
+ * last, and now the fight has a shape. Everything shown here is already measured: this
  * widget does no detection of its own, it only puts two columns of existing numbers next
  * to each other.
  */
@@ -1282,7 +1282,7 @@ function renderStandings() {
  * The line under the tower title.
  *
  * A running race shows "LAP x OF y" the way a broadcast does; anything else falls back to
- * the session name. Used by both skins — it is just better text — and it is what the
+ * the session name. Used by both skins (it is just better text) and it is what the
  * MotoGP header renders large.
  */
 function isTimedSession() {
@@ -1298,7 +1298,7 @@ function sessionRemaining() {
 function headerLine() {
   const r = state.race, mode = (state.event.sessionType || 'race'), skin = state.overlay.skin || 'classic';
   if (skin === 'wec') return wecClock();
-  // Practice and qualifying run to a clock, not a lap count — every skin shows the time
+  // Practice and qualifying run to a clock, not a lap count: every skin shows the time
   // remaining in the session (or the session name until a limit is set).
   if (isTimedSession()) {
     if ((r.timeLimitSec || 0) > 0) return fmtClock(sessionRemaining());
@@ -1353,7 +1353,7 @@ function renderFastLap() {
   const box = document.getElementById('fastlap');
   if (!nameEl || !timeEl || !box) return;
   if (!fl || fl.bestLap == null) {
-    setText(nameEl, '—', null);
+    setText(nameEl, '-', null);
     setText(timeEl, '--:--.---', null);
     box.style.setProperty('--c', '#b026ff');
     return;
@@ -1365,7 +1365,7 @@ function renderFastLap() {
 
 /**
  * The sector-times card for the focus driver (or the leader): each sector coloured by how
- * good it is — session best (purple), personal best (green) or simply set (yellow) — the way
+ * good it is (session best (purple), personal best (green) or simply set (yellow)) the way
  * the F1 timing graphic breaks a lap down.
  */
 function renderSectors(rows) {
@@ -1376,7 +1376,7 @@ function renderSectors(rows) {
   if (!box || !nameEl || !cells) return;
   const focus = state.overlay.focusDriverId;
   const d = (focus && rows.find((r) => r.id === focus)) || rows[0];
-  if (!d) { nameEl.textContent = '—'; if (lapEl) lapEl.textContent = ''; cells.innerHTML = ''; return; }
+  if (!d) { nameEl.textContent = '-'; if (lapEl) lapEl.textContent = ''; cells.innerHTML = ''; return; }
   box.style.setProperty('--c', d.color || '#888');
   setText(nameEl, rowName(d), null);
   const lastLap = (d.lapSectors || [])[(d.lapSectors || []).length - 1] || d.sectors || [];
@@ -1558,7 +1558,7 @@ function renderPodium(rows) {
   const cols = document.getElementById('podCols');
   if (!cols || cols.dataset.sig === sig) return;
   cols.dataset.sig = sig;
-  setText(document.getElementById('podTitle'), `${state.event.name || 'RACE'} — RESULT`.replace(' — ', ' · '), null);
+  setText(document.getElementById('podTitle'), `${state.event.name || 'RACE'} · RESULT`, null);
   // Visual order 2, 1, 3 so the winner's column stands in the middle and tallest.
   const order = [top[1], top[0], top[2]].filter(Boolean);
   cols.innerHTML = order.map((d) => {
@@ -1649,7 +1649,7 @@ function renderCountdown() {
   t.textContent = fmtClock(rem);
 }
 
-/** The driver intro card: the focus driver (or leader) big — number, name, team, points. */
+/** The driver intro card: the focus driver (or leader) big: number, name, team, points. */
 /** Season record for a driver from the standings counts, for the intro and rivalry cards. */
 function seasonStats(id) {
   const s = (state.standings || []).find((r) => r.driverId === id);
@@ -1734,7 +1734,7 @@ let radioSeenAt = 0;
 /**
  * The team-radio card. Two sources feed it, newest wins: a message a driver typed in the
  * phone app (state.radio, fresh for ~25s) or a quote the operator typed on the panel
- * (state.overlay.radio). The driver app is the live one — a real "BOX BOX BOX" from the
+ * (state.overlay.radio). The driver app is the live one: a real "BOX BOX BOX" from the
  * cockpit goes straight to air without the operator retyping it.
  */
 function renderRadio() {
@@ -1748,7 +1748,7 @@ function renderRadio() {
   const holdMs = live && live.text ? Math.min(20000, Math.max(10000, live.text.length * 90 + 3000)) : 0;
 
   // A brand-new driver message: paint it and start the CSS auto-hide. The hide is CSS, not a
-  // JS timer, because an OBS browser source freezes timers — a JS countdown never fired and the
+  // JS timer, because an OBS browser source freezes timers: a JS countdown never fired and the
   // card never left. The animation runs there regardless, fading the card after holdMs, so it
   // does not depend on another render ever arriving.
   if (live && live.text && live.id !== radioSeenId) {
@@ -1792,7 +1792,7 @@ const WEC_CLASS_COLORS = {
   // IMSA classes
   GTP: ['#5b6470', '#2e343d'], GTDPRO: ['#e2001a', '#8a0511'], GTD: ['#1fa82c', '#0c801b'],
   LMP3: ['#0a3fb0', '#062a78'],
-  // Super GT classes — the number box takes the class colour
+  // Super GT classes: the number box takes the class colour
   GT500: ['#e6e6e6', '#9a9a9a'], GT300: ['#ff7a00', '#a85f00']
 };
 function wecClassColor(name) { return WEC_CLASS_COLORS[(name || '').toUpperCase().replace(/\s+/g, '')] || null; }
@@ -1801,7 +1801,7 @@ function wecClassColor(name) { return WEC_CLASS_COLORS[(name || '').toUpperCase(
 function wecGroup(rows) {
   const order = [], map = new Map();
   for (const d of rows) {
-    const c = (d.carClass || '').trim() || '—';
+    const c = (d.carClass || '').trim() || '-';
     if (!map.has(c)) { map.set(c, []); order.push(c); }
     map.get(c).push(d);
   }
@@ -1817,7 +1817,7 @@ function applyClassBanners(boxId, groups) {
   const box = document.getElementById(boxId);
   if (!box) return;
   box.querySelectorAll('.lb-classbanner').forEach((n) => n.remove());
-  const single = groups.length === 1 && groups[0].cls === '—';
+  const single = groups.length === 1 && groups[0].cls === '-';
   for (const g of groups) {
     const col = wecClassColor(g.cls);
     g.rows.forEach((d, i) => {
@@ -1931,7 +1931,7 @@ function render() {
 function renderInner() {
   if (!state) return;
   // A state that arrived without its overlay config (realtime can drop the oversized settings
-  // jsonb) has nothing to draw from — skip the frame and keep the last good render rather than
+  // jsonb) has nothing to draw from: skip the frame and keep the last good render rather than
   // throwing halfway. The next complete state (a realtime update that carried settings, or the
   // reconcile poll) renders normally.
   if (!state.overlay || !state.overlay.show) return;
@@ -2057,7 +2057,10 @@ function tickerItems() {
   const manual = (state.overlay.ticker || []).filter(Boolean);
   if (manual.length) return manual;
   if (!state.overlay.autoTicker) return [];
-  return (state.feed || []).slice(0, 8).map((e) => e.text).filter(Boolean);
+  // Feed lines written by an older build used a long dash as the separator; a state saved
+  // before the update still holds them until the next reset, so they are evened out here.
+  return (state.feed || []).slice(0, 8).map((e) => e.text).filter(Boolean)
+    .map((text) => String(text).replace(/\s*—\s*/g, ' · '));
 }
 
 // local clock tick so the race time is smooth without server spam
@@ -2065,7 +2068,7 @@ function tickerItems() {
  * The race clock, on a timer rather than an animation frame.
  *
  * It is derived from the green-flag timestamp, not accumulated, so it needs no frame
- * loop to stay correct — and a frame loop is exactly what stops when the browser
+ * loop to stay correct, and a frame loop is exactly what stops when the browser
  * source is not being rendered. A quarter-second timer keeps a seconds display honest
  * for a fraction of the cost.
  */
@@ -2345,7 +2348,7 @@ bus.on('signal', (channel) => { if (channel === 'overlay-demo') playDemo(); });
  * Scene changes get a transition, everything else does not.
  *
  * A scene swap moves and hides several widgets at once. Letting each one animate on its
- * own produces a scramble — panels sliding past each other in different directions —
+ * own produces a scramble: panels sliding past each other in different directions:
  * which reads as a glitch rather than a cut. Fading the whole stage through the swap
  * turns it into one deliberate move, the way a vision mixer would.
  *
@@ -2427,8 +2430,8 @@ function playBumper(s) {
  * Coalesce renders to one per frame.
  *
  * Vision pushes a driver's progress several times a second, and each push arrives as a
- * fresh state. Rendering synchronously on every one means a full KeyedList diff — with the
- * layout flush its position animation needs — many times a second, even when nothing on
+ * fresh state. Rendering synchronously on every one means a full KeyedList diff: with the
+ * layout flush its position animation needs: many times a second, even when nothing on
  * screen has meaningfully moved. On a machine already running the game, OBS's encoder and
  * the detector, that is the difference between instant and laggy.
  *
@@ -2441,7 +2444,7 @@ function applyState(s) {
    * Render synchronously on every state push.
    *
    * A timer-based throttle was tried here to cut the cost of frequent vision pushes, but an
-   * OBS browser source renders windowless — the page counts as hidden, and a hidden page's
+   * OBS browser source renders windowless: the page counts as hidden, and a hidden page's
    * timers are frozen. The scheduled render never fired, so a flag or a layout change did
    * not reach the stream until the source was refreshed by hand. Correctness first: the
    * render is immediate. Its cost is kept down instead by the signature guard inside

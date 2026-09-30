@@ -185,7 +185,7 @@ export function buildReport(state) {
   //
   // The question an operator is asked within a minute of the flag. Answering it means
   // scoring this round whether or not it has been added yet, and running the table both
-  // ways — which is the whole reason the scoring rules were lifted into points.js.
+  // ways, which is the whole reason the scoring rules were lifted into points.js.
   const points = champ.points || {};
   const rounds = champ.rounds || [];
 
@@ -203,12 +203,12 @@ export function buildReport(state) {
    *
    * A round carries no reference to the session it came from, so it has to be recognised by
    * what is in it. The first attempt compared only which drivers were listed, and the same
-   * twelve drivers turn out for every round of a league — so round one was mistaken for
+   * twelve drivers turn out for every round of a league, so round one was mistaken for
    * round three, quietly dropped from the "before" table, and the report announced a
    * championship swing that had not happened.
    *
    * Two things have to agree now: the name the operator gave it, and the finishing order
-   * driver by driver. When they do not, this counts as a round not yet added — which is the
+   * driver by driver. When they do not, this counts as a round not yet added, which is the
    * safe way round, because that case is labelled on screen and the other is not.
    */
   const sameOrder = (results) =>
@@ -260,10 +260,10 @@ export function reportAsText(report) {
   const out = [];
   const ev = report.event;
 
-  out.push(`**${ev.name}**${ev.round ? ` — ${ev.round}` : ''}`);
+  out.push(`**${ev.name}**${ev.round ? ` · ${ev.round}` : ''}`);
   const where = [ev.track, ev.session].filter(Boolean).join(' · ');
   if (where) out.push(where);
-  if (report.provisional) out.push('_Provisional — the race has not been flagged finished._');
+  if (report.provisional) out.push('_Provisional: the race has not been flagged finished._');
   out.push('');
 
   if (report.winner) {
@@ -298,7 +298,7 @@ export function reportAsText(report) {
     out.push('');
     out.push('**Stewards**');
     for (const p of report.penalties) {
-      out.push(`- ${p.driver} #${p.num} — ${p.headline}${p.open ? ' (under investigation)' : ''}`
+      out.push(`- ${p.driver} #${p.num} · ${p.headline}${p.open ? ' (under investigation)' : ''}`
         + `, lap ${p.lap}: ${p.reason}`);
     }
   }
@@ -308,7 +308,7 @@ export function reportAsText(report) {
     out.push(`**Championship**${report.round.counted ? '' : ' _(with this round included)_'}`);
     for (const e of report.standings.moved.slice(0, 10)) {
       const arrow = e.change == null ? 'new' : e.change > 0 ? `▲${e.change}` : e.change < 0 ? `▼${-e.change}` : '–';
-      out.push(`${e.rank}. ${e.name} — ${e.points} pts  ${arrow}`);
+      out.push(`${e.rank}. ${e.name} · ${e.points} pts  ${arrow}`);
     }
   }
 
@@ -402,7 +402,7 @@ export function classificationHtml(report, lang = 'en') {
 
   const gapCell = (r) => {
     if (r.dnf) return '';
-    if (r.position === 1) return '—';
+    if (r.position === 1) return '-';
     if (r.laps === leaderLaps && r.gapMs != null) return '+' + fmtGap(r.gapMs);
     const down = leaderLaps - r.laps;
     return down > 0 ? `+${down} ${down > 1 ? (id ? 'lap' : 'laps') : 'lap'}` : '';
@@ -423,11 +423,11 @@ export function classificationHtml(report, lang = 'en') {
 
   const applied = (report.penalties || []).filter((p) => !p.open);
   const stewards = applied.length
-    ? '<ul>' + applied.map((p) => `<li><b>#${esc(p.num)} ${esc(p.driver)}</b> — ${esc(p.headline)}${p.lap ? ` (${T.lap} ${p.lap})` : ''}: ${esc(p.reason)}</li>`).join('') + '</ul>'
+    ? '<ul>' + applied.map((p) => `<li><b>#${esc(p.num)} ${esc(p.driver)}</b> · ${esc(p.headline)}${p.lap ? ` (${T.lap} ${p.lap})` : ''}: ${esc(p.reason)}</li>`).join('') + '</ul>'
     : `<p class="muted">${T.none}</p>`;
 
   const fastest = report.fastest
-    ? `<p class="fast">${T.fastest}: <b>#${esc(report.fastest.num)} ${esc(report.fastest.name)}</b> — ${esc(report.fastest.bestText)}</p>`
+    ? `<p class="fast">${T.fastest}: <b>#${esc(report.fastest.num)} ${esc(report.fastest.name)}</b> · ${esc(report.fastest.bestText)}</p>`
     : '';
 
   const dur = (ms) => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -437,7 +437,7 @@ export function classificationHtml(report, lang = 'en') {
     : '';
 
   return `<!doctype html><html lang="${id ? 'id' : 'en'}"><head><meta charset="utf-8">
-<title>${esc([ev.name, ev.round].filter(Boolean).join(' '))} — ${title}</title>
+<title>${esc([ev.name, ev.round].filter(Boolean).join(' '))} · ${title}</title>
 <style>
   @page { size: A4; margin: 16mm; }
   * { box-sizing: border-box; }
@@ -532,7 +532,7 @@ export function certificateHtml(report, lang = 'en', positions = [1, 2, 3]) {
   const empty = `<section class="cert"><div class="frame"><div class="title">${id ? 'Belum ada pemenang' : 'No winner yet'}</div><div class="desc">${id ? 'Finish balapan dulu.' : 'Finish the race first.'}</div></div></section>`;
 
   return `<!doctype html><html lang="${id ? 'id' : 'en'}"><head><meta charset="utf-8">
-<title>${esc(ev.name || 'FRLcast')} — ${id ? 'Sertifikat' : 'Certificate'}</title>
+<title>${esc(ev.name || 'FRLcast')} · ${id ? 'Sertifikat' : 'Certificate'}</title>
 <style>
   @page { size: A4 landscape; margin: 0; }
   * { box-sizing: border-box; }

@@ -8,7 +8,7 @@
  *
  * The engine underneath is the browser's own speechSynthesis: free, offline, no key, and
  * already present in OBS's browser source. It is not a beautiful voice. Everything above
- * this line — what to say, when, and what to drop — is the part that decides whether it
+ * this line (what to say, when, and what to drop) is the part that decides whether it
  * sounds like commentary, and none of it changes if a nicer engine is ever bolted on: see
  * speak() at the bottom, which is the only place that knows what makes the sound.
  */
@@ -95,7 +95,7 @@ export class Speaker {
      * A named voice wins, when the machine has it.
      *
      * The operator picks from the list their console can see, and the page that does the
-     * speaking may be on the streaming machine instead — a different set of voices, and
+     * speaking may be on the streaming machine instead: a different set of voices, and
      * sometimes none of the same ones. Saying so is better than silently reading the race
      * in a voice nobody chose.
      */
@@ -168,7 +168,7 @@ export class Speaker {
        * Found by running a race: the flag went yellow, then green, then chequered inside
        * twenty seconds, and each announcement takes four to speak. The queue read them in
        * priority order, so the chequered flag cut in first and the green flag was announced
-       * after the race had ended — "the track is clear, go and attack" over a finished
+       * after the race had ended: "the track is clear, go and attack" over a finished
        * race. Expiry alone could not fix it, because the green line was still well within
        * its own lifetime. What made it wrong was not its age but that the flag had changed.
        */
@@ -292,7 +292,7 @@ function defaultSpeak(speaker) {
 /**
  * Piper: post the line to the local server, play the wav it returns.
  *
- * Any failure — no server, Piper not set up, a hosted event with no /api/tts at all — falls
+ * Any failure (no server, Piper not set up, a hosted event with no /api/tts at all) falls
  * back to the browser voice for this one line, so choosing Piper never risks silence.
  */
 function piperSpeak(speaker, text, done, fallback) {

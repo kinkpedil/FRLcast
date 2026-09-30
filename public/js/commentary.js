@@ -8,7 +8,7 @@
  * urgent they are and how long they stay true.
  *
  * Nothing here speaks. Nothing here touches a browser. It is a function from two states to
- * a list of sentences, which is what makes it testable on a desktop — and the sentences are
+ * a list of sentences, which is what makes it testable on a desktop, and the sentences are
  * the part most likely to be wrong in a way only reading them reveals.
  *
  * ------------------------------------------------------------------ saying something
@@ -18,7 +18,7 @@
  * not commentary. Who did they pass? By how much? Was it for a podium? All of that was
  * already in the state, and none of it was being used.
  *
- * So a line now gets the surroundings as well as the event — who was overtaken, the gap it
+ * So a line now gets the surroundings as well as the event: who was overtaken, the gap it
  * happened by, what it changes. Which pool is used depends on which of those are actually
  * known, so a pass whose victim cannot be identified reads properly instead of naming
  * somebody who was never overtaken.
@@ -27,7 +27,7 @@
  *
  * The words follow the voice, not the setting. Ask for Indonesian on a machine that has no
  * Indonesian voice and an English one reads it, and Indonesian words in an English mouth
- * are not accented — they are unintelligible. The overlay resolves which voice it actually
+ * are not accented: they are unintelligible. The overlay resolves which voice it actually
  * got and tells this which language to write in.
  *
  * ------------------------------------------------------------------ why not a language model
@@ -46,7 +46,7 @@ import { fmtGap } from './timing.js';
 export const P_URGENT = 1;   // red flag, chequered flag: say it now, cut off whatever is running
 export const P_HIGH = 2;     // lead change, penalty, retirement
 export const P_NORMAL = 3;   // overtakes, fastest lap, pit stops
-export const P_COLOUR = 4;   // the outlook, gaps, who is in trouble — dropped when busy
+export const P_COLOUR = 4;   // the outlook, gaps, who is in trouble: dropped when busy
 
 /**
  * A stable choice from a pool.
@@ -614,7 +614,7 @@ export class Commentary {
      * A Browser Source added to OBS halfway through a session arrives holding the whole
      * race: every penalty already given, whoever is leading, the flag. Announcing all of
      * that as though it had just happened is what it did the first time it was run against
-     * a real server — it opened by reading out a penalty from the previous race. So the
+     * a real server: it opened by reading out a penalty from the previous race. So the
      * first update only records where things stand, and commentary begins with the next
      * thing that actually changes.
      */
@@ -633,8 +633,8 @@ export class Commentary {
     /*
      * After the chequered flag, nothing.
      *
-     * Positions keep settling for several seconds after a race ends — a car still on track
-     * crosses the line, the classification reshuffles — and the first version of this
+     * Positions keep settling for several seconds after a race ends: a car still on track
+     * crosses the line, the classification reshuffles, and the first version of this
      * called two lead changes and an overtake after it had already announced the finish.
      * Nobody commentates a pass that happened after the flag.
      */
@@ -662,13 +662,13 @@ export class Commentary {
     if (!prev || prev.race.status !== race.status) {
       const key = `flag:${race.status}:${race.startedAt || 0}:${lap}`;
       // "Racing again" only after something stopped it. Written the other way round at
-      // first — anything that was not idle — and a race started straight after the previous
+      // first (anything that was not idle) and a race started straight after the previous
       // one had finished was announced as a restart.
       const restart = race.status === 'green' && prev
         && ['yellow', 'safety', 'vsc', 'red'].includes(prev.race.status);
       let pool = race.status === 'green' ? (restart ? 'restart' : 'green') : race.status;
-      // The chequered flag is the one moment a name belongs in it. With no leader to name —
-      // an empty grid, a session abandoned — it falls back to the plain wording rather than
+      // The chequered flag is the one moment a name belongs in it. With no leader to name: 
+      // an empty grid, a session abandoned: it falls back to the plain wording rather than
       // announcing that nobody has won.
       if (race.status === 'finished') pool = leader ? 'finished' : 'finishedPlain';
 
@@ -771,7 +771,7 @@ export class Commentary {
            * Who was passed.
            *
            * The car that was ahead of this one and is now behind it. Anything else is a
-           * coincidence of the classification — a retirement in front, a pit stop — and
+           * coincidence of the classification (a retirement in front, a pit stop) and
            * naming somebody who was not overtaken is worse than naming nobody, so the pool
            * changes rather than the sentence guessing.
            */

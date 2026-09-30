@@ -225,7 +225,7 @@ function band(p, sample) {
  * Everything the commentary is allowed to claim.
  *
  * @param {object} state     the broadcast state, either side
- * @param {object} opts      { runs, previous } — previous is the last outlook, for deltas
+ * @param {object} opts      { runs, previous }: previous is the last outlook, for deltas
  */
 export function outlook(state, { runs = 2000, previous = null } = {}) {
   const race = state.race || {};

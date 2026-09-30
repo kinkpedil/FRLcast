@@ -41,7 +41,7 @@ export class CloudBus {
     this.penalties = new Map();
     this.feed = [];
     this.radio = [];            // newest-first team-radio messages, for the overlay card
-    this.radioChannel = null;   // its own realtime channel — see subscribe()
+    this.radioChannel = null;   // its own realtime channel: see subscribe()
     this.votes = new Map();     // voter fingerprint -> choice, for the audience poll
 
     this.connect();
@@ -63,7 +63,7 @@ export class CloudBus {
       this.handlers.open.forEach((f) => f());
 
       // Safety net. Realtime is the fast path, but OBS's Browser Source can hold a channel
-      // that has quietly stopped delivering — no error, no close, just silence — and the
+      // that has quietly stopped delivering (no error, no close, just silence) and the
       // overlay then freezes on whatever flag was last pushed. A slow re-fetch reconciles the
       // whole state every few seconds, so the very worst case is a handful of seconds stale
       // rather than stuck until someone reloads the source. It is a few small selects; on a
@@ -158,7 +158,7 @@ export class CloudBus {
       // Realtime drops oversized jsonb from the payload: this event's `settings` (eight
       // scenes, the layout, the grid) is past the per-row byte cap, so a flag change arrives
       // as a row with `settings` missing entirely. Overwriting blindly wiped the overlay's
-      // whole config for that frame — every widget's placement gone, and `activeScene` gone
+      // whole config for that frame: every widget's placement gone, and `activeScene` gone
       // with it, which the overlay then read as a scene change and fired the stinger on every
       // flag. Keep the settings we already have whenever the update did not carry them.
       const prev = this.event || {};
@@ -206,7 +206,7 @@ export class CloudBus {
 
     // Team radio rides its OWN channel, on purpose. Binding a postgres_changes listener to a
     // table that is not yet in the realtime publication makes the WHOLE channel come back
-    // CHANNEL_ERROR — so putting team_radio on the main channel took flags, drivers and
+    // CHANNEL_ERROR, so putting team_radio on the main channel took flags, drivers and
     // penalties down with it whenever the radio migration had not been applied. Its own
     // channel fails alone and the broadcast keeps running; when the migration lands it simply
     // starts working, no code change.
@@ -219,7 +219,7 @@ export class CloudBus {
    *
    * In OBS the reconcile poll is a background-throttled timer and barely runs, so this channel
    * is what actually puts a message on the card the instant it is sent. It used to be killed
-   * permanently on the first error — a single transient drop and radio was dead for the rest
+   * permanently on the first error: a single transient drop and radio was dead for the rest
    * of the broadcast, which is exactly the "message never appears" everyone hit. Now it comes
    * back like the main channel does. A genuinely missing table (migration not applied) errors
    * every time, so the retries are capped rather than looping forever.
@@ -233,7 +233,7 @@ export class CloudBus {
     this.radioChannel.subscribe((status) => {
       if (status === 'SUBSCRIBED') { this.radioRetries = 0; return; }
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        // Come back after a moment — unless it keeps failing, which means the table is not
+        // Come back after a moment, unless it keeps failing, which means the table is not
         // there and retrying forever would just burn the connection.
         if (this.radioRetries++ < 6) {
           clearTimeout(this.radioResub);

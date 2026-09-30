@@ -109,7 +109,7 @@ const noCache = {
 /*
  * The uploaded logo is the one file here that did not come from this repository, and SVG
  * is a document format that can carry script. Rendered through <img> it is inert, but
- * opening /brand/logo.svg directly would run it in this origin — where the operator's
+ * opening /brand/logo.svg directly would run it in this origin: where the operator's
  * session lives. A sandbox header costs nothing and removes the question entirely.
  */
 app.use('/brand', (_req, res, next) => {
@@ -137,7 +137,7 @@ app.get('/api/ping', (req, res) => {
 
 // tlsPort is here for the driver page: over plain http Android blocks both the service
 // worker and the Notification API, so a phone has to be told where the https door is.
-// null when no certificate could be made, which is the honest answer — there is no door.
+// null when no certificate could be made, which is the honest answer: there is no door.
 app.get('/api/net', (_req, res) => res.json({
   port: PORT, tlsPort: secure ? TLS_PORT : null, addresses: lanAddresses(), clients: clientList()
 }));
@@ -152,7 +152,7 @@ app.post('/api/action', (req, res) => {
  * without first having to trust it. Installing it there as a trusted root removes the
  * "Your connection is not private" warning for good.
  *
- * Only the certificate is served. The private key never leaves this machine — certs/ is
+ * Only the certificate is served. The private key never leaves this machine: certs/ is
  * outside every static root on purpose, and this route names one file explicitly rather
  * than exposing the directory.
  */
@@ -172,7 +172,7 @@ app.get('/frl-ca.crt', (req, res) => {
  * would be retransmitted with every lap.
  *
  * The filename is fixed and the extension comes from the declared image type, never from
- * anything the client sends — so there is no path to traverse and no way to land an
+ * anything the client sends, so there is no path to traverse and no way to land an
  * executable extension in a served directory. Anything that is not a small image is
  * refused outright.
  */
@@ -357,7 +357,7 @@ app.get('/api/driver/me', (req, res) => {
      * something a phone in the paddock should be handing out.
      *
      * `text` is built here rather than on the phone so the app and the broadcast overlay
-     * cannot drift into describing the same penalty differently — the driver reading it
+     * cannot drift into describing the same penalty differently: the driver reading it
      * and the steward who issued it have to be looking at the same sentence.
      */
     penalties: d ? (s.race.penalties || [])
@@ -376,7 +376,7 @@ app.get('/api/driver/me', (req, res) => {
 
 /*
  * Team radio: a driver messages their own team. In an endurance race the incoming driver
- * types "box box box" and the driver on track gets it — nobody on another team does.
+ * types "box box box" and the driver on track gets it: nobody on another team does.
  * Kept in memory (latest message per team); the phone polls it through /api/driver/me.
  */
 const teamRadio = new Map();   // teamKey -> { id, team, from, text, at }
@@ -453,7 +453,7 @@ app.get('/api/lap/:driverId', (req, res) => {
 });
 
 /*
- * Piper TTS — a natural local commentary voice.
+ * Piper TTS: a natural local commentary voice.
  *
  * The commentary overlay's built-in voice is the browser's own speechSynthesis, which in
  * OBS's embedded Chromium only has the robotic local SAPI voices. Piper is a fast neural
@@ -463,8 +463,8 @@ app.get('/api/lap/:driverId', (req, res) => {
  * run Piper, so the overlay falls back to the browser voice whenever these routes are
  * absent or fail.
  *
- * Set it up with env — FRL_PIPER (the piper binary), FRL_VOICES (a folder of *.onnx voices,
- * each with its .onnx.json beside it) — or drop both under tools/piper/.
+ * Set it up with env: FRL_PIPER (the piper binary), FRL_VOICES (a folder of *.onnx voices,
+ * each with its .onnx.json beside it), or drop both under tools/piper/.
  */
 function resolvePiper() {
   const bin = process.env.FRL_PIPER
@@ -542,7 +542,7 @@ async function piperCatalog() {
     const lang = v.language || {};
     return {
       key: v.key,
-      lang: [lang.name_english, lang.country_english].filter(Boolean).join(' — '),
+      lang: [lang.name_english, lang.country_english].filter(Boolean).join(', '),
       code: lang.code || '',
       quality: v.quality || '',
       speakers: v.num_speakers || 1,
@@ -726,7 +726,7 @@ function routeUpgrade(req, socket, head) {
 server.on('upgrade', routeUpgrade);
 if (secure) secure.on('upgrade', routeUpgrade);
 
-/** Who is attached right now — the panel shows this so you can see the laptop arrive. */
+/** Who is attached right now: the panel shows this so you can see the laptop arrive. */
 function clientList() {
   return [...wss.clients]
     .filter((c) => c.readyState === 1)
@@ -787,7 +787,7 @@ function broadcastClients() {
 /**
  * A predicted running order is a function of the clock, so it needs a clock to move.
  * Recompute is otherwise only triggered by an action, which between two crossings can
- * be nothing at all — and a leaderboard that only reorders once a lap is the very
+ * be nothing at all, and a leaderboard that only reorders once a lap is the very
  * problem prediction exists to solve. One tick a second is enough for an order change
  * to look live, and clients that see no visible difference skip the render anyway.
  */
@@ -797,7 +797,7 @@ function broadcastClients() {
  * It used to run only under a green flag, because its one job was to advance the
  * predicted running order. Automatic flags gave it a second one: a yellow lifts when the
  * track has been clear for a few seconds, and "a few seconds have passed" is not an event
- * anybody sends — without a tick while the flag is out, the race would stay yellow until
+ * anybody sends: without a tick while the flag is out, the race would stay yellow until
  * the next lap crossing happened to wake the state up.
  */
 setInterval(() => {
@@ -812,8 +812,8 @@ setInterval(() => {
 /**
  * Heartbeat.
  *
- * Pinging alone is not enough: a browser tab that goes away without a clean close —
- * a machine sleeping, WiFi dropping, a crash — leaves a socket the server happily
+ * Pinging alone is not enough: a browser tab that goes away without a clean close:
+ * a machine sleeping, WiFi dropping, a crash: leaves a socket the server happily
  * keeps broadcasting to forever. Over an event with a few reconnects that pile of
  * ghosts is what makes the connected-clients list lie. So require a pong, and drop
  * whoever does not answer within one interval.
@@ -868,7 +868,7 @@ server.listen(PORT, () => {
     if (best) {
       console.log('');
       console.log(`  The other device must be on the same ${best.subnet} network.`);
-      console.log('  Different IPs are normal and fine — WiFi and Ethernet on one router share a subnet.');
+      console.log('  Different IPs are normal and fine: WiFi and Ethernet on one router share a subnet.');
       if (process.platform === 'win32') {
         console.log('  If it cannot connect, allow the port through Windows Firewall (run as admin):');
         console.log(`    netsh advfirewall firewall add rule name="FRL Broadcast" dir=in action=allow protocol=TCP localport=${PORT}`);
@@ -881,7 +881,7 @@ server.listen(PORT, () => {
   if (secure) {
     const best = addresses.find((a) => a.likely) || addresses[0];
     console.log('');
-    console.log('  From ANOTHER machine the node must be opened over HTTPS —');
+    console.log('  From ANOTHER machine the node must be opened over HTTPS -');
     console.log('  browsers hide screen capture entirely on a plain-http address:');
     console.log(`    https://${best ? best.address : 'localhost'}:${TLS_PORT}/node.html`);
     console.log('  The certificate is self-signed, so accept the warning once');
@@ -889,7 +889,7 @@ server.listen(PORT, () => {
   } else {
     console.log('');
     console.log('  NOTE: openssl was not found, so HTTPS is off. The capture node will');
-    console.log('  only work on this machine — browsers require a secure origin.');
+    console.log('  only work on this machine: browsers require a secure origin.');
   }
   console.log('');
   console.log('  OBS browser sources (1920x1080, transparent):');

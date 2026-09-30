@@ -50,7 +50,7 @@ function defaultState() {
       pausedAt: null,
       pausedTotal: 0,
       timeLimitSec: 0,     // 0 = lap based
-      // Manual mode: no vision, no timing lines — the operator sets the order and the laps
+      // Manual mode: no vision, no timing lines: the operator sets the order and the laps
       // by hand. When on, recompute arranges the field by manualOrder instead of by pace.
       manual: false,
       manualOrder: [],     // driver ids, position 1 first, while manual mode is on
@@ -64,8 +64,8 @@ function defaultState() {
       /*
        * The order the cars line up in, as driver ids.
        *
-       * Before anyone has completed a lap there is nothing to rank on — every car has
-       * zero laps and zero elapsed time — so without this the leaderboard shows whatever
+       * Before anyone has completed a lap there is nothing to rank on: every car has
+       * zero laps and zero elapsed time, so without this the leaderboard shows whatever
        * order the roster happens to be in, which is not the order on track. The grid is
        * usually built from a qualifying session, but it is just a list, so it can also be
        * set by hand for a reverse grid or a heat draw.
@@ -77,7 +77,7 @@ function defaultState() {
        * Penalties are recorded as decisions with a reason and a moment, not as a number
        * silently added to a driver. A stewarding decision that cannot be shown, explained
        * or reversed is not one anyone will trust, and at a club event the person running
-       * race control is also running the stream — they need to see what is outstanding
+       * race control is also running the stream: they need to see what is outstanding
        * without keeping it in their head.
        *
        * An investigation is deliberately its own state. Announcing UNDER INVESTIGATION and
@@ -88,7 +88,7 @@ function defaultState() {
       /*
        * Flags, raised by the system where the system can actually see the reason.
        *
-       * A stopped car on the racing line is a yellow — that is what a yellow means, and
+       * A stopped car on the racing line is a yellow, that is what a yellow means, and
        * "this car has not moved for four seconds and is not in the pits" is something the
        * tracker already knows. Several at once is an accident, which is a red. The leader
        * completing the distance is a chequered flag. A car about to be lapped is a blue.
@@ -102,8 +102,8 @@ function defaultState() {
         auto: true,
         yellowOnStopped: true,
         /*
-         * What a stopped car raises. The detection is identical either way — a car that
-         * has not moved and is not in the pits — so this is a preference about response,
+         * What a stopped car raises. The detection is identical either way: a car that
+         * has not moved and is not in the pits, so this is a preference about response,
          * not a second thing to detect. Series that neutralise with a virtual safety car
          * set it here once and never think about it again.
          */
@@ -171,7 +171,7 @@ function defaultState() {
        *
        * Auto by default, and auto means the closest fight on track rather than the front
        * two. The battle worth showing is rarely for the lead, and an operator who has to
-       * notice it and pick both drivers by hand will miss it — by the time the graphic is
+       * notice it and pick both drivers by hand will miss it: by the time the graphic is
        * up the pass has happened.
        */
       h2h: { mode: 'auto', a: null, b: null },
@@ -181,8 +181,8 @@ function defaultState() {
        * different things on screen, and rebuilding the layout by hand between them is
        * not something anyone does while a stream is live.
        *
-       * `show` and `layout` above are the *active* scene, mirrored out so every reader —
-       * the overlays, the layout editor, the preview — keeps working unchanged. Writes go
+       * `show` and `layout` above are the *active* scene, mirrored out so every reader:
+       * the overlays, the layout editor, the preview: keeps working unchanged. Writes go
        * into the scene and are mirrored back, so the two can never drift apart.
        */
       scenes: [],
@@ -224,8 +224,8 @@ function defaultState() {
         logoUrl: '',
         name: '',
         showLogo: true,
-        // 'beside'    — logo sits next to the flag, both on screen the whole time
-        // 'alternate' — the two share one slot and cross-fade between each other
+        // 'beside': logo sits next to the flag, both on screen the whole time
+        // 'alternate': the two share one slot and cross-fade between each other
         placement: 'beside',
         rotateSec: 6       // only used by 'alternate': how long each holds the slot
       },
@@ -305,7 +305,7 @@ function defaultState() {
       bestSectors: []            // index -> { ms, driverId }
     },
     /*
-     * Tandem battles — the format FR Legends is actually competed in.
+     * Tandem battles: the format FR Legends is actually competed in.
      *
      * Everything else in this file measures a car against a clock. A drift event is not
      * that: drivers qualify on a judged solo run, then meet head to head in a knockout,
@@ -331,7 +331,7 @@ function defaultState() {
      * Finished sessions, kept so one can feed the next.
      *
      * A race weekend is a chain: practice informs qualifying, qualifying sets the grid,
-     * the race produces the result. Holding only the live session throws that away — the
+     * the race produces the result. Holding only the live session throws that away: the
      * operator would have to write the qualifying order on paper and type it back in,
      * which is exactly where a grid gets scrambled. Results are snapshots, not links to
      * the drivers, so editing the roster afterwards cannot rewrite history.
@@ -363,8 +363,8 @@ function defaultState() {
     /*
      * Markers for cutting the recording afterwards.
      *
-     * Everything worth marking is already detected — an overtake, a fastest lap, a car
-     * stopping, a battle decided — and already timestamped. What was missing was somewhere
+     * Everything worth marking is already detected: an overtake, a fastest lap, a car
+     * stopping, a battle decided, and already timestamped. What was missing was somewhere
      * durable to keep it: `feed` is capped at 60 so the overlays stay cheap to render, and
      * an evening's event overruns that within the first race. These are kept in full and
      * expressed relative to the moment recording started, which is the only form an editor
@@ -391,7 +391,7 @@ function defaultState() {
      * The spoken commentator.
      *
      * Settings only. What it says is worked out fresh by whichever page is speaking, from
-     * the same state every overlay already has, so no commentary ever crosses the wire —
+     * the same state every overlay already has, so no commentary ever crosses the wire:
      * three hundred lines an evening in the settings blob would rewrite the blob three
      * hundred times, and every rewrite is a Realtime message to every overlay.
      */
@@ -624,7 +624,7 @@ export class RaceState {
         if (this.state.race.status === 'green') this.state.race.status = 'red';
         this.state.vision = defaultState().vision;
       }
-      this.state.radio = [];   // radio is live pit chatter, not race history — never reload stale
+      this.state.radio = [];   // radio is live pit chatter, not race history: never reload stale
       this.ensureScenes();
     } catch (err) {
       console.error('[state] load failed, using defaults:', err.message);
@@ -722,7 +722,7 @@ export class RaceState {
         if (prev == null) continue;
         d.lapTimes.push(d.crossings[i] - prev);
       }
-      // A crossing can carry a timestamp fractionally before the green flag — the
+      // A crossing can carry a timestamp fractionally before the green flag: the
       // detector interpolates between frames, and the operator may hit Start a moment
       // after the cars are already rolling. That yields a negative lap time, and a
       // single one used to poison bestLap, the session record and the overlay for the
@@ -734,7 +734,7 @@ export class RaceState {
         ? d.crossings[d.crossings.length - 1] - race.startedAt
         : 0;
       // Only penalties actually handed down count. An investigation still open must not
-      // move anyone on the timing screen — that is the whole point of announcing one.
+      // move anyone on the timing screen, that is the whole point of announcing one.
       const served = (race.penalties || [])
         .filter((p) => p.driverId === d.id && p.status === 'applied' && p.type === 'time')
         .reduce((n, p) => n + (p.seconds || 0), 0);
@@ -767,8 +767,8 @@ export class RaceState {
       /*
        * A measurement plus however far the car must have travelled since it was taken.
        *
-       * The obvious version of this — trust the measurement for a few seconds, then
-       * switch to a pace estimate — has two discontinuities, and a race is decided in
+       * The obvious version of this: trust the measurement for a few seconds, then
+       * switch to a pace estimate: has two discontinuities, and a race is decided in
        * the gaps between them. While the measurement is held, the car's position is
        * frozen although time is passing, so a car that is briefly unseen is passed by
        * one that is not; when the hold expires, the estimate jumps from the frozen
@@ -781,7 +781,7 @@ export class RaceState {
        *
        * Extrapolating from the last measurement removes both. At the instant of the
        * measurement the estimate equals it exactly, and from there it advances at the
-       * car's own pace — so losing sight of a car changes nothing about its reported
+       * car's own pace, so losing sight of a car changes nothing about its reported
        * position, only how confident that position is.
        */
       const age = d.trackedAt ? now - d.trackedAt : Infinity;
@@ -798,7 +798,7 @@ export class RaceState {
         /*
          * No live measurement of where this car is (no camera, or its reading is stale).
          *
-         * With a single timing line — a finish line and nothing else — there is genuinely no
+         * With a single timing line (a finish line and nothing else) there is genuinely no
          * way to know where a car is between crossings, and guessing from its lap pace only
          * reshuffles the order by lap time, which is not track position at all. So do not
          * guess: the car sits at the lap it has completed, and its place only moves when it
@@ -829,7 +829,7 @@ export class RaceState {
       const i = grid.indexOf(d.id);
       return i < 0 ? Infinity : i;
     };
-    // Before the flag there is nothing to measure, so the grid is the order — not the
+    // Before the flag there is nothing to measure, so the grid is the order, not the
     // roster, and not whatever the detector happens to see on the dummy grid.
     const preRace = !isDrift && !isQuali && grid.length &&
       (race.status === 'idle' || race.status === 'formation');
@@ -848,7 +848,7 @@ export class RaceState {
         return a.bestLap - b.bestLap;
       }
       /*
-       * Once the flag is out, the classification is the result — and a time penalty is
+       * Once the flag is out, the classification is the result, and a time penalty is
        * part of the result, not part of the race. While the cars are running they are
        * ranked where they physically are: a driver carrying five seconds is still ahead
        * on the road, and showing them demoted before the end would be wrong on the
@@ -879,8 +879,8 @@ export class RaceState {
      * and has been extrapolated since. Those two quantities disagree by a few percent
      * of a lap and the disagreement changes sign as each car is seen and lost, so the
      * pair trade places again and again without either of them overtaking anything.
-     * Nothing about the estimate removes this — a measurement and an extrapolation are
-     * genuinely not comparable at that precision — so the order itself is what has to
+     * Nothing about the estimate removes this: a measurement and an extrapolation are
+     * genuinely not comparable at that precision, so the order itself is what has to
      * be damped.
      *
      * Only pairs involving an extrapolated position are held, and only while they are
@@ -892,8 +892,8 @@ export class RaceState {
      * Not before the flag.
      *
      * The damping exists because a measured position and an extrapolated one are not
-     * comparable at close quarters. On the grid nothing is being measured at all — every
-     * car has zero laps and zero elapsed time — so every pair is inside the margin and
+     * comparable at close quarters. On the grid nothing is being measured at all: every
+     * car has zero laps and zero elapsed time, so every pair is inside the margin and
      * the order would freeze at whatever it happened to be first, ignoring the grid
      * entirely. There is nothing to damp until the cars are running.
      */
@@ -910,7 +910,7 @@ export class RaceState {
        * Staleness, not the predicted flag, is what makes two positions incomparable.
        *
        * A car has no pace to extrapolate from until it has completed a lap, so on the
-       * opening lap nothing is ever marked predicted — the last reading simply sits
+       * opening lap nothing is ever marked predicted: the last reading simply sits
        * there, frozen, while the clock runs. That is the worst case for ordering and it
        * was the one the flag left unguarded: every flicker measured in the reproduction
        * happened on lap one.
@@ -1132,8 +1132,8 @@ export class RaceState {
   /**
    * Raise and clear flags from what the tracker can see.
    *
-   * Deliberately narrow. Three situations are unambiguous in the data — a car stopped
-   * away from the pits, several stopped at once, and the leader reaching the distance —
+   * Deliberately narrow. Three situations are unambiguous in the data: a car stopped
+   * away from the pits, several stopped at once, and the leader reaching the distance:
    * and each maps onto exactly one flag. Everything else a real race director calls
    * needs eyes on the incident, so it stays a button.
    */
@@ -1177,7 +1177,7 @@ export class RaceState {
      * This is the one escalation the system can work out for itself: the lap a penalty
      * was issued on is recorded, the current lap count is known, and "still not served
      * three laps later" is arithmetic rather than judgement. Everything else that earns a
-     * black flag — ignoring marshals, dangerous driving — needs a person watching.
+     * black flag (ignoring marshals, dangerous driving) needs a person watching.
      */
     const unservedLaps = Math.max(0, rules.blackFlagUnserved || 0);
     if (unservedLaps && race.status !== 'finished') {
@@ -1216,23 +1216,23 @@ export class RaceState {
       race.flagSource = 'auto';
       const who = stopped.map((d) => d.name).join(', ');
       this.pushFeed('flag', want === 'red'
-        ? `RED FLAG — ${stopped.length} CARS STOPPED`
-        : `${want === 'vsc' ? 'VIRTUAL SAFETY CAR' : 'YELLOW FLAG'} — ${who} STOPPED ON TRACK`);
+        ? `RED FLAG: ${stopped.length} CARS STOPPED`
+        : `${want === 'vsc' ? 'VIRTUAL SAFETY CAR' : 'YELLOW FLAG'}: ${who} STOPPED ON TRACK`);
       return;
     }
 
     if (race.status === 'green') { race.clearSince = null; return; }
     /*
      * Hold before going back to green. The track being clear for one update is not the
-     * same as the incident being over — a car can register as moving for a moment while
-     * it is being recovered — and a flag that flickers is worse than one that lingers.
+     * same as the incident being over: a car can register as moving for a moment while
+     * it is being recovered, and a flag that flickers is worse than one that lingers.
      */
     if (!race.clearSince) { race.clearSince = now; return; }
     if (now - race.clearSince < Math.max(1, rules.greenAfterSec || 5) * 1000) return;
     race.status = 'green';
     race.flagSource = 'auto';
     race.clearSince = null;
-    this.pushFeed('flag', 'TRACK CLEAR — GREEN FLAG');
+    this.pushFeed('flag', 'TRACK CLEAR · GREEN FLAG');
   }
 
   /** Newest-first log of things worth putting on screen or in the ticker. */
@@ -1253,7 +1253,7 @@ export class RaceState {
   /**
    * The table, from every round scored so far.
    *
-   * Ties are broken by countback — most wins, then most seconds, and so on — which is how
+   * Ties are broken by countback (most wins, then most seconds, and so on) which is how
    * every real series settles them. Total points alone would leave two drivers level with
    * nothing to separate them, and a championship that ends in a shrug is worse than one
    * decided by a rule nobody likes.
@@ -1365,7 +1365,7 @@ export class RaceState {
     d.battle = null;
     d.champion = null;
     this.growBracket();
-    this.pushFeed('battle', `BRACKET SET — ${d.bracket[0].name}`);
+    this.pushFeed('battle', `BRACKET SET: ${d.bracket[0].name}`);
     return true;
   }
 
@@ -1397,8 +1397,8 @@ export class RaceState {
   /**
    * Turn the judges' votes into a result.
    *
-   * A majority decides. Anything else — a tie, or the judges themselves calling it too
-   * close — is One More Time, which is the honest answer and the one the crowd wants.
+   * A majority decides. Anything else: a tie, or the judges themselves calling it too
+   * close: is One More Time, which is the honest answer and the one the crowd wants.
    * After maxOmt reruns a decision has to be forced, because an event cannot loop.
    */
   decideBattle() {
@@ -1434,7 +1434,7 @@ export class RaceState {
         b.lead = 'a';
         b.status = 'running';
         const A = this.driver(b.a), B = this.driver(b.b);
-        this.pushFeed('battle', `ONE MORE TIME — ${A ? A.name : '?'} vs ${B ? B.name : '?'}`);
+        this.pushFeed('battle', `ONE MORE TIME: ${A ? A.name : '?'} vs ${B ? B.name : '?'}`);
         return true;
       }
     }
@@ -1469,7 +1469,7 @@ export class RaceState {
 
   penaltyText(p) {
     if (p.type === 'note') return p.reason;
-    return `${this.penaltyHeadline(p)} — ${p.reason}`;
+    return `${this.penaltyHeadline(p)}: ${p.reason}`;
   }
 
   pushFeed(kind, text, driverId = null) {
@@ -1496,7 +1496,7 @@ export class RaceState {
     const rec = this.state.records.bestSectors[index];
     if (!rec || ms < rec.ms) {
       this.state.records.bestSectors[index] = { ms, driverId: d.id };
-      this.pushFeed('sector', `${d.name} — FASTEST S${index + 1} ${fmtGap(ms)}`, d.id);
+      this.pushFeed('sector', `${d.name} · FASTEST S${index + 1} ${fmtGap(ms)}`, d.id);
     }
   }
 
@@ -1506,7 +1506,7 @@ export class RaceState {
     const rec = this.state.records.bestLap;
     if (lapMs > 0 && (rec.ms == null || lapMs < rec.ms)) {
       this.state.records.bestLap = { ms: lapMs, driverId: d.id, lap: d.crossings.length };
-      this.pushFeed('fastest', `${d.name} — FASTEST LAP ${fmtGap(lapMs)}`, d.id);
+      this.pushFeed('fastest', `${d.name} · FASTEST LAP ${fmtGap(lapMs)}`, d.id);
     }
   }
 
@@ -1528,7 +1528,7 @@ export class RaceState {
     switch (a.type) {
       case 'history.undo': {
         const prev = this.history.pop();
-        if (!prev) return false;   // nothing to undo — no emit, no-op
+        if (!prev) return false;   // nothing to undo, no emit, no-op
         this.state = prev;
         break;
       }
@@ -1638,7 +1638,7 @@ export class RaceState {
           if (sc) sc.show.results = false;
           this.syncScene();
         }
-        this.pushFeed('flag', 'GREEN FLAG — RACE START');
+        this.pushFeed('flag', 'GREEN FLAG · RACE START');
         break;
 
       case 'race.flag': { // green | yellow | safety | red | formation | finished
@@ -1931,7 +1931,7 @@ export class RaceState {
         break;
       }
 
-      case 'lap.record':   // operator hotkey / REST hook — same path as a detected crossing
+      case 'lap.record':   // operator hotkey / REST hook: same path as a detected crossing
         // With the timing API live a crossing written here is overwritten on the next poll,
         // so the operator's +Lap (button or hotkey) becomes a lap correction the poller applies.
         if (this.extLive() && (a.source === 'operator' || a.source === 'hotkey')) {
@@ -2143,7 +2143,7 @@ export class RaceState {
         break;
       }
 
-      case 'overlay.layout': {   // move / resize / scale one widget — LIVE (straight to OBS)
+      case 'overlay.layout': {   // move / resize / scale one widget: LIVE (straight to OBS)
         const sc = this.scene(a.scene);
         if (!sc) break;
         if (!sc.layout) sc.layout = {};
@@ -2346,7 +2346,7 @@ export class RaceState {
         if (!r || r.status === 'approved') break;
         /*
          * Approving joins the sign-in to a car on the grid. An existing driver with that
-         * number is adopted rather than duplicated — the operator has usually already
+         * number is adopted rather than duplicated: the operator has usually already
          * built the roster, and a second "#7" appearing beside the first is worse than
          * useless on a timing screen.
          */
@@ -2360,8 +2360,8 @@ export class RaceState {
         // The team the driver typed on their phone, put on the car by accepting them. A
         // driver who left the box empty must not wipe a team the operator typed in.
         if (r.team) d.team = r.team;
-        // Which account is driving this car. Nothing here reads it — a driver's phone
-        // finds itself through the sign-in row, not through the car — but the database
+        // Which account is driving this car. Nothing here reads it: a driver's phone
+        // finds itself through the sign-in row, not through the car, but the database
         // carries the same link, and a row that only one of the two paths fills in is a
         // row nobody can trust later.
         d.accountId = r.accountId || d.accountId || null;
@@ -2481,7 +2481,7 @@ export class RaceState {
         /*
          * An automatic finding opens an investigation unless the operator has asked for
          * decisions to be immediate. Software that hands down penalties on its own, from
-         * a colour blob it might have mistracked, would be wrong in public — and a wrong
+         * a colour blob it might have mistracked, would be wrong in public, and a wrong
          * penalty is far more damaging to an event than a late one.
          */
         const status = a.status || (auto && !rules.autoApply ? 'investigating' : 'applied');
@@ -2489,7 +2489,7 @@ export class RaceState {
           id: uid(),
           driverId: a.driverId,
           // `kind`, not `type`: the action's own discriminator is `type`, and naming the
-          // penalty class the same thing overwrote it — the whole action stopped being
+          // penalty class the same thing overwrote it: the whole action stopped being
           // recognised and failed silently.
           type: a.kind || 'time',           // time | warning | drivethrough | dq | note
           seconds: Number(a.seconds) || 0,
@@ -2503,8 +2503,8 @@ export class RaceState {
         s.race.penalties = s.race.penalties.slice(0, 200);
         if (p.type === 'dq' && status === 'applied') d.dnf = true;
         this.pushFeed('penalty', status === 'investigating'
-          ? `${d.name} — UNDER INVESTIGATION: ${p.reason}`
-          : `${d.name} — ${this.penaltyText(p)}`, d.id);
+          ? `${d.name} · UNDER INVESTIGATION: ${p.reason}`
+          : `${d.name} · ${this.penaltyText(p)}`, d.id);
         break;
       }
 
@@ -2514,14 +2514,14 @@ export class RaceState {
         const d = this.driver(p.driverId);
         if (a.drop) {
           p.status = 'dropped';
-          if (d) this.pushFeed('penalty', `${d.name} — NO FURTHER ACTION`, d.id);
+          if (d) this.pushFeed('penalty', `${d.name} · NO FURTHER ACTION`, d.id);
           break;
         }
         p.status = 'applied';
         if (a.kind) p.type = a.kind;
         if (a.seconds != null) p.seconds = Number(a.seconds) || 0;
         if (p.type === 'dq' && d) d.dnf = true;
-        if (d) this.pushFeed('penalty', `${d.name} — ${this.penaltyText(p)}`, d.id);
+        if (d) this.pushFeed('penalty', `${d.name} · ${this.penaltyText(p)}`, d.id);
         break;
       }
 
@@ -2538,7 +2538,7 @@ export class RaceState {
         p.served = true;
         p.servedAt = now;
         const d = this.driver(p.driverId);
-        if (d) this.pushFeed('penalty', `${d.name} — PENALTY SERVED`, d.id);
+        if (d) this.pushFeed('penalty', `${d.name} · PENALTY SERVED`, d.id);
         break;
       }
 
@@ -2579,7 +2579,7 @@ export class RaceState {
         d.trackLimits = (d.trackLimits || 0) + 1;
         const allowed = Math.max(0, s.race.rules.trackLimitsAllowed);
         if (d.trackLimits <= allowed) {
-          this.pushFeed('penalty', `${d.name} — TRACK LIMITS ${d.trackLimits}/${allowed}`, d.id);
+          this.pushFeed('penalty', `${d.name} · TRACK LIMITS ${d.trackLimits}/${allowed}`, d.id);
           break;
         }
         d.trackLimits = 0;
@@ -2762,7 +2762,7 @@ export class RaceState {
           status: 'running', winner: null
         };
         const A = this.driver(pair.a), B = this.driver(pair.b);
-        this.pushFeed('battle', `${round.name} — ${A ? A.name : '?'} vs ${B ? B.name : '?'}`);
+        this.pushFeed('battle', `${round.name}: ${A ? A.name : '?'} vs ${B ? B.name : '?'}`);
         break;
       }
 

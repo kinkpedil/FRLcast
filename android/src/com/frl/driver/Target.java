@@ -47,7 +47,7 @@ public final class Target {
    * machine on the local network, so the app went looking for a broadcast server on
    * frl-broadcast.vercel.app:4700 and reported that it could not be reached.
    *
-   * Any link the operator can copy — the OBS overlay URL, the console's own address —
+   * Any link the operator can copy (the OBS overlay URL, the console's own address) 
    * carries `event=CODE`, so a paste of one of those now works. The bare website address
    * carries nothing that names an event, and no amount of guessing will fix that; see
    * isWebsite below for what the driver is told instead.
@@ -77,7 +77,7 @@ public final class Target {
    * a timeout and then tells them the wrong thing.
    *
    * A port means somebody typed an address deliberately, an IP is an IP, and .local is a
-   * name only this network knows. What is left — a dotted name with no port — is the web.
+   * name only this network knows. What is left (a dotted name with no port) is the web.
    */
   public static boolean isWebsite(String typed) {
     String h = typed == null ? "" : typed.trim();

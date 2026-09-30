@@ -31,8 +31,8 @@ import java.util.Set;
 /**
  * The floating window, and the thing that keeps it fed.
  *
- * A foreground service because the driver is going to leave this app immediately — they
- * are here to race — and an activity would be stopped the moment FR Legends came forward.
+ * A foreground service because the driver is going to leave this app immediately: they
+ * are here to race, and an activity would be stopped the moment FR Legends came forward.
  * The notification is the price Android charges for staying alive, and it is a fair one.
  */
 public class OverlayService extends Service {
@@ -54,7 +54,7 @@ public class OverlayService extends Service {
    * How long a penalty holds the window.
    *
    * Long enough to read a headline and a reason at a glance between corners, short enough
-   * that the flag — the thing that is true continuously — is never hidden for long.
+   * that the flag (the thing that is true continuously) is never hidden for long.
    */
   private static final long PENALTY_MS = 8000;
 
@@ -78,7 +78,7 @@ public class OverlayService extends Service {
    * Which penalties have already been announced.
    *
    * Keyed by id *and* status, so a finding that starts as an investigation and is later
-   * upheld announces twice — those are two different things to be told, and a driver who
+   * upheld announces twice: those are two different things to be told, and a driver who
    * only heard "under investigation" does not know they are now carrying five seconds.
    *
    * Kept on disk because the phone will kill this service during a long race and the
@@ -155,7 +155,7 @@ public class OverlayService extends Service {
     lp.x = p.getInt(Api.K_X, (int) (16 * d));
     lp.y = p.getInt(Api.K_Y, (int) (80 * d));
 
-    // A preset — or a saved size from a bigger screen — can put the window's bottom-right
+    // A preset (or a saved size from a bigger screen) can put the window's bottom-right
     // corner past the edge of the display. That corner is the resize grip, so once it is
     // off screen the driver cannot shrink the window again by any means. Found by setting
     // the largest preset while the window sat near the right edge.
@@ -221,7 +221,7 @@ public class OverlayService extends Service {
    * Keep a corner of the window on screen.
    *
    * The only limit on dragging. Without it a window can be pushed entirely past the edge,
-   * and since there is nothing left to grab it can never be pulled back — the driver would
+   * and since there is nothing left to grab it can never be pulled back: the driver would
    * have to reinstall the app to see their flags again.
    */
   /** Bring the whole window, grip included, inside the display. */
@@ -288,19 +288,19 @@ public class OverlayService extends Service {
       if (me != null && me.optInt("position") > 0) who += "  ·  P" + me.optInt("position");
     }
 
-    // A flag shown to this driver alone outranks the session's — being told to come in is
+    // A flag shown to this driver alone outranks the session's: being told to come in is
     // not something that should sit behind a green.
     String personal = "";
     if (me != null) {
       int lights = me.optInt("lights", 0);
       String opMsg = me.optString("message", "");
-      if (me.optBoolean("blackFlag")) personal = "BLACK FLAG — PIT NOW";
+      if (me.optBoolean("blackFlag")) personal = "BLACK FLAG: PIT NOW";
       // The start gantry, so the grid sees the same countdown as the gantry and the overlay.
       else if (lights >= 1 && lights <= 5) personal = "GET READY  " + lightDots(lights);
       else if (lights >= 6) personal = "GO  " + lightDots(6);
       // A note race control typed for this driver.
       else if (!opMsg.isEmpty()) personal = opMsg;
-      else if (me.optBoolean("blueFlag")) personal = "BLUE FLAG — LET THEM BY";
+      else if (me.optBoolean("blueFlag")) personal = "BLUE FLAG: LET THEM BY";
     }
 
     view.update(flag, who, personal);
@@ -417,7 +417,7 @@ public class OverlayService extends Service {
    *
    * Both halves come from the server so that the phone, the tower and the steward's own
    * screen are quoting the same sentence. BigTextStyle because a reason is written by a
-   * person under time pressure and is regularly longer than one line — and a reason the
+   * person under time pressure and is regularly longer than one line, and a reason the
    * driver cannot read in full is a reason to argue about it later.
    */
   private void announce(JSONObject p) {
@@ -482,7 +482,7 @@ public class OverlayService extends Service {
   }
 
   /**
-   * A team-radio message from a teammate — the incoming driver typing "BOX BOX BOX" to the
+   * A team-radio message from a teammate: the incoming driver typing "BOX BOX BOX" to the
    * one on track. It reaches the window the same way a penalty does: over the flag for a few
    * seconds, then gone. The driver's own messages come back on the poll too and are skipped,
    * and the first poll after the window opens only seeds the id so nothing stale is replayed.
@@ -503,7 +503,7 @@ public class OverlayService extends Service {
     if (!myNick.isEmpty() && myNick.equalsIgnoreCase(from)) return;
 
     if (view != null) {
-      // Big line is the message, small line is who sent it — the driver mid-corner needs the
+      // Big line is the message, small line is who sent it: the driver mid-corner needs the
       // instruction first and the name second.
       view.showPenalty(text, from.isEmpty() ? "TEAM RADIO" : ("📻 " + from));
       ui.removeCallbacks(clearPenalty);

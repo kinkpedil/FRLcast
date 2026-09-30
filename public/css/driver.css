@@ -17,7 +17,7 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 /* The browser's own `[hidden]` rule is only `display: none`, so any author rule that sets
-   a display — `.f { display: block }`, `.stats { display: grid }` — silently outranks it
+   a display (`.f { display: block }`, `.stats { display: grid }`) silently outranks it
    and the element stays on screen. Every hidden thing on this page is hidden by that
    attribute, so it is stated once here rather than guarded at each of them. */
 [hidden] { display: none !important; }
@@ -115,7 +115,7 @@ button { font: inherit; cursor: pointer; }
 .mine .pen { background: rgba(255, 69, 58, .18); color: #ff8a80; }
 
 /* Team radio: a teammate's message lands as a banner, and the input pushes one back. Same
-   team only — the server routes by the driver's team, so drivers on other teams never see it. */
+   team only: the server routes by the driver's team, so drivers on other teams never see it. */
 .teamradio { margin-top: 14px; }
 .tr-msg {
   display: flex; flex-direction: column; gap: 2px;
@@ -169,7 +169,7 @@ button { font: inherit; cursor: pointer; }
 }
 .pipreal.warn { color: #ffd60a; background: rgba(255, 214, 10, .1); }
 
-/* Not an error — the page works, one part of it does not. Amber rather than red, and it
+/* Not an error: the page works, one part of it does not. Amber rather than red, and it
    carries the way out rather than only the bad news. */
 .secnote {
   margin-top: 14px; padding: 13px 15px;
@@ -186,7 +186,7 @@ button { font: inherit; cursor: pointer; }
   border-radius: 10px;
 }
 
-/* The PiP plumbing. Both must stay in the layout — a display:none video cannot be
+/* The PiP plumbing. Both must stay in the layout: a display:none video cannot be
    handed to Picture-in-Picture, and a canvas that is never composited stops producing
    frames for captureStream. One pixel in a corner satisfies both. */
 #pipVideo, #pipCanvas {

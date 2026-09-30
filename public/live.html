@@ -79,9 +79,9 @@
   <div id="app" hidden>
     <header class="top">
       <div>
-        <div class="kicker" id="round">—</div>
-        <h1 id="evname">—</h1>
-        <div class="where" id="where">—</div>
+        <div class="kicker" id="round">-</div>
+        <h1 id="evname">-</h1>
+        <div class="where" id="where">-</div>
       </div>
       <div class="langbtns">
         <button data-lang="id">ID</button>
@@ -89,7 +89,7 @@
       </div>
     </header>
 
-    <div class="flagpill" id="flag"><i></i><span id="flagtext">—</span></div>
+    <div class="flagpill" id="flag"><i></i><span id="flagtext">-</span></div>
 
     <div class="reactbar" id="reactbar" hidden>
       <span class="reactlbl" data-t="react">React</span>
@@ -101,9 +101,9 @@
     </div>
 
     <div class="meta">
-      <div class="m"><div class="lbl" data-t="session">Session</div><div class="val" id="session">—</div></div>
-      <div class="m"><div class="lbl" data-t="lap">Lap</div><div class="val" id="lap">—</div></div>
-      <div class="m"><div class="lbl" data-t="fastest">Fastest lap</div><div class="val mono" id="fastest">—</div></div>
+      <div class="m"><div class="lbl" data-t="session">Session</div><div class="val" id="session">-</div></div>
+      <div class="m"><div class="lbl" data-t="lap">Lap</div><div class="val" id="lap">-</div></div>
+      <div class="m"><div class="lbl" data-t="fastest">Fastest lap</div><div class="val mono" id="fastest">-</div></div>
     </div>
 
     <div id="pollBox" hidden>
@@ -121,7 +121,7 @@
       <div class="wrap-x"><table id="std"></table></div>
     </div>
 
-    <p class="foot"><span data-t="foot">Live — updates automatically.</span> <span id="code" class="mono"></span></p>
+    <p class="foot"><span data-t="foot">Live, updates automatically.</span> <span id="code" class="mono"></span></p>
   </div>
 </div>
 
@@ -138,11 +138,11 @@
   // translated; names, times and places are the same in any language.
   const STR = {
     id: { session: 'Sesi', lap: 'Lap', fastest: 'Lap tercepat', classification: 'Klasemen',
-          standings: 'Klasemen juara', foot: 'Langsung — diperbarui otomatis.', poll: 'Voting',
+          standings: 'Klasemen juara', foot: 'Langsung, diperbarui otomatis.', poll: 'Voting',
           votes2: 'suara', tap: 'ketuk untuk memilih', react: 'Reaksi',
           POS: 'POS', DRIVER: 'PEMBALAP', GAP: 'GAP', BEST: 'TERBAIK', LAPS: 'LAP', PTS: 'POIN' },
     en: { session: 'Session', lap: 'Lap', fastest: 'Fastest lap', classification: 'Classification',
-          standings: 'Championship', foot: 'Live — updates automatically.', poll: 'Poll',
+          standings: 'Championship', foot: 'Live, updates automatically.', poll: 'Poll',
           votes2: 'votes', tap: 'tap to vote', react: 'React',
           POS: 'POS', DRIVER: 'DRIVER', GAP: 'GAP', BEST: 'BEST', LAPS: 'LAPS', PTS: 'PTS' }
   };
@@ -178,9 +178,9 @@
 
     $('#session').textContent = s.event.sessionName || (s.event.sessionType || 'race').toUpperCase();
     const total = s.race.totalLaps || 0;
-    $('#lap').textContent = total ? `${Math.min(leaderLap(s) + 1, total)} / ${total}` : (leaderLap(s) || '—');
+    $('#lap').textContent = total ? `${Math.min(leaderLap(s) + 1, total)} / ${total}` : (leaderLap(s) || '-');
     const fl = fastestLap(s);
-    $('#fastest').textContent = fl && fl.bestLap != null ? `${fmtTime(fl.bestLap)} · ${fl.name}` : '—';
+    $('#fastest').textContent = fl && fl.bestLap != null ? `${fmtTime(fl.bestLap)} · ${fl.name}` : '-';
 
     const rows = classification(s);
     let html = `<thead><tr><th>${T.POS}</th><th>${T.DRIVER}</th><th class="r">${T.GAP}</th><th class="r">${T.BEST}</th><th class="r">${T.LAPS}</th></tr></thead><tbody>`;
@@ -188,8 +188,8 @@
       html += `<tr class="${d.dnf ? 'dnf' : ''}">` +
         `<td class="pos">${d.dnf ? 'DNF' : d.position}</td>` +
         `<td><span class="cbar" style="background:${d.color || '#666'}"></span><span class="nm">${esc(d.name)}</span>${d.team ? `<span class="team">${esc(d.team)}</span>` : ''}</td>` +
-        `<td class="r mono">${d.position === 1 ? '—' : (d.predicted ? '~' : '') + (d.gap || '')}</td>` +
-        `<td class="r mono ${fl && fl.id === d.id ? 'best' : ''}">${d.bestLap != null ? fmtTime(d.bestLap) : '—'}</td>` +
+        `<td class="r mono">${d.position === 1 ? '-' : (d.predicted ? '~' : '') + (d.gap || '')}</td>` +
+        `<td class="r mono ${fl && fl.id === d.id ? 'best' : ''}">${d.bestLap != null ? fmtTime(d.bestLap) : '-'}</td>` +
         `<td class="r mono">${d.lapsDone || 0}</td></tr>`;
     }
     html += '</tbody>';
@@ -224,7 +224,7 @@
       for (const r of st) {
         sh += `<tr><td class="pos">${r.rank}</td>` +
           `<td><span class="cbar" style="background:${r.color || '#666'}"></span><span class="nm">${esc(r.name)}</span></td>` +
-          `<td class="r mono">${r.rank === 1 ? '—' : '-' + (lead - r.points)}</td>` +
+          `<td class="r mono">${r.rank === 1 ? '' : '-' + (lead - r.points)}</td>` +
           `<td class="r mono">${r.points}</td></tr>`;
       }
       sh += '</tbody>';

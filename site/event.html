@@ -87,7 +87,7 @@
   <div id="loading" data-t="loading">Loading event…</div>
 
   <div id="app" hidden>
-    <div class="flagpill" id="flag"><i></i><span id="flagtext">—</span></div>
+    <div class="flagpill" id="flag"><i></i><span id="flagtext">-</span></div>
 
     <div class="links" id="links"></div>
 
@@ -105,7 +105,7 @@
       <div class="rounds" id="rounds"></div>
     </div>
 
-    <p class="foot"><span data-t="foot">Live event hub — updates automatically.</span>
+    <p class="foot"><span data-t="foot">Live event hub, updates automatically.</span>
       · <a href="https://frlcast.my.id">FRLcast by kinkpedil12</a></p>
   </div>
 </div>
@@ -122,12 +122,12 @@
   const STR = {
     en: { loading: 'Loading event…', entries: 'Entry list', standings: 'Championship',
           results: 'Past rounds', noentries: 'No cars on the grid yet.',
-          foot: 'Live event hub — updates automatically.',
+          foot: 'Live event hub, updates automatically.',
           live: 'Live timing', report: 'Race report', recap: 'Recap card', stats: 'Season stats', join: 'Enter / check in', predict: 'Predict the winner',
           POS: 'POS', NO: 'NO', DRIVER: 'DRIVER', TEAM: 'TEAM', PTS: 'PTS' },
     id: { loading: 'Memuat event…', entries: 'Daftar peserta', standings: 'Klasemen juara',
           results: 'Round sebelumnya', noentries: 'Belum ada mobil di grid.',
-          foot: 'Hub event langsung — diperbarui otomatis.',
+          foot: 'Hub event langsung, diperbarui otomatis.',
           live: 'Timing langsung', report: 'Laporan balapan', recap: 'Kartu recap', stats: 'Statistik musim', join: 'Daftar / check-in', predict: 'Tebak pemenang',
           POS: 'POS', NO: 'NO', DRIVER: 'PEMBALAP', TEAM: 'TIM', PTS: 'POIN' }
   };
@@ -172,7 +172,7 @@
     $('#flag').className = 'flagpill ' + flag;
     $('#flagtext').textContent = FLAG_LABEL[flag] || flag.toUpperCase();
 
-    // entry list — sorted by race number
+    // entry list: sorted by race number
     const grid = (s.drivers || []).slice().sort((a, b) => (parseInt(a.num, 10) || 999) - (parseInt(b.num, 10) || 999));
     $('#gridEmpty').hidden = grid.length > 0;
     if (grid.length) {
@@ -213,7 +213,7 @@
     const blocks = [];
     for (const [round, rows] of byRound) {
       rows.sort((a, b) => a.position - b.position);
-      let h = `<div class="round"><h3>${esc(round || '—')}</h3><table><thead><tr><th>${T.POS}</th><th>${T.DRIVER}</th><th class="r">${T.PTS}</th></tr></thead><tbody>`;
+      let h = `<div class="round"><h3>${esc(round || '-')}</h3><table><thead><tr><th>${T.POS}</th><th>${T.DRIVER}</th><th class="r">${T.PTS}</th></tr></thead><tbody>`;
       for (const r of rows.slice(0, 12)) {
         h += `<tr><td class="pos">${r.position}</td><td><span class="nm">${esc(r.name)}</span></td><td class="r mono">${r.points}</td></tr>`;
       }

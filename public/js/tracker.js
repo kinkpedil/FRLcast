@@ -1,6 +1,6 @@
 // Car tracking primitives.
 //
-// The naive approach — "for each driver, scan every pixel and test its colour" —
+// The naive approach: "for each driver, scan every pixel and test its colour":
 // costs one full pass per driver, so twelve cars means twelve passes per frame.
 // This module does the same job in two passes total, regardless of how many cars
 // are on track, and adds the temporal layer that makes the result usable for timing:
@@ -12,7 +12,7 @@
 //   4. crossing()  exact segment intersection, so a timing line yields a
 //                  sub-frame timestamp instead of a frame-quantised one
 //
-// Everything here is plain arithmetic — no model, no GPU, no allocations per frame.
+// Everything here is plain arithmetic, no model, no GPU, no allocations per frame.
 
 /**
  * How far apart two colours are, for the purpose of deciding whether they are the
@@ -20,7 +20,7 @@
  *
  * Plain RGB distance is the obvious choice and the wrong one, because it treats a
  * change in brightness exactly like a change in hue. A car is lit differently at
- * every point of the lap — bright on the straight, dark under a bridge — and straight
+ * every point of the lap (bright on the straight, dark under a bridge) and straight
  * RGB reports that as a different colour, so the match is lost or, worse, handed to
  * another car whose colour happens to sit where the shadow landed.
  *
@@ -112,7 +112,7 @@ function ensureScratch(n) {
 }
 
 /**
- * Pass 1 — every pixel becomes a driver index or -1.
+ * Pass 1: every pixel becomes a driver index or -1.
  * `step` samples every Nth pixel in both axes; 2 quarters the work and is still
  * far finer than a minimap dot, which is typically 6-14px across.
  */
@@ -135,11 +135,11 @@ export function classify(imageData, lut, step = 1) {
 }
 
 /**
- * Pass 2 — union-find connected components over the label map.
+ * Pass 2: union-find connected components over the label map.
  *
  * With `all`, every component is returned. That matters more than it sounds: keeping
- * only the biggest blob per colour means a large piece of scenery in the same hue — a
- * kerb, a barrier, a painted line — outranks the car and *is* the car as far as the
+ * only the biggest blob per colour means a large piece of scenery in the same hue: a
+ * kerb, a barrier, a painted line: outranks the car and *is* the car as far as the
  * rest of the pipeline can tell. Handing the tracker every candidate lets it pick the
  * one that is actually where the car should be.
  */
@@ -200,7 +200,7 @@ export function blobs(classified, minArea = 6, all = false, img = null) {
     return { list, scale: step };
   }
 
-  // biggest blob per driver — fine when nothing else on screen shares the colour
+  // biggest blob per driver: fine when nothing else on screen shares the colour
   const best = new Map();
   for (const a of acc.values()) {
     if (a.n < minArea) continue;
@@ -234,14 +234,14 @@ export function sideOf(a, b, p) {
  * Tells scenery apart from cars, using nothing but where blobs keep turning up.
  *
  * Colour alone cannot do this. A kerb, a painted line or a piece of signage in the
- * roster's hue is indistinguishable from a car pixel by pixel — and it is often *larger*
+ * roster's hue is indistinguishable from a car pixel by pixel, and it is often *larger*
  * than the car, so any rule that breaks ties by size picks the scenery and stays there
  * for the rest of the session. That is the single biggest source of wrong laps.
  *
  * What separates them is time: a circuit does not move. A blob that keeps appearing at
  * the same spot frame after frame is part of the track. One that travels is a car. So
  * this holds a small register of positions and how long each has been occupied, and
- * marks the settled ones. It costs one pass over the blobs — a few dozen items — not
+ * marks the settled ones. It costs one pass over the blobs (a few dozen items) not
  * over the pixels.
  */
 export class SceneryFilter {
@@ -291,7 +291,7 @@ export class SceneryFilter {
          * then gone. Counting visits instead cannot tell those apart, and on a circuit
          * it fails badly: every car goes round the same loop, so each point of the track
          * is revisited constantly by different cars and eventually the whole circuit is
-         * declared scenery — after which no car can be acquired anywhere. So a gap
+         * declared scenery: after which no car can be acquired anywhere. So a gap
          * resets the count, and only something genuinely present frame after frame ever
          * settles.
          */
@@ -380,7 +380,7 @@ export class Tracker {
 
       /*
        * A track that has stopped moving while something live is in reach is almost
-       * certainly stuck on scenery. The gate cannot free it on its own — the scenery
+       * certainly stuck on scenery. The gate cannot free it on its own: the scenery
        * sits exactly where a stationary prediction says to look, so it wins every frame
        * for ever. When there is a real alternative, ignore the settled blobs; when there
        * is not, keep them, because a car genuinely parked on track also holds still and
@@ -406,14 +406,14 @@ export class Tracker {
     }
 
     // Whatever is left may be claimed by a car with no position yet. Size alone is a bad
-    // tiebreak here — a kerb in the same hue is often larger than the car — so a moving
+    // tiebreak here (a kerb in the same hue is often larger than the car) so a moving
     // candidate is preferred, and size only decides among equals.
     for (const id of driverIds) {
       if (chosen.has(id)) continue;
       const t = this.tracks.get(id);
       if (t && !t.lost) continue;
       // Settled blobs are excluded outright, not merely ranked lower. Acquiring onto a
-      // kerb is not a small error that later frames correct — the track stays there and
+      // kerb is not a small error that later frames correct: the track stays there and
       // every lap it "records" is false. Waiting for something that moves is better than
       // being confidently wrong, and a car on the grid becomes eligible the moment it
       // pulls away and stops matching its old spot.
@@ -608,7 +608,7 @@ export function pointAtProgress(path, progress) {
  *
  * Colour matching needs enough pixels of the car to survive the game's own rendering,
  * the encoder and the downscale. On a wide drone shot of a big circuit a car is three
- * to five pixels and its colour has been blended into the tarmac underneath it — there
+ * to five pixels and its colour has been blended into the tarmac underneath it: there
  * is nothing left to match.
  *
  * The circuit, however, does not move. A running average of each pixel is therefore a
@@ -736,7 +736,7 @@ export function componentsOf(labels, w, h, minArea = 1) {
  * Nearest driver colour to a measured mean colour, or -1 when the answer is not clear.
  *
  * The margin matters more than the distance. When two cars run close together their
- * motion blobs merge and the mean colour lands between two entries in the palette —
+ * motion blobs merge and the mean colour lands between two entries in the palette:
  * and a confident wrong answer there is far worse than no answer, because it credits
  * one car's lap to another. A dropped blob only costs a frame; the tracker coasts
  * through it. A misattributed one corrupts the timing.
@@ -746,7 +746,7 @@ export function componentsOf(labels, w, h, minArea = 1) {
  *
  * Naming a blob after its single nearest colour throws away the one case that matters
  * most. When two cars are painted nearly the same, every pixel of both resolves to
- * whichever of the two is marginally closer — so one car is offered every blob and the
+ * whichever of the two is marginally closer, so one car is offered every blob and the
  * other is offered none, and no amount of clever tracking can recover a car it is never
  * shown. Handing an ambiguous blob to both and letting position settle it is the only
  * way the second car is ever seen.

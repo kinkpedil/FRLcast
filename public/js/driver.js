@@ -7,7 +7,7 @@
 //   3. a window that floats over the game
 //
 // The third one is where the honest engineering is. A web page cannot draw over another
-// Android app — that needs SYSTEM_ALERT_WINDOW and a native APK. What it can do is
+// Android app, that needs SYSTEM_ALERT_WINDOW and a native APK. What it can do is
 // Picture-in-Picture, and a PiP window does float above other apps including a game. PiP
 // only accepts video, so the flag is painted to a canvas, the canvas is captured as a
 // stream, and the stream is played into a hidden video element which is then handed to
@@ -29,13 +29,13 @@ const FLAG_COLOR = {
 // instruction behind it, which is what actually matters at 100kph.
 const FLAG_ACTION = {
   idle: 'Wait for the start',
-  formation: 'Formation lap — hold position',
-  green: 'Racing — go',
+  formation: 'Formation lap: hold position',
+  green: 'Racing: go',
   yellow: 'Slow down, no overtaking',
-  safety: 'Safety car — slow, no overtaking',
-  vsc: 'Virtual safety car — slow, hold the gap',
-  red: 'Session stopped — slow down and return to the pits',
-  finished: 'Chequered flag — race over'
+  safety: 'Safety car: slow, no overtaking',
+  vsc: 'Virtual safety car: slow, hold the gap',
+  red: 'Session stopped: slow down and return to the pits',
+  finished: 'Chequered flag: race over'
 };
 
 let token = null;
@@ -117,7 +117,7 @@ async function enterLive() {
   clearInterval(poll);
   /*
    * Polled, not pushed. The broadcast socket carries the entire race state several times
-   * a second — a roster, a calibration, a penalty record — none of which a phone can use
+   * a second (a roster, a calibration, a penalty record) none of which a phone can use
    * and all of which costs battery and would hand every driver the whole event. This asks
    * a small endpoint for its own driver's slice instead.
    */
@@ -173,8 +173,8 @@ function render(s) {
 
   // Personal flags outrank the session one for the driver holding them.
   const mine = [];
-  if (s.me && s.me.blackFlag) mine.push(['black', 'BLACK FLAG — return to the pits, you are out']);
-  if (s.me && s.me.blueFlag) mine.push(['blue', 'BLUE FLAG — let the leader through']);
+  if (s.me && s.me.blackFlag) mine.push(['black', 'BLACK FLAG: return to the pits, you are out']);
+  if (s.me && s.me.blueFlag) mine.push(['blue', 'BLUE FLAG: let the leader through']);
   if (s.me && s.me.penaltyPending) mine.push(['inv', 'UNDER INVESTIGATION']);
   if (s.me && s.me.penaltyServed) mine.push(['pen', `+${s.me.penaltyServed}s PENALTY`]);
   const box = $('#mine');
@@ -220,7 +220,7 @@ function canAlert() {
 }
 
 $('#btnNotify').onclick = async () => {
-  if (!window.isSecureContext) return note('Alerts need the https address — see the note below');
+  if (!window.isSecureContext) return note('Alerts need the https address: see the note below');
   if (!canAlert()) return note('This browser will not show alerts. It still vibrates.');
   const ok = await Notification.requestPermission();
   note(ok === 'granted' ? 'Flag alerts are on' : 'Alerts were blocked in browser settings');
@@ -238,7 +238,7 @@ async function sendRadio() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, text })
     });
-  } catch { /* offline — the poll will resync */ }
+  } catch { /* offline: the poll will resync */ }
 }
 $('#trSend').onclick = sendRadio;
 $('#trText').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendRadio(); } });
@@ -255,7 +255,7 @@ function note(msg) {
  *
  * Vibration first: it is the only one that works with the screen off and the phone in a
  * pocket, and it needs no permission. The notification is the part that says what
- * changed, and on Android it has to go through the service worker — the Notification
+ * changed, and on Android it has to go through the service worker: the Notification
  * constructor is blocked there.
  */
 function alertDriver(label, sub, color) {
@@ -284,16 +284,16 @@ let stream = null;
  *
  * Not the pixel size. Android owns the window and hands it a width of its own choosing,
  * then derives the height from the aspect ratio of the video it was given. The video's
- * own resolution does not enter into it — an earlier version of this file offered a
+ * own resolution does not enter into it: an earlier version of this file offered a
  * small/medium/large control built on that assumption and it did nothing at all on a
  * phone, which is exactly what testing on one showed.
  *
  * So there are two honest levers, and they are these:
  *
- *   shape — the aspect ratio, which Android does obey. Because width is roughly fixed and
+ *   shape: the aspect ratio, which Android does obey. Because width is roughly fixed and
  *           height follows the ratio, a taller shape is a physically bigger window. That
  *           is the closest thing to a size control that exists here.
- *   text  — how large the lettering is drawn inside whatever window we are given. Nothing
+ *   text: how large the lettering is drawn inside whatever window we are given. Nothing
  *           to do with the OS, entirely ours, and the thing that decides whether the flag
  *           can be read at a glance.
  */
@@ -302,7 +302,7 @@ let stream = null;
  *
  * Shape and size were offered separately and that was a fiction: Android picks the
  * window's width itself and derives the height from the aspect ratio, so on a phone the
- * two are the same knob. A flatter ratio is a shorter — smaller — window; a taller ratio
+ * two are the same knob. A flatter ratio is a shorter (smaller) window; a taller ratio
  * is a bigger one. Listed smallest first, which is the order they appear in.
  *
  * Android refuses a ratio outside roughly 1:2.39 .. 2.39:1 and will not open the window
@@ -317,7 +317,7 @@ const PIP_SHAPES = {
 };
 
 /*
- * Text sizes — how much of the window's height the flag name is allowed to claim.
+ * Text sizes: how much of the window's height the flag name is allowed to claim.
  *
  * The first version of this capped the font size instead and barely changed anything: a
  * flag name set on one line is limited by how wide the window is long before any height
@@ -339,7 +339,7 @@ const PIP_TEXT = {
   l: { block: 0.78, sub: false }
 };
 
-// Fixed, and nothing to do with the window's size on screen — this is only how many
+// Fixed, and nothing to do with the window's size on screen: this is only how many
 // pixels the letters are drawn with, so they stay sharp when Android scales the window.
 const PIP_LONG = 640;
 
@@ -421,7 +421,7 @@ function paint(label, sub, color, s) {
    * An earlier arrangement placed the flag name first, at a fixed fraction of the height,
    * and then put the instruction wherever was left. On a wide window that left nothing:
    * the name landed low enough that the first instruction line was already past the
-   * bottom edge and the whole sentence was silently dropped. Nothing looked broken — the
+   * bottom edge and the whole sentence was silently dropped. Nothing looked broken: the
    * text was simply not there.
    *
    * So the space is divided up front: the driver's line takes the top, and the name and
@@ -437,7 +437,7 @@ function paint(label, sub, color, s) {
   const avail = H - top - Math.round(pad * 0.6);
 
   // The name is wrapped, so a two-word flag is not held down to the width of both words
-  // at once — that is what makes the text setting able to change anything at all. When
+  // at once, that is what makes the text setting able to change anything at all. When
   // the instruction is shown the name is also kept to part of the space so there is
   // somewhere for it to go.
   let name = fitBlock(label, maxW, Math.min(H * size.block, size.sub ? avail * 0.6 : avail));
@@ -452,7 +452,7 @@ function paint(label, sub, color, s) {
 
     // It fits whole or it does not appear. A sentence cut off after three words reads as
     // an instruction the driver has missed the end of, which is worse than no sentence at
-    // all — and in the shortest window that is what "as much as fits" produced. When it
+    // all, and in the shortest window that is what "as much as fits" produced. When it
     // will not fit, the space goes back to the flag name, which is the message anyway.
     const room = Math.max(0, Math.floor((avail - nameH - subSize * 0.5) / subLineH));
     if (subLines.length > room) {
@@ -538,7 +538,7 @@ async function applyPipPrefs({ redrawOnly = false } = {}) {
     // Chrome can refuse the reopen if it decides the tap no longer counts as a gesture.
     // Saying so beats leaving the driver looking at a window that closed itself; the
     // button label has already corrected itself through the leave event.
-    note('Size saved — tap to open the window again');
+    note('Size saved: tap to open the window again');
   }
 }
 
@@ -561,7 +561,7 @@ $$('#segText button').forEach((b) => {
     try { localStorage.setItem(TEXT_KEY, pipText); } catch { /* private window */ }
     markSegments();
     // Only the drawing changes, so there is no need to disturb a window that is already
-    // open — the next frame of the capture carries the new size across on its own.
+    // open: the next frame of the capture carries the new size across on its own.
     applyPipPrefs({ redrawOnly: true });
   };
 });
@@ -594,7 +594,7 @@ $('#btnFloat').onclick = async () => {
  * What size did Android actually give us?
  *
  * Everything above is a request. The phone decides, and this page has been guessing at
- * what it decided — badly, twice. `document.pictureInPictureWindow` is the browser's own
+ * what it decided: badly, twice. `document.pictureInPictureWindow` is the browser's own
  * answer, and it updates as the window is dragged, so it is shown on the page rather than
  * assumed. If a setting turns out to change nothing on a given phone, this is the line
  * that says so instead of leaving it to be discovered mid-race.
@@ -609,7 +609,7 @@ function showWindowSize() {
   el.hidden = false;
   el.textContent = honoured
     ? `Window: ${w.width}×${w.height}`
-    : `Window: ${w.width}×${w.height} — this phone ignored the shape (asked ${asked.toFixed(2)}, got ${got.toFixed(2)})`;
+    : `Window: ${w.width}×${w.height}. This phone ignored the shape (asked ${asked.toFixed(2)}, got ${got.toFixed(2)})`;
   el.classList.toggle('warn', !honoured);
 }
 
@@ -667,7 +667,7 @@ async function offerSecure() {
   paint('WAITING', '', '#8e8e93', null);
 
   /*
-   * Over plain http on a phone there is no service worker and no Notification API —
+   * Over plain http on a phone there is no service worker and no Notification API: 
    * Android blocks both outside a secure context, and localhost does not count as one
    * from another device. Vibration and the floating window are unaffected, so the page
    * still does its job; what it must not do is leave a button that quietly never works.
@@ -680,8 +680,8 @@ async function offerSecure() {
     if ('serviceWorker' in navigator) {
       // Swallowing this failure is what made an earlier version lie: the button still
       // said alerts were available and nothing ever arrived. Registration can fail for
-      // reasons outside the page — an embedded browser with workers disabled, a locked
-      // down profile — so record it and let the button say what is actually true.
+      // reasons outside the page: an embedded browser with workers disabled, a locked
+      // down profile, so record it and let the button say what is actually true.
       try { swReg = await navigator.serviceWorker.register('/driver-sw.js'); } catch { swReg = null; }
     }
     if (!canAlert()) {

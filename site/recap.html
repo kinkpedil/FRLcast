@@ -239,7 +239,7 @@
       const isFast = fl && fl.id === d.id;
       ctx.fillStyle = isFast ? '#bf5af2' : 'rgba(242,244,248,.85)';
       ctx.font = `600 ${Math.round(rowH * 0.3)}px ui-monospace, Menlo, Consolas, monospace`;
-      ctx.fillText(d.bestLap != null ? fmtTime(d.bestLap) : '—', rx, mid - (d.lapsDone ? rowH * 0.12 : 0));
+      ctx.fillText(d.bestLap != null ? fmtTime(d.bestLap) : '-', rx, mid - (d.lapsDone ? rowH * 0.12 : 0));
       ctx.fillStyle = 'rgba(242,244,248,.4)';
       ctx.font = `400 ${Math.round(rowH * 0.2)}px ui-monospace, Menlo, Consolas, monospace`;
       ctx.fillText(`${d.lapsDone || 0} ${T.LAPS}`, rx, mid + rowH * 0.2);
