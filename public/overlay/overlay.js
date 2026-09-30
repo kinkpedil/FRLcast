@@ -2060,7 +2060,7 @@ function tickerItems() {
   // Feed lines written by an older build used a long dash as the separator; a state saved
   // before the update still holds them until the next reset, so they are evened out here.
   return (state.feed || []).slice(0, 8).map((e) => e.text).filter(Boolean)
-    .map((text) => String(text).replace(/\s*—\s*/g, ' · '));
+    .map((text) => String(text).replace(/\s*\u2014\s*/g, ' · '));
 }
 
 // local clock tick so the race time is smooth without server spam
