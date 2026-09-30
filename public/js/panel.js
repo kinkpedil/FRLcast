@@ -3744,9 +3744,9 @@ function helpBlock(b) {
     case 'list': return `<ul>${b.items.map((i) => `<li>${i}</li>`).join('')}</ul>`;
     case 'steps': return `<ol>${b.items.map((i) => `<li>${i}</li>`).join('')}</ol>`;
     case 'table':
-      return `<table><tr>${b.head.map((h) => `<th>${h}</th>`).join('')}</tr>` +
+      return `<div class="tbl"><table><tr>${b.head.map((h) => `<th>${h}</th>`).join('')}</tr>` +
              b.rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('') +
-             `</table>`;
+             `</table></div>`;
     default: return '';
   }
 }
@@ -3772,20 +3772,44 @@ function highlight(html, query) {
   });
 }
 
+/*
+ * Twenty-one sections read as a wall in one list. Grouped by when an operator needs them,
+ * the contents answer "where is the part about X" before it is scrolled. Any section not
+ * named here still shows, under the last group, so a new one is never lost.
+ */
+const HELP_GROUPS = [
+  ['Start here', ['overview', 'hosted', 'local']],
+  ['Race night', ['race', 'drivers', 'timing', 'hotkeys', 'manual', 'championship', 'report']],
+  ['Broadcast', ['overlays', 'obs', 'obsws', 'commentary', 'public']],
+  ['Vision / AI', ['vision', 'calibration', 'engine', 'performance']],
+  ['When it goes wrong', ['trouble', 'files']]
+];
+
+let helpSpyOn = false;
+const helpMark = (id) => $$('#helpToc a').forEach((x) => x.classList.toggle('on', x.dataset.id === id));
+
 function renderHelp(query = '') {
   if (!HELP) return;
   const q = query.trim().toLowerCase();
   const matches = q ? HELP.filter((s) => helpText(s).includes(q)) : HELP;
+  const byId = new Map(matches.map((s) => [s.id, s]));
+  const placed = new Set(HELP_GROUPS.flatMap(([, ids]) => ids));
+  const groups = HELP_GROUPS.map(([name, ids], gi) => [name, [
+    ...ids.map((id) => byId.get(id)).filter(Boolean),
+    ...(gi === HELP_GROUPS.length - 1 ? matches.filter((s) => !placed.has(s.id)) : [])
+  ]]).filter(([, list]) => list.length);
+  const ordered = groups.flatMap(([, list]) => list);
 
-  $('#helpToc').innerHTML = matches.map((s) =>
-    `<a href="#help-${s.id}" data-id="${s.id}">${s.title}</a>`).join('');
+  $('#helpToc').innerHTML = groups.map(([name, list]) =>
+    `<div class="grp">${esc(t(name))}</div>` +
+    list.map((s) => `<a href="#help-${s.id}" data-id="${s.id}">${s.title}</a>`).join('')).join('');
 
-  $('#helpBody').innerHTML = matches.map((s) => `
-    <section class="helpsec" id="help-${s.id}">
+  $('#helpBody').innerHTML = ordered.map((s) => `
+    <section class="card helpsec" id="help-${s.id}">
       <h3>${s.title}</h3>
-      <div class="card"><div class="body">
+      <div class="body">
         ${highlight(s.blocks.map(helpBlock).join(''), q)}
-      </div></div>
+      </div>
     </section>`).join('');
 
   $('#helpNoResult').style.display = matches.length ? 'none' : '';
@@ -3795,8 +3819,28 @@ function renderHelp(query = '') {
     if (!a) return;
     ev.preventDefault();
     document.getElementById(`help-${a.dataset.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    $$('#helpToc a').forEach((x) => x.classList.toggle('on', x === a));
+    helpMark(a.dataset.id);
   };
+
+  // The contents follow the reading: the section being read is the last one whose title
+  // has scrolled past the top of the window.
+  if (!helpSpyOn) {
+    helpSpyOn = true;
+    let queued = false;
+    window.addEventListener('scroll', () => {
+      if (queued || !$('#page-help').classList.contains('on')) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        let current = null;
+        for (const el of $$('#helpBody .helpsec')) {
+          if (el.getBoundingClientRect().top <= 140) current = el; else break;
+        }
+        if (current) helpMark(current.id.replace(/^help-/, ''));
+      });
+    }, { passive: true });
+  }
+  if (ordered[0]) helpMark(ordered[0].id);
 }
 
 
@@ -3918,6 +3962,8 @@ async function renderNetwork() {
     `<b>4. Test</b>: from the other device open <code>http://${best.address}:${net.port}/api/ping</code>, or run ` +
     `<code>Test-NetConnection ${best.address} -Port ${net.port}</code> there.`;
 
+  // Built after the page was translated, so it is walked again: the dictionary has these lines.
+  if (window.FRL_I18N) window.FRL_I18N.apply();
   $('#btnCopyPs').onclick = () => { navigator.clipboard.writeText(ps); toast('PowerShell command copied'); };
   $('#btnCopyFw').onclick = () => { navigator.clipboard.writeText(cmd); toast('netsh command copied'); };
 }
@@ -4218,9 +4264,9 @@ requestAnimationFrame(previewLoop);
     const box = $('#kbList');
     if (!box) return;
     box.innerHTML = HK_ACTIONS.map((a) =>
-      `<div class="kbrow"><span class="kbl">${a.label}</span>` +
+      `<div class="kbrow"><span class="kbl">${esc(t(a.label))}</span>` +
       `<kbd class="kbkey">${pretty(binds[a.id])}</kbd>` +
-      `<button class="btn sm" data-kbset="${a.id}">${capturing === a.id ? 'Press key…' : 'Set'}</button>` +
+      `<button class="btn sm" data-kbset="${a.id}">${t(capturing === a.id ? 'Press key…' : 'Set')}</button>` +
       `<button class="btn sm ghost" data-kbclr="${a.id}">✕</button></div>`).join('');
     box.querySelectorAll('[data-kbset]').forEach((b) => {
       b.onclick = () => { capturing = b.dataset.kbset; render(); };

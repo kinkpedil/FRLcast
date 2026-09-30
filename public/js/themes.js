@@ -54,7 +54,7 @@ export const THEMES = [
     radius: 6,
     name: 'Paper',
     accent: '#c2410c',
-    note: 'Light panels with dark text — the one to use over dark gameplay.'
+    note: 'Light panels with dark text: the one to use over dark gameplay.'
   },
   {
     id: 'mono',

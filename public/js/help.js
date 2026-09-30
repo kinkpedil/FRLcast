@@ -73,8 +73,8 @@ const SECTIONS = [
         head: T(['Piece', 'Job'], ['Bagian', 'Tugasnya']),
         rows: [
           [T('Operator console', 'Konsol operator'),
-           T('This screen. Flags, grid, penalties, overlays, and — in a hosted event — the timing itself.',
-             'Layar ini. Bendera, grid, penalti, overlay, dan — di event hosted — timing-nya sendiri.')],
+           T('This screen. Flags, grid, penalties, overlays, and (in a hosted event) the timing itself.',
+             'Layar ini. Bendera, grid, penalti, overlay, dan (di event hosted) timing-nya sendiri.')],
           [T('Overlays', 'Overlay'),
            T('Transparent 1920×1080 pages OBS takes as a Browser Source.',
              'Halaman transparan 1920×1080 yang diambil OBS sebagai Browser Source.')],
@@ -157,7 +157,7 @@ const SECTIONS = [
   // ---------------------------------------------------------------- race control
   {
     id: 'race',
-    title: T('Page: Race control', 'Halaman: Race control'),
+    title: T('Race control', 'Race control'),
     blocks: [
       { type: 'p', text: T(
         'The page you work from during a session. Everything here reaches the overlays in the same second.',
@@ -210,8 +210,8 @@ const SECTIONS = [
         items: [
           T('Download the app from the website and install it. One Android file, about 33 KB.',
             'Unduh aplikasinya dari website lalu pasang. Satu file Android, sekitar 33 KB.'),
-          T('Type the <b>event code</b> — not the website address. A link race control sends them works too, because the code is in it.',
-            'Ketik <b>kode event</b> — bukan alamat website. Tautan yang dikirim race control juga bisa, karena kodenya ada di dalamnya.'),
+          T('Type the <b>event code</b>, not the website address. A link race control sends them works too, because the code is in it.',
+            'Ketik <b>kode event</b>, bukan alamat website. Tautan yang dikirim race control juga bisa, karena kodenya ada di dalamnya.'),
           T('Register once with a racing name, a race number, a password, and optionally a team.',
             'Daftar sekali dengan nama balap, nomor, kata sandi, dan opsional nama tim.'),
           T('Allow drawing over other apps, then turn on the floating flag. Drag it anywhere, drag its corner to any size.',
@@ -223,14 +223,14 @@ const SECTIONS = [
         'Tim yang diketik pembalap langsung menempel di mobilnya saat kamu menerima pendaftarannya, jadi tidak ada yang perlu mengetik daftar tim di race control. Mengosongkan kolomnya tidak pernah menghapus tim yang kamu atur sendiri.') },
       { type: 'p', text: T(
         'Until you accept them they get no flags, and the app tells them that is what is happening rather than sitting silent.',
-        'Sebelum kamu menerima mereka, mereka tidak menerima bendera apa pun — dan aplikasinya memberi tahu bahwa itulah yang sedang terjadi, bukan diam saja.') }
+        'Sebelum kamu menerima mereka, mereka tidak menerima bendera apa pun, dan aplikasinya memberi tahu bahwa itulah yang sedang terjadi, bukan diam saja.') }
     ]
   },
 
   // ---------------------------------------------------------------- vision
   {
     id: 'vision',
-    title: T('Page: Vision / AI', 'Halaman: Vision / AI'),
+    title: T('Vision / AI', 'Vision / AI'),
     blocks: [
       { type: 'p', text: T(
         'Share the game window, mark the regions to watch, and let it call the laps. It runs in this browser tab, on the machine showing the game.',
@@ -307,8 +307,8 @@ const SECTIONS = [
     title: T('How detection works', 'Cara kerja deteksi'),
     blocks: [
       { type: 'p', text: T(
-        'Every frame goes through four stages. All of it is ordinary arithmetic — no model, no GPU.',
-        'Tiap frame melewati empat tahap. Semuanya aritmetika biasa — tanpa model, tanpa GPU.') },
+        'Every frame goes through four stages. All of it is ordinary arithmetic, no model, no GPU.',
+        'Tiap frame melewati empat tahap. Semuanya aritmetika biasa, tanpa model, tanpa GPU.') },
       {
         type: 'table',
         head: T(['Stage', 'What happens'], ['Tahap', 'Isinya']),
@@ -321,23 +321,23 @@ const SECTIONS = [
              'Connected-component menyatukan piksel bertetangga. Yang terbesar per pembalap yang diambil, jadi pantulan dan noise terbuang.')],
           [T('3. Tracker', '3. Tracker'),
            T('Each car carries a position and a speed. When its blob is lost the track coasts on the last speed, and that speed is also how a stopped car is spotted.',
-             'Tiap mobil punya posisi dan kecepatan. Saat blob-nya hilang, track meluncur pakai kecepatan terakhir — dan kecepatan itu juga yang dipakai untuk mendeteksi mobil berhenti.')],
+             'Tiap mobil punya posisi dan kecepatan. Saat blob-nya hilang, track meluncur pakai kecepatan terakhir, dan kecepatan itu juga yang dipakai untuk mendeteksi mobil berhenti.')],
           [T('4. Crossing', '4. Crossing'),
            T('The step between frames is tested for intersection with every timing line, including <i>where</i> in that step, so the time is interpolated.',
-             'Perpindahan antar frame diuji perpotongannya dengan tiap garis timing — termasuk <i>di mana</i> dalam langkah itu, jadi waktunya diinterpolasi.')]
+             'Perpindahan antar frame diuji perpotongannya dengan tiap garis timing, termasuk <i>di mana</i> dalam langkah itu, jadi waktunya diinterpolasi.')]
         ]
       },
       { type: 'h', text: T('Why it is cheap', 'Kenapa ini ringan') },
       { type: 'p', text: T(
-        'The naive approach — for each driver, scan every pixel — costs one full pass per car. This is two passes however many cars there are. Measured on a 200×180 minimap: 4 cars 7.6 ms per frame, 12 cars 8.3 ms.',
+        'The naive approach (for each driver, scan every pixel) costs one full pass per car. This is two passes however many cars there are. Measured on a 200×180 minimap: 4 cars 7.6 ms per frame, 12 cars 8.3 ms.',
         'Pendekatan naif "untuk tiap pembalap, pindai semua piksel" butuh satu lintasan penuh per mobil. Cara ini dua lintasan, berapa pun jumlah mobilnya. Terukur pada minimap 200×180: 4 mobil 7,6 ms per frame, 12 mobil 8,3 ms.') },
       { type: 'h', text: T('Why it is accurate', 'Kenapa ini akurat') },
       { type: 'p', text: T(
-        'Because the crossing is interpolated, a lap time is not locked to a multiple of the frame interval. In a 15 fps simulation — 66.7 ms between frames — a 4.000 second lap reads 4.000 seconds. Detection that only knows which frame is out by up to ±66 ms.',
-        'Karena perpotongan garis diinterpolasi, waktu lap tidak terkunci di kelipatan frame. Pada uji simulasi 15 fps — jarak antar frame 66,7 ms — lap 4,000 detik terbaca 4,000 detik. Deteksi yang cuma tahu "frame ke berapa" meleset sampai ±66 ms.') },
+        'Because the crossing is interpolated, a lap time is not locked to a multiple of the frame interval. In a 15 fps simulation (66.7 ms between frames) a 4.000 second lap reads 4.000 seconds. Detection that only knows which frame is out by up to ±66 ms.',
+        'Karena perpotongan garis diinterpolasi, waktu lap tidak terkunci di kelipatan frame. Pada uji simulasi 15 fps (jarak antar frame 66,7 ms) lap 4,000 detik terbaca 4,000 detik. Deteksi yang cuma tahu "frame ke berapa" meleset sampai ±66 ms.') },
       { type: 'note', text: T(
-        'Because it tests the movement segment rather than nearness to the line, a lower frame rate costs precision — it does not lose the lap.',
-        'Karena yang diuji adalah segmen perpindahan, bukan kedekatan ke garis, frame rate yang turun mengurangi presisi waktu — bukan menghilangkan lapnya.') }
+        'Because it tests the movement segment rather than nearness to the line, a lower frame rate costs precision: it does not lose the lap.',
+        'Karena yang diuji adalah segmen perpindahan, bukan kedekatan ke garis, frame rate yang turun mengurangi presisi waktu, bukan menghilangkan lapnya.') }
     ]
   },
 
@@ -347,11 +347,11 @@ const SECTIONS = [
     title: T('If it lags', 'Kalau lag'),
     blocks: [
       { type: 'note', text: T(
-        '<b>This application already starts on the Low spec profile.</b> The first time it opens in a browser it picks Low spec and the overlay starts in Lite mode. Raise it to Balanced or Quality whenever you like — nothing is lost.',
-        '<b>Aplikasi ini sudah berjalan dengan profil Spek rendah secara bawaan.</b> Saat pertama dibuka di sebuah browser, preset Spek rendah dipakai otomatis dan overlay memulai dalam Mode ringan. Naikkan ke Seimbang atau Kualitas kapan saja — tidak ada yang hilang.') },
+        '<b>This application already starts on the Low spec profile.</b> The first time it opens in a browser it picks Low spec and the overlay starts in Lite mode. Raise it to Balanced or Quality whenever you like: nothing is lost.',
+        '<b>Aplikasi ini sudah berjalan dengan profil Spek rendah secara bawaan.</b> Saat pertama dibuka di sebuah browser, preset Spek rendah dipakai otomatis dan overlay memulai dalam Mode ringan. Naikkan ke Seimbang atau Kualitas kapan saja, tidak ada yang hilang.') },
       { type: 'p', text: T(
         'What makes a machine struggle during a broadcast is usually not this detection, which runs under 10 ms a frame. It is the emulator, the OBS video encoder, and pixels being moved around for nothing. Work down the list in order.',
-        'Yang membuat komputer berat saat siaran biasanya bukan deteksi ini — deteksi jalan di bawah 10 ms per frame. Yang berat adalah emulator, encoder video OBS, dan piksel yang dipindah-pindah percuma. Kerjakan daftarnya berurutan.') },
+        'Yang membuat komputer berat saat siaran biasanya bukan deteksi ini: deteksi jalan di bawah 10 ms per frame. Yang berat adalah emulator, encoder video OBS, dan piksel yang dipindah-pindah percuma. Kerjakan daftarnya berurutan.') },
       {
         type: 'table',
         head: T(['Try this', 'Why it helps'], ['Coba ini', 'Kenapa membantu']),
@@ -416,20 +416,20 @@ const SECTIONS = [
            T('A banner naming who holds the fastest lap, in their team colour.',
              'Banner yang menyebut pemegang lap tercepat, dengan warna timnya.')],
           [T('Sector times', 'Waktu sektor'),
-           T('The focus driver’s last lap split into sectors — purple best, green personal best, yellow set.',
-             'Lap terakhir pembalap fokus dipecah per sektor — ungu terbaik sesi, hijau terbaik pribadi, kuning biasa.')],
+           T('The focus driver’s last lap split into sectors: purple best, green personal best, yellow set.',
+             'Lap terakhir pembalap fokus dipecah per sektor: ungu terbaik sesi, hijau terbaik pribadi, kuning biasa.')],
           [T('Team radio', 'Radio tim'),
-           T('A driver name and a quote you type — the radio card. Set the driver + text on the Overlays page.',
-             'Nama pembalap dan kutipan yang kamu ketik — kartu radio. Atur pembalap + teks di halaman Overlay.')],
+           T('A driver name and a quote you type: the radio card. Set the driver + text on the Overlays page.',
+             'Nama pembalap dan kutipan yang kamu ketik: kartu radio. Atur pembalap + teks di halaman Overlay.')],
           [T('Audience poll', 'Voting penonton'),
            T('A live bar chart of viewer votes. Open the poll on the Overlays page (needs the votes table).',
              'Diagram batang suara penonton secara langsung. Buka voting di halaman Overlay (butuh tabel votes).')],
           [T('Sponsor', 'Sponsor'),
-           T('A rotating sponsor strip — a label or a logo image, cycled every few seconds.',
-             'Strip sponsor bergilir — teks atau gambar logo, berganti tiap beberapa detik.')],
+           T('A rotating sponsor strip: a label or a logo image, cycled every few seconds.',
+             'Strip sponsor bergilir: teks atau gambar logo, berganti tiap beberapa detik.')],
           [T('Countdown', 'Hitung mundur'),
-           T('A big clock counting down to a moment you set — a pre-show timer.',
-             'Jam besar menghitung mundur ke waktu yang kamu set — timer pra-acara.')],
+           T('A big clock counting down to a moment you set: a pre-show timer.',
+             'Jam besar menghitung mundur ke waktu yang kamu set: timer pra-acara.')],
           [T('Driver intro', 'Perkenalan pembalap'),
            T('A large card for the focus driver: number, name, team, championship points.',
              'Kartu besar untuk pembalap fokus: nomor, nama, tim, poin championship.')]
@@ -437,15 +437,15 @@ const SECTIONS = [
       },
       { type: 'h', text: T('Broadcast skins', 'Skin siaran') },
       { type: 'p', text: T(
-        'A skin reshapes the same widgets into a series look — Classic (the original), MotoGP (tilted number chips, black + orange, a session progress bar), WEC (navy endurance tower with class banners), and F1 (near-black tower, team-colour tabs, 3-letter codes, a purple fastest-lap pill). A skin changes shape; the theme still sets colours; any combination works. Pick it on the Overlays page. On WEC / MotoGP / F1 you can also set a custom header wordmark (Tower title).',
-        'Skin membentuk ulang widget yang sama menjadi tampilan sebuah seri — Classic (asli), MotoGP (chip nomor miring, hitam + oranye, bar progres sesi), WEC (menara ketahanan navy dengan banner kelas), dan F1 (menara nyaris hitam, tab warna tim, kode 3-huruf, pil lap tercepat ungu). Skin mengubah bentuk; tema tetap mengatur warna; kombinasi apa pun bisa. Pilih di halaman Overlay. Di WEC / MotoGP / F1 kamu juga bisa mengatur wordmark header sendiri (Tower title).') },
+        'A skin reshapes the same widgets into a series look: Classic (the original), MotoGP (tilted number chips, black + orange, a session progress bar), WEC (navy endurance tower with class banners), and F1 (near-black tower, team-colour tabs, 3-letter codes, a purple fastest-lap pill). A skin changes shape; the theme still sets colours; any combination works. Pick it on the Overlays page. On WEC / MotoGP / F1 you can also set a custom header wordmark (Tower title).',
+        'Skin membentuk ulang widget yang sama menjadi tampilan sebuah seri: Classic (asli), MotoGP (chip nomor miring, hitam + oranye, bar progres sesi), WEC (menara ketahanan navy dengan banner kelas), dan F1 (menara nyaris hitam, tab warna tim, kode 3-huruf, pil lap tercepat ungu). Skin mengubah bentuk; tema tetap mengatur warna; kombinasi apa pun bisa. Pilih di halaman Overlay. Di WEC / MotoGP / F1 kamu juga bisa mengatur wordmark header sendiri (Tower title).') },
       { type: 'p', text: T(
         'WEC groups the field by a driver’s Class (set on the Drivers page) with a coloured banner per class; F1 shows a 3-letter code taken from a driver’s short name.',
         'WEC mengelompokkan grid berdasarkan Class pembalap (diatur di halaman Drivers) dengan banner berwarna per kelas; F1 menampilkan kode 3-huruf dari nama pendek pembalap.') },
       { type: 'h', text: T('Scenes and the moment bar', 'Scene dan bar momen') },
       { type: 'p', text: T(
-        'A scene is one set of visible widgets and one arrangement of them. The row of scene chips at the top of Race control puts any scene on air in one click and cross-fades the overlay. OBS needs only the one address — the change happens inside it, so there is no second Browser Source.',
-        'Scene adalah satu set widget yang tampil beserta susunannya. Deretan chip scene di atas Race control menayangkan scene mana pun dengan satu klik dan membuat overlay bertransisi. OBS hanya butuh satu alamat — pergantiannya terjadi di dalamnya, jadi tidak perlu Browser Source kedua.') },
+        'A scene is one set of visible widgets and one arrangement of them. The row of scene chips at the top of Race control puts any scene on air in one click and cross-fades the overlay. OBS needs only the one address: the change happens inside it, so there is no second Browser Source.',
+        'Scene adalah satu set widget yang tampil beserta susunannya. Deretan chip scene di atas Race control menayangkan scene mana pun dengan satu klik dan membuat overlay bertransisi. OBS hanya butuh satu alamat: pergantiannya terjadi di dalamnya, jadi tidak perlu Browser Source kedua.') },
       { type: 'h', text: T('Layout editor', 'Editor tata letak') },
       { type: 'p', text: T(
         'On the Layout page, click a widget (or pick it from the list) to select it, then drag it or use the size/scale fields. Dragging reaches the overlays live; the Apply button forces every overlay to redraw the current layout if one ever looks out of date.',
@@ -455,8 +455,8 @@ const SECTIONS = [
         'On the Overlays page, Auto-director flashes the fastest-lap banner for a few seconds whenever the record falls and brings up the results screen at the chequered flag. It only toggles widgets you can also toggle by hand.',
         'Di halaman Overlay, Auto-director menampilkan banner lap tercepat beberapa detik tiap rekor terpecah dan memunculkan layar hasil saat bendera kotak-kotak. Hanya menyalakan widget yang bisa kamu nyalakan sendiri.') },
       { type: 'note', text: T(
-        'Layout and style are saved with the event, so OBS picks them up on the next frame — no need to refresh the Browser Source, though a hard re-add is still the surest way to load a new app version.',
-        'Tata letak dan gaya disimpan bersama event, jadi OBS mengambilnya di frame berikutnya — tak perlu refresh Browser Source, meski hapus+tambah ulang tetap cara paling pasti memuat versi aplikasi baru.') }
+        'Layout and style are saved with the event, so OBS picks them up on the next frame, no need to refresh the Browser Source, though a hard re-add is still the surest way to load a new app version.',
+        'Tata letak dan gaya disimpan bersama event, jadi OBS mengambilnya di frame berikutnya, tak perlu refresh Browser Source, meski hapus+tambah ulang tetap cara paling pasti memuat versi aplikasi baru.') }
     ]
   },
 
@@ -466,8 +466,8 @@ const SECTIONS = [
     title: T('Manual mode (no camera)', 'Mode manual (tanpa kamera)'),
     blocks: [
       { type: 'p', text: T(
-        'For a low-spec machine that cannot run the tracker, the Manual control card on Race control lets you own the order and the laps by hand. Turn on Manual mode and the computed ranking is set aside — the field follows the order you arrange.',
-        'Untuk mesin spek rendah yang tak kuat menjalankan tracker, kartu Manual control di Race control membuatmu mengatur urutan dan lap secara manual. Nyalakan Mode manual dan peringkat otomatis dikesampingkan — grid mengikuti urutan yang kamu susun.') },
+        'For a low-spec machine that cannot run the tracker, the Manual control card on Race control lets you own the order and the laps by hand. Turn on Manual mode and the computed ranking is set aside: the field follows the order you arrange.',
+        'Untuk mesin spek rendah yang tak kuat menjalankan tracker, kartu Manual control di Race control membuatmu mengatur urutan dan lap secara manual. Nyalakan Mode manual dan peringkat otomatis dikesampingkan: grid mengikuti urutan yang kamu susun.') },
       {
         type: 'table',
         head: T(['Control', 'What it does'], ['Kontrol', 'Fungsinya']),
@@ -503,8 +503,8 @@ const SECTIONS = [
         'Event hosted punya halaman tanpa login yang bisa dibuka penonton untuk mengikuti balapan langsung di HP: klasemen, bendera, lap tercepat, dan championship, diperbarui otomatis, dengan pengalih ID / EN. Salin tautannya dari kotak Public live timing di Race control, atau bagikan /live?event=CODE.') },
       { type: 'h', text: T('Audience voting', 'Voting penonton') },
       { type: 'p', text: T(
-        'Open a poll on the Overlays page (the options are your current drivers). Viewers vote on the live page and the tally moves in real time on the Audience poll overlay widget. Voting needs a one-time votes table in Supabase — run the migration SQL from the file you were given, then it just works.',
-        'Buka voting di halaman Overlay (opsinya adalah daftar pembalapmu saat ini). Penonton memilih di halaman live dan hitungannya bergerak real-time di widget overlay Audience poll. Voting butuh tabel votes sekali saja di Supabase — jalankan SQL migration dari file yang diberikan, lalu langsung jalan.') }
+        'Open a poll on the Overlays page (the options are your current drivers). Viewers vote on the live page and the tally moves in real time on the Audience poll overlay widget. Voting needs a one-time votes table in Supabase: run the migration SQL from the file you were given, then it just works.',
+        'Buka voting di halaman Overlay (opsinya adalah daftar pembalapmu saat ini). Penonton memilih di halaman live dan hitungannya bergerak real-time di widget overlay Audience poll. Voting butuh tabel votes sekali saja di Supabase: jalankan SQL migration dari file yang diberikan, lalu langsung jalan.') }
     ]
   },
 
@@ -514,8 +514,8 @@ const SECTIONS = [
     title: T('OBS control & clips (optional)', 'Kontrol OBS & klip (opsional)'),
     blocks: [
       { type: 'p', text: T(
-        'Entirely optional: nothing connects until you press Connect. On OBS setup, the OBS control card lets the console drive OBS over WebSocket — cut cameras on a flag, and save a replay-buffer clip on a marker.',
-        'Sepenuhnya opsional: tak ada yang konek sampai kamu tekan Connect. Di OBS setup, kartu OBS control membuat konsol mengendalikan OBS lewat WebSocket — ganti kamera saat flag, dan simpan klip replay buffer saat marker.') },
+        'Entirely optional: nothing connects until you press Connect. On OBS setup, the OBS control card lets the console drive OBS over WebSocket: cut cameras on a flag, and save a replay-buffer clip on a marker.',
+        'Sepenuhnya opsional: tak ada yang konek sampai kamu tekan Connect. Di OBS setup, kartu OBS control membuat konsol mengendalikan OBS lewat WebSocket: ganti kamera saat flag, dan simpan klip replay buffer saat marker.') },
       {
         type: 'table',
         head: T(['Step', 'Do'], ['Langkah', 'Lakukan']),
@@ -543,15 +543,15 @@ const SECTIONS = [
     title: T('The spoken commentator', 'Komentator suara'),
     blocks: [
       { type: 'p', text: T(
-        'A Browser Source that makes sound instead of pictures. It reads the flags, the penalties with the reason you typed, the lead, overtakes — and, turned up, who is likely to win, who is fighting for a podium and whose pace is falling away.',
-        'Browser Source yang menghasilkan suara, bukan gambar. Dia membacakan bendera, penalti beserta alasan yang kamu ketik, pimpinan, salip-menyalip — dan kalau dinaikkan, siapa yang mungkin menang, siapa yang memperebutkan podium, dan siapa yang pace-nya turun.') },
+        'A Browser Source that makes sound instead of pictures. It reads the flags, the penalties with the reason you typed, the lead, overtakes, and, turned up, who is likely to win, who is fighting for a podium and whose pace is falling away.',
+        'Browser Source yang menghasilkan suara, bukan gambar. Dia membacakan bendera, penalti beserta alasan yang kamu ketik, pimpinan, salip-menyalip, dan kalau dinaikkan, siapa yang mungkin menang, siapa yang memperebutkan podium, dan siapa yang pace-nya turun.') },
       {
         type: 'steps',
         items: [
           T('Switch it on in <b>Overlays → Spoken commentary</b> and choose how much it talks.',
             'Nyalakan di <b>Overlay → Komentator suara</b> dan pilih seberapa banyak dia bicara.'),
-          T('Copy the address there and add it in OBS as a Browser Source — <b>once</b>, and only once.',
-            'Salin alamatnya lalu tambahkan di OBS sebagai Browser Source — <b>satu kali saja</b>.'),
+          T('Copy the address there and add it in OBS as a Browser Source: <b>once</b>, and only once.',
+            'Salin alamatnya lalu tambahkan di OBS sebagai Browser Source: <b>satu kali saja</b>.'),
           T('Tick <b>Control audio via OBS</b> in the source properties, then set its level in the mixer under the game.',
             'Centang <b>Control audio via OBS</b> di properti source-nya, lalu atur levelnya di mixer di bawah suara game.')
         ]
@@ -561,11 +561,11 @@ const SECTIONS = [
         '<b>Tambahkan sekali saja.</b> Tiap salinan menghitung kalimat yang sama dari balapan yang sama dan akan bicara berbarengan.') },
       { type: 'h', text: T('Language and voice', 'Bahasa dan suara') },
       { type: 'p', text: T(
-        'The words follow the voice, not the setting. Ask for Indonesian on a machine with no Indonesian voice and the commentary is spoken <i>and written</i> in English, because Indonesian read by an English voice is not an accent — it is unintelligible. The Overlays page names the voice it found.',
-        'Teksnya mengikuti suara, bukan setelan. Minta bahasa Indonesia di mesin yang tidak punya suara Indonesia, dan komentarnya diucapkan <i>dan ditulis</i> dalam bahasa Inggris — karena bahasa Indonesia dibaca suara Inggris itu bukan aksen, melainkan tidak bisa dipahami. Halaman Overlay menyebutkan suara yang ditemukannya.') },
+        'The words follow the voice, not the setting. Ask for Indonesian on a machine with no Indonesian voice and the commentary is spoken <i>and written</i> in English, because Indonesian read by an English voice is not an accent: it is unintelligible. The Overlays page names the voice it found.',
+        'Teksnya mengikuti suara, bukan setelan. Minta bahasa Indonesia di mesin yang tidak punya suara Indonesia, dan komentarnya diucapkan <i>dan ditulis</i> dalam bahasa Inggris, karena bahasa Indonesia dibaca suara Inggris itu bukan aksen, melainkan tidak bisa dipahami. Halaman Overlay menyebutkan suara yang ditemukannya.') },
       { type: 'note', text: T(
-        'Windows does not ship an Indonesian voice. To add one: Settings, Time &amp; language, Language &amp; region, Add a language, Indonesian — make sure <b>Speech</b> is ticked — then restart the browser and OBS.',
-        'Windows tidak menyertakan suara Indonesia. Untuk menambahkannya: Settings, Time &amp; language, Language &amp; region, Add a language, Indonesian — pastikan <b>Speech</b> tercentang — lalu restart browser dan OBS.') },
+        'Windows does not ship an Indonesian voice. To add one: Settings, Time &amp; language, Language &amp; region, Add a language, Indonesian (make sure <b>Speech</b> is ticked) then restart the browser and OBS.',
+        'Windows tidak menyertakan suara Indonesia. Untuk menambahkannya: Settings, Time &amp; language, Language &amp; region, Add a language, Indonesian (pastikan <b>Speech</b> tercentang) lalu restart browser dan OBS.') },
       { type: 'p', text: T(
         'Every engine mangles a racing name eventually. The <b>How to say a name</b> box takes one per line, written = spoken, and applies everywhere that name is read out.',
         'Tiap mesin suara pada akhirnya merusak nama balap. Kotak <b>Cara melafalkan nama</b> menerima satu per baris, tertulis = terucap, dan berlaku di mana pun nama itu diucapkan.') }
@@ -582,13 +582,13 @@ const SECTIONS = [
         'Satu halaman untuk orang yang tidak menonton: pemenang dan selisihnya, lap tercepat, tiap keputusan steward beserta alasannya, siapa yang naik paling banyak, dan posisi championship dengan ronde ini dihitung.') },
       { type: 'p', text: T(
         'It needs no login, so the link can go straight into your league channel. <b>Copy for Discord</b> on the page hands you the text rather than a screenshot, which means a driver can search for their own name in that channel six weeks later.',
-        'Tidak perlu login, jadi tautannya bisa langsung masuk ke channel ligamu. <b>Salin untuk Discord</b> di halaman itu memberi teksnya, bukan tangkapan layar — artinya seorang pembalap bisa mencari namanya sendiri di channel itu enam minggu kemudian.') },
+        'Tidak perlu login, jadi tautannya bisa langsung masuk ke channel ligamu. <b>Salin untuk Discord</b> di halaman itu memberi teksnya, bukan tangkapan layar: artinya seorang pembalap bisa mencari namanya sendiri di channel itu enam minggu kemudian.') },
       { type: 'p', text: T(
         'The address is on the <b>Championship</b> page here, and on every event card on the dashboard.',
         'Alamatnya ada di halaman <b>Championship</b> di sini, dan di tiap kartu event di dashboard.') },
       { type: 'note', text: T(
-        'Two things it will not do. It names no biggest mover when no starting grid was set — there is no honest way to know who gained. And it labels itself <b>provisional</b> until the race is flagged finished, so nobody pastes a result that is still moving.',
-        'Dua hal yang tidak akan dilakukannya. Dia tidak menyebut biggest mover kalau grid start tidak diatur — tidak ada cara jujur untuk tahu siapa yang naik. Dan dia menandai dirinya <b>provisional</b> sampai balapan diberi bendera selesai, supaya tidak ada yang menempel hasil yang masih bergerak.') }
+        'Two things it will not do. It names no biggest mover when no starting grid was set: there is no honest way to know who gained. And it labels itself <b>provisional</b> until the race is flagged finished, so nobody pastes a result that is still moving.',
+        'Dua hal yang tidak akan dilakukannya. Dia tidak menyebut biggest mover kalau grid start tidak diatur, tidak ada cara jujur untuk tahu siapa yang naik. Dan dia menandai dirinya <b>provisional</b> sampai balapan diberi bendera selesai, supaya tidak ada yang menempel hasil yang masih bergerak.') }
     ]
   },
 
@@ -604,8 +604,8 @@ const SECTIONS = [
             'Source <b>Window Capture</b> → window yang menampilkan game. Itu gameplay-nya.'),
           T('Source <b>Browser</b> → the all-in-one overlay address, 1920×1080, transparent background.',
             'Source <b>Browser</b> → alamat overlay semua-dalam-satu, 1920×1080, latar transparan.'),
-          T('In the browser source properties, leave <b>Shutdown source when not visible</b> and <b>Refresh browser when scene becomes active</b> both off — the overlay reconnects on its own.',
-            'Di properti browser source, biarkan <b>Shutdown source when not visible</b> dan <b>Refresh browser when scene becomes active</b> sama-sama mati — overlay menyambung ulang sendiri.'),
+          T('In the browser source properties, leave <b>Shutdown source when not visible</b> and <b>Refresh browser when scene becomes active</b> both off: the overlay reconnects on its own.',
+            'Di properti browser source, biarkan <b>Shutdown source when not visible</b> dan <b>Refresh browser when scene becomes active</b> sama-sama mati: overlay menyambung ulang sendiri.'),
           T('Custom CSS: leave it empty. The pages are already transparent.',
             'Custom CSS: biarkan kosong. Halamannya memang sudah transparan.'),
           T('Keep this operator tab open on a second monitor.',
@@ -627,8 +627,8 @@ const SECTIONS = [
         'Each round is banked as a scored snapshot, so editing the roster later never rewrites what somebody won months ago.',
         'Tiap ronde disimpan sebagai cuplikan yang sudah diskor, jadi mengubah daftar pembalap nanti tidak pernah menulis ulang apa yang seseorang menangkan berbulan-bulan lalu.') },
       { type: 'p', text: T(
-        'Set the points table yourself, with optional bonuses for fastest lap and pole and an optional drop-worst rule. Ties are settled by countback — most wins, then most seconds, and so on — because a championship that ends in a shrug is worse than one decided by a rule nobody likes.',
-        'Atur tabel poinnya sendiri, dengan bonus opsional untuk lap tercepat dan pole, serta aturan buang-hasil-terburuk yang opsional. Nilai seri diselesaikan lewat countback — paling banyak menang, lalu paling banyak posisi kedua, dan seterusnya — karena championship yang berakhir tanpa kejelasan lebih buruk daripada yang diputuskan aturan yang tidak disukai siapa pun.') },
+        'Set the points table yourself, with optional bonuses for fastest lap and pole and an optional drop-worst rule. Ties are settled by countback (most wins, then most seconds, and so on) because a championship that ends in a shrug is worse than one decided by a rule nobody likes.',
+        'Atur tabel poinnya sendiri, dengan bonus opsional untuk lap tercepat dan pole, serta aturan buang-hasil-terburuk yang opsional. Nilai seri diselesaikan lewat countback (paling banyak menang, lalu paling banyak posisi kedua, dan seterusnya) karena championship yang berakhir tanpa kejelasan lebih buruk daripada yang diputuskan aturan yang tidak disukai siapa pun.') },
       { type: 'h', text: T('Drift', 'Drift') },
       { type: 'p', text: T(
         'Judged qualifying runs seed the bracket, then two runs per battle with the lead swapped, and the judges call it. Empty seats become byes, so eleven entries fit a sixteen-car bracket without inventing drivers.',
@@ -645,8 +645,8 @@ const SECTIONS = [
     title: T('Timing rules', 'Aturan timing'),
     blocks: [
       { type: 'p', text: T(
-        'One place decides the timing: the server on a local event, this console on a hosted one. The overlays and the detector only report events — they never decide.',
-        'Satu tempat yang memutuskan timing: server di event lokal, konsol ini di event hosted. Overlay dan detektor hanya melaporkan kejadian — mereka tidak pernah memutuskan.') },
+        'One place decides the timing: the server on a local event, this console on a hosted one. The overlays and the detector only report events: they never decide.',
+        'Satu tempat yang memutuskan timing: server di event lokal, konsol ini di event hosted. Overlay dan detektor hanya melaporkan kejadian: mereka tidak pernah memutuskan.') },
       {
         type: 'table',
         head: T(['Rule', 'What it means'], ['Aturan', 'Artinya']),
@@ -714,11 +714,11 @@ const SECTIONS = [
       },
       { type: 'h', text: T('Custom shortcuts & Stream Deck', 'Pintasan custom & Stream Deck') },
       { type: 'p', text: T(
-        'On the OBS setup page, Keyboard shortcuts lets you bind flags, Start, Undo, scene next/previous and any widget toggle to a key you choose. A Stream Deck’s Hotkey action sends the same keystroke to the console tab — so a Stream Deck button works with no plugin and no server: set the button to the key you picked here.',
-        'Di halaman OBS setup, Keyboard shortcuts membiarkanmu mengikat bendera, Start, Undo, scene berikut/sebelumnya, dan toggle widget apa pun ke tombol pilihanmu. Aksi Hotkey di Stream Deck mengirim keystroke yang sama ke tab konsol — jadi tombol Stream Deck jalan tanpa plugin dan tanpa server: set tombolnya ke tombol yang kamu pilih di sini.') },
+        'On the OBS setup page, Keyboard shortcuts lets you bind flags, Start, Undo, scene next/previous and any widget toggle to a key you choose. A Stream Deck’s Hotkey action sends the same keystroke to the console tab, so a Stream Deck button works with no plugin and no server: set the button to the key you picked here.',
+        'Di halaman OBS setup, Keyboard shortcuts membiarkanmu mengikat bendera, Start, Undo, scene berikut/sebelumnya, dan toggle widget apa pun ke tombol pilihanmu. Aksi Hotkey di Stream Deck mengirim keystroke yang sama ke tab konsol, jadi tombol Stream Deck jalan tanpa plugin dan tanpa server: set tombolnya ke tombol yang kamu pilih di sini.') },
       { type: 'note', text: T(
         'The manual lap keys are a safety net. If detection misses one you can correct it without stopping the broadcast, and every action has an Undo.',
-        'Tombol lap manual adalah jaring pengaman. Kalau deteksi meleset, kamu bisa mengoreksinya tanpa menghentikan siaran — dan tiap aksi punya Undo.') }
+        'Tombol lap manual adalah jaring pengaman. Kalau deteksi meleset, kamu bisa mengoreksinya tanpa menghentikan siaran, dan tiap aksi punya Undo.') }
     ]
   },
 
@@ -735,14 +735,14 @@ const SECTIONS = [
            T('For a hosted event, the address needs <code>?event=CODE</code> on it. Without one the page looks for a server on the streaming machine, which is not there. Copy the address from the OBS setup page rather than typing it.',
              'Untuk event hosted, alamatnya wajib membawa <code>?event=KODE</code>. Tanpa itu, halamannya mencari server di mesin streaming yang memang tidak ada. Salin alamatnya dari halaman Setup OBS, jangan diketik manual.')],
           [T('Nothing updates any more', 'Tidak ada yang berubah lagi'),
-           T('In a hosted event, race control is the timing computer. If you closed that tab, nothing is working the race out. Open it again — the event itself is safe in the database.',
-             'Di event hosted, race control adalah komputer timing-nya. Kalau tabnya kamu tutup, tidak ada yang menghitung balapan. Buka lagi — event-nya sendiri aman di database.')],
+           T('In a hosted event, race control is the timing computer. If you closed that tab, nothing is working the race out. Open it again: the event itself is safe in the database.',
+             'Di event hosted, race control adalah komputer timing-nya. Kalau tabnya kamu tutup, tidak ada yang menghitung balapan. Buka lagi: event-nya sendiri aman di database.')],
           [T('A driver signed in but gets no flags', 'Pembalap sudah mendaftar tapi tidak dapat bendera'),
            T('They are waiting for you. Accept them in <b>Driver sign-ins</b>; the app tells them that is what is happening.',
              'Mereka sedang menunggumu. Terima di <b>Pendaftaran pembalap</b>; aplikasinya sudah memberi tahu bahwa itulah yang sedang terjadi.')],
           [T('The app says that is the website address', 'Aplikasi bilang itu alamat website'),
-           T('It is. The app wants the event code — four to twelve letters — not the site the APK came from. A link with <code>?event=</code> in it works too.',
-             'Memang begitu. Aplikasi meminta kode event — empat sampai dua belas huruf — bukan situs tempat APK-nya diunduh. Tautan yang mengandung <code>?event=</code> juga bisa.')],
+           T('It is. The app wants the event code (four to twelve letters), not the site the APK came from. A link with <code>?event=</code> in it works too.',
+             'Memang begitu. Aplikasi meminta kode event (empat sampai dua belas huruf), bukan situs tempat APK-nya diunduh. Tautan yang mengandung <code>?event=</code> juga bisa.')],
           [T('Cars swap with each other', 'Mobil tertukar satu sama lain'),
            T('Two driver colours are too close. Change one, or lower <b>Colour tolerance</b> so a pixel has to match more exactly.',
              'Dua warna pembalap terlalu mirip. Ganti salah satunya, atau turunkan <b>Toleransi warna</b> supaya piksel harus lebih persis cocok.')],
@@ -756,8 +756,8 @@ const SECTIONS = [
            T('Right-click the source → Properties → <b>Refresh cache of current page</b>. Check the address is right and, for a local event, that the server is still running.',
              'Klik kanan source → Properties → <b>Refresh cache of current page</b>. Periksa alamatnya benar dan, untuk event lokal, servernya masih jalan.')],
           [T('The overlay looks frozen', 'Overlay terlihat diam'),
-           T('Most overlay motion is event-driven — a position swap, a lap landing, a flag change. With the race idle there is nothing to animate. Use <b>Overlays → Play animation rehearsal</b> to prove motion is reaching OBS.',
-             'Sebagian besar animasi overlay digerakkan kejadian — tukar posisi, lap masuk, ganti bendera. Kalau balapan siaga, tidak ada yang perlu dianimasikan. Pakai <b>Overlay → Putar gladi animasi</b> untuk membuktikan animasinya sampai ke OBS.')]
+           T('Most overlay motion is event-driven: a position swap, a lap landing, a flag change. With the race idle there is nothing to animate. Use <b>Overlays → Play animation rehearsal</b> to prove motion is reaching OBS.',
+             'Sebagian besar animasi overlay digerakkan kejadian: tukar posisi, lap masuk, ganti bendera. Kalau balapan siaga, tidak ada yang perlu dianimasikan. Pakai <b>Overlay → Putar gladi animasi</b> untuk membuktikan animasinya sampai ke OBS.')]
         ]
       }
     ]
@@ -779,16 +779,16 @@ const SECTIONS = [
            T('<code>data/state.json</code>, written as it happens. Back it up before an event that matters.',
              '<code>data/state.json</code>, ditulis sambil jalan. Cadangkan sebelum event yang penting.')],
           [T('Driver accounts', 'Akun pembalap'),
-           T('Never in the state. Passwords are hashed and live where nothing else can reach them — not in any file the overlays or the network can read.',
-             'Tidak pernah ada di dalam state. Kata sandi di-hash dan disimpan di tempat yang tidak bisa dijangkau apa pun — tidak di file mana pun yang bisa dibaca overlay atau jaringan.')],
+           T('Never in the state. Passwords are hashed and live where nothing else can reach them, not in any file the overlays or the network can read.',
+             'Tidak pernah ada di dalam state. Kata sandi di-hash dan disimpan di tempat yang tidak bisa dijangkau apa pun, tidak di file mana pun yang bisa dibaca overlay atau jaringan.')],
           [T('Detection model', 'Model deteksi'),
            T('<code>public/models/</code>, if you use model-based detection at all. Optional.',
              '<code>public/models/</code>, kalau kamu memang memakai deteksi berbasis model. Opsional.')]
         ]
       },
       { type: 'note', text: T(
-        'One lap of per-driver history — the individual lap times — lives only in the console tab and is not written to the database. Close race control mid-race and reopen it and the classification is intact, but the commentator needs a few laps before it will quote a probability again.',
-        'Riwayat per pembalap — daftar waktu tiap lap — hanya hidup di tab konsol dan tidak ditulis ke database. Tutup race control di tengah balapan lalu buka lagi: klasemennya utuh, tapi komentator butuh beberapa lap sebelum mau menyebut angka peluang lagi.') }
+        'One lap of per-driver history (the individual lap times) lives only in the console tab and is not written to the database. Close race control mid-race and reopen it and the classification is intact, but the commentator needs a few laps before it will quote a probability again.',
+        'Riwayat per pembalap (daftar waktu tiap lap) hanya hidup di tab konsol dan tidak ditulis ke database. Tutup race control di tengah balapan lalu buka lagi: klasemennya utuh, tapi komentator butuh beberapa lap sebelum mau menyebut angka peluang lagi.') }
     ]
   }
 ];

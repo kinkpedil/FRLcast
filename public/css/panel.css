@@ -333,64 +333,77 @@ label.field span b { color: var(--ink-dim); float: right; font-family: var(--mon
 
 /* ---------- help page ---------- */
 
-.helpwrap { display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start; }
+/*
+ * A manual is read, not operated. So the text column stops at a readable width, the
+ * contents stay in view beside it with the section being read marked, and every section is
+ * one card with its title in the card's header, like every other page of the console.
+ */
+.helpwrap { display: grid; grid-template-columns: 232px minmax(0, 860px); gap: 28px; align-items: start; }
+@media (max-width: 1000px) { .helpwrap { grid-template-columns: minmax(0, 1fr); } .helpside { position: static !important; max-height: none !important; } }
 
-.helptoc { position: sticky; top: 22px; display: flex; flex-direction: column; gap: 2px; }
+.helpside { position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow: auto; padding-right: 4px; }
+.helpside input { margin-bottom: 14px; }
+.helptoc { display: flex; flex-direction: column; }
+.helptoc .grp { margin: 14px 0 4px; padding: 0 10px; font-size: 11px; font-weight: 600; color: var(--ink-mute); }
+.helptoc .grp:first-child { margin-top: 0; }
 .helptoc a {
-  padding: 7px 11px; border-radius: 7px; color: var(--ink-dim);
-  text-decoration: none; font-size: 13px; font-weight: 500;
+  display: block; padding: 6px 10px; border-radius: 6px; color: var(--ink-dim);
+  text-decoration: none; font-size: 13px; line-height: 1.35;
 }
 .helptoc a:hover { background: var(--bg-2); color: var(--ink); }
-.helptoc a.on { background: var(--bg-3); color: var(--ink); box-shadow: inset 2px 0 0 var(--accent); }
+.helptoc a.on { background: var(--bg-3); color: var(--ink); font-weight: 600; }
 
-.helpsec { margin-bottom: 14px; }
-.helpsec > h3 {
-  margin: 0 0 12px; font-size: 17px; font-weight: 700; letter-spacing: -.01em; color: var(--ink);
-  display: flex; align-items: center; gap: 10px;
-}
+.helpmain .lede { margin-bottom: 18px; }
+.helpabout { margin-bottom: 16px; }
+.helpabout .body { display: grid; gap: 12px; }
+.helpabout .ver { font-size: 13px; color: var(--ink-dim); line-height: 1.5; }
+.helpabout .ver b { color: var(--ink); }
 
-.helpsec .card .body { padding: 18px 20px; }
+.helpsec { scroll-margin-top: 20px; }
+.helpsec + .helpsec { margin-top: 16px; }
+.helpsec > h3 { font-size: 15px; }
+.helpsec > .body { padding: 18px 20px 8px; }
 
-.helpsec h4 {
-  margin: 20px 0 8px; font-size: 13px; font-weight: 600; color: var(--ink);
-}
+.helpsec h4 { margin: 22px 0 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
 .helpsec h4:first-child { margin-top: 0; }
 
-.helpsec p { margin: 0 0 10px; line-height: 1.7; color: var(--ink-dim); font-size: 13.5px; }
+.helpsec p { margin: 0 0 12px; line-height: 1.7; color: var(--ink-dim); font-size: 13.5px; }
 .helpsec p b, .helpsec li b, .helpsec td b { color: var(--ink); font-weight: 600; }
 .helpsec code {
-  font-family: var(--mono); font-size: 12px; color: var(--accent);
-  background: var(--bg-3); padding: 1px 5px; border-radius: 4px;
+  font-family: var(--mono); font-size: 12px; color: var(--ink);
+  background: var(--bg-3); border: 1px solid var(--line); padding: 0 5px; border-radius: 4px; white-space: nowrap;
 }
 .helpsec kbd {
   font-family: var(--mono); font-size: 11px; color: var(--ink);
   background: var(--bg-3); border: 1px solid var(--line-2); border-bottom-width: 2px;
-  padding: 2px 6px; border-radius: 5px;
+  padding: 1px 6px; border-radius: 5px; white-space: nowrap;
 }
 
-.helpsec ol, .helpsec ul { margin: 0 0 10px; padding-left: 20px; }
-.helpsec li { margin-bottom: 7px; line-height: 1.65; color: var(--ink-dim); font-size: 13.5px; }
-.helpsec ol li::marker { color: var(--accent); font-weight: 700; }
+.helpsec ol, .helpsec ul { margin: 0 0 12px; padding-left: 22px; }
+.helpsec li { margin-bottom: 8px; padding-left: 4px; line-height: 1.65; color: var(--ink-dim); font-size: 13.5px; }
+.helpsec ol li::marker { color: var(--ink-mute); font-family: var(--mono); font-size: 12px; }
+.helpsec ul li::marker { color: var(--ink-mute); }
 
-.helpsec table { width: 100%; border-collapse: collapse; margin: 0 0 10px; }
+.helpsec .tbl { margin: 0 0 14px; border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
+.helpsec table { width: 100%; border-collapse: collapse; }
 .helpsec th {
-  text-align: left; font-size: 11px;
-  color: var(--ink-mute); font-weight: 500; padding: 0 10px 8px; border-bottom: 1px solid var(--line);
+  text-align: left; font-size: 11px; color: var(--ink-mute); font-weight: 500;
+  padding: 8px 12px; background: var(--bg-3); border-bottom: 1px solid var(--line);
 }
 .helpsec td {
-  padding: 9px 10px; border-bottom: 1px solid var(--line);
+  padding: 10px 12px; border-bottom: 1px solid var(--line);
   font-size: 13px; line-height: 1.6; color: var(--ink-dim); vertical-align: top;
 }
 .helpsec tr:last-child td { border-bottom: 0; }
-.helpsec td:first-child { color: var(--ink); font-weight: 500; white-space: nowrap; }
+.helpsec td:first-child { color: var(--ink); font-weight: 500; width: 1%; white-space: nowrap; }
 
 .helpnote, .helpwarn {
-  padding: 11px 14px; border-radius: 8px; margin: 0 0 10px;
-  font-size: 13px; line-height: 1.65; border: 1px solid;
+  padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 0 0 14px;
+  font-size: 13px; line-height: 1.65; border-left: 3px solid; color: var(--ink-dim);
 }
-.helpnote { border-color: rgba(10,132,255,.4); background: rgba(10,132,255,.09); color: #9dc9ff; }
-.helpwarn { border-color: rgba(255,214,10,.4); background: rgba(255,214,10,.09); color: #ffe27a; }
-.helpnote b, .helpwarn b { color: #fff; }
+.helpnote { border-color: var(--blue); background: rgba(10,132,255,.07); }
+.helpwarn { border-color: var(--yellow); background: rgba(255,214,10,.07); }
+.helpnote b, .helpwarn b { color: var(--ink); }
 
 mark { background: rgba(0,224,164,.28); color: var(--ink); border-radius: 3px; padding: 0 2px; }
 

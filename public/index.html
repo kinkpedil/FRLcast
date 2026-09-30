@@ -82,7 +82,7 @@
         <div class="sess-flags">
           <div class="subhead">
             <b>Flag</b>
-            <span class="hint" id="flagOwner">--</span>
+            <span class="hint" id="flagOwner" data-i18n-skip>--</span>
             <button class="btn sm ghost" id="btnFlagRelease">Hand back to auto</button>
           </div>
           <div class="flags">
@@ -1420,43 +1420,39 @@
       that would be worse than one language, so the switch does not touch this page.
     -->
     <section class="page" id="page-help">
-      <h2>Manual</h2>
-      <!--
-        "Available offline" was true when every event lived on the operator's own machine.
-        A hosted event does not, and a manual page is the last place that should still be
-        claiming something the rest of the manual spends a section correcting.
-      -->
-      <p class="lede">Every page in this console, and how to use it. It switches language
-        with the rest of the app.</p>
-
       <!--
         The manual carries its own translations, so the dictionary must not touch it: its
         blocks are paragraphs and table rows, and a sentence-keyed lookup is the wrong tool
-        for those. Only the body and the contents list are skipped — the heading above and
-        the search box are ordinary interface and translate normally.
+        for those. Only the body and the contents list are skipped; the heading, the version
+        card and the search box are ordinary interface and translate normally.
       -->
-      <div class="card" id="aboutCard" style="margin-bottom:22px">
-        <h3>Version and updates</h3>
-        <div class="body">
-          <p style="margin:0 0 12px">You are running <b id="aboutVer" data-i18n-skip>FRLcast</b>. <span id="aboutState" data-i18n-skip></span></p>
-          <div class="row" style="gap:8px;margin-bottom:12px">
-            <button class="btn" id="btnCheckUpdate">Check for updates</button>
-            <a class="btn ghost" href="https://frlcast.my.id/changelog" target="_blank" rel="noopener">What's new in each version</a>
-          </div>
-          <div id="betaWrap">
-            <label class="toggle">
-              <span>Tell me about beta versions</span>
-              <input type="checkbox" id="betaToggle"><i class="sw"></i>
-            </label>
-            <p class="hint" style="margin:8px 0 0">Betas get new features first, so you can try them before race day. Do not run a beta at a real event. The normal download never becomes a beta.</p>
-          </div>
-        </div>
-      </div>
-
       <div class="helpwrap">
-        <nav class="helptoc" id="helpToc" data-i18n-skip></nav>
-        <div>
-          <input type="text" id="helpSearch" placeholder="Search… try: sector, OBS, colour, throttle" style="margin-bottom:16px">
+        <aside class="helpside">
+          <input type="text" id="helpSearch" placeholder="Search the manual">
+          <nav class="helptoc" id="helpToc" data-i18n-skip></nav>
+        </aside>
+
+        <div class="helpmain">
+          <h2>Manual</h2>
+          <p class="lede">Every page in this console, and how to use it.</p>
+
+          <div class="card helpabout" id="aboutCard">
+            <h3>Version and updates</h3>
+            <div class="body">
+              <p class="ver">You are running <b id="aboutVer" data-i18n-skip>FRLcast</b>. <span id="aboutState" data-i18n-skip></span></p>
+              <div class="btnrow">
+                <button class="btn sm" id="btnCheckUpdate">Check for updates</button>
+                <a class="btn sm ghost" href="https://www.frlcast.my.id/changelog" target="_blank" rel="noopener">What's new in each version</a>
+              </div>
+              <div id="betaWrap">
+                <label class="toggle">
+                  <span>Tell me about beta versions <b>Betas get new features first, so you can try them before race day. Do not run a beta at a real event.</b></span>
+                  <input type="checkbox" id="betaToggle"><i class="sw"></i>
+                </label>
+              </div>
+            </div>
+          </div>
+
           <div id="helpBody" data-i18n-skip></div>
           <p class="hint" id="helpNoResult" style="display:none">Nothing matches.</p>
         </div>
