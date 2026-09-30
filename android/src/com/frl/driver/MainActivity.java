@@ -5,7 +5,11 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -15,6 +19,7 @@ import android.provider.Settings;
 import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -28,24 +33,43 @@ import android.widget.TextView;
 import org.json.JSONObject;
 
 /**
- * Sign in — or sign up — and then get out of the way.
+ * Sign in, or sign up, and then get out of the way.
  *
  * Everything a driver does mid-race happens in the floating window; this screen exists to
  * get them an account, to ask Android for the one permission that makes the window
  * possible, and to set its size. It is built in code rather than XML because it is one
  * screen and a layout file would be another thing to keep in step with it.
+ *
+ * The look is a small, deliberate design system, all defined here: one dark ground, cards
+ * for each group, rounded fields and buttons, the FRLcast teal used sparingly. The helpers
+ * (card, field, filledBtn, ghostBtn, chip) are the whole vocabulary; every screen state is
+ * built from them, so the styling lives in one place rather than being sprinkled per view.
  */
 public class MainActivity extends Activity {
 
+  // ---------------------------------------------------------------- palette
+  private static final int BG      = 0xFF0B0D11;
+  private static final int CARD    = 0xFF141922;
+  private static final int FIELD   = 0xFF1B212B;
+  private static final int BORDER  = 0xFF283039;
+  private static final int INK     = 0xFFEEF1F5;
+  private static final int MUTE    = 0xFF8C939F;
+  private static final int FAINT   = 0xFF5C6470;
+  private static final int ACCENT  = 0xFF00E0A4;
+  private static final int ACCENT_INK = 0xFF04120D;
+  private static final int BLUE    = 0xFF3B9EFF;
+  private static final int WARN    = 0xFFFFD60A;
+  private static final int DANGER  = 0xFFFF5A4E;
+
   private EditText fHost, fNick, fNum, fTeam, fPlayerId, fPass, fRadio, fAgainst, fReport, fAppeal;
   private Button appealSend;
-  private TextView status, hint, formLede, nickLabel, radioLabel;
+  private TextView status, statusName, statusChip, hint, formLede, nickLabel, radioLabel;
   private Button go, swap, floatBtn, permBtn, signOut, radioSend, reportSend;
-  private LinearLayout sizeRow, settings, form, radioBox, reportBox;
+  private LinearLayout sizeRow, settings, form, radioBox, reportBox, appealBox, statusCard;
   private CheckBox subBox, boardBox;
   private SeekBar alpha;
 
-  /** The team the server last reported for this driver — team radio only shows with one. */
+  /** The team the server last reported for this driver; team radio only shows with one. */
   private String team = "";
   /** Newest team-radio id already shown here, so a poll does not repeat it. String because
    *  the id is a number on the laptop server and a UUID on the hosted event. */
@@ -66,7 +90,7 @@ public class MainActivity extends Activity {
     super.onCreate(b);
     dp = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, getResources().getDisplayMetrics());
     setContentView(build());
-    getWindow().getDecorView().setBackgroundColor(Color.parseColor("#0b0d11"));
+    getWindow().getDecorView().setBackgroundColor(BG);
 
     if (Build.VERSION.SDK_INT >= 33
         && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -91,24 +115,18 @@ public class MainActivity extends Activity {
   private View build() {
     LinearLayout root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(20 * dp, 28 * dp, 20 * dp, 28 * dp);
+    root.setPadding(18 * dp, 22 * dp, 18 * dp, 30 * dp);
 
-    root.addView(title("FRL DRIVER"));
+    root.addView(header());
 
-    /*
-     * The whole form lives in one container.
-     *
-     * Hiding the fields one at a time left their headings behind — "RACE NUMBER" and
-     * "PASSWORD" sat on the signed-in screen with nothing under them. A label belongs to
-     * its field, so they leave together.
-     */
-    form = new LinearLayout(this);
-    form.setOrientation(LinearLayout.VERTICAL);
-    root.addView(form);
+    // ---- the sign-in / sign-up form, one card -------------------------------
+    form = card();
+    addTop(root, form, 20);
 
     formLede = new TextView(this);
-    formLede.setTextColor(Color.parseColor("#8b9099"));
+    formLede.setTextColor(MUTE);
     formLede.setTextSize(14);
+    formLede.setLineSpacing(2 * dp, 1f);
     form.addView(formLede);
 
     fHost = field("NDL3  or  192.168.1.20:4700", InputType.TYPE_CLASS_TEXT);
@@ -127,129 +145,113 @@ public class MainActivity extends Activity {
     form.addView(label("RACE NUMBER"));
     form.addView(fNum);
 
-    // Shown on both screens, unlike the racing name. A driver who changed teams between
-    // rounds has nowhere else to say so, and race control would otherwise be retyping it
-    // from a list they keep somewhere off this system entirely.
-    fTeam = field("KINKPEDIL RACING", InputType.TYPE_CLASS_TEXT
-        | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+    fTeam = field("KINKPEDIL RACING", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
     fTeam.setText(Api.prefs(this).getString(Api.K_TEAM, ""));
     form.addView(label("TEAM  (optional)"));
     form.addView(fTeam);
 
-    // Shown on both screens like the team, and for the same reason: a driver can set it later
-    // by signing in again, and an empty box never clears an ID already on file. This is the FR
-    // Legends player ID the timing API matches a car by — names collide, this does not.
     fPlayerId = field("FRL-XXXXXX", InputType.TYPE_CLASS_TEXT);
     fPlayerId.setText(Api.prefs(this).getString(Api.K_GAMEID, ""));
     form.addView(label("FR LEGENDS PLAYER ID  (optional)"));
     form.addView(fPlayerId);
 
-    fPass = field("••••", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+    fPass = field("password", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
     form.addView(label("PASSWORD"));
     form.addView(fPass);
 
-    go = button("Sign in", 0xFF00E0A4, Color.parseColor("#05070a"));
+    go = filledBtn("Sign in", ACCENT, ACCENT_INK);
     go.setOnClickListener(v -> submit());
-    form.addView(go);
+    addTop(form, go, 18);
 
-    swap = button("First time here? Create an account", 0xFF1C2027, Color.WHITE);
+    swap = ghostBtn("First time here? Create an account", INK);
     swap.setOnClickListener(v -> setRegistering(!registering));
-    form.addView(swap);
+    addTop(form, swap, 10);
 
-    form.addView(fine("A short code like NDL3 means a hosted event — race control gives you "
+    form.addView(fine("A short code like NDL3 means a hosted event: race control gives you "
         + "one, and pasting any link they send works too. An address like 192.168.1.20:4700 "
         + "means race control is on a machine on this network, and your password crosses it "
         + "in the clear, so do not reuse a real one."));
 
+    // ---- status card, shown once signed in ----------------------------------
+    statusCard = card();
+    addTop(root, statusCard, 20);
+    LinearLayout statusRow = new LinearLayout(this);
+    statusRow.setOrientation(LinearLayout.HORIZONTAL);
+    statusRow.setGravity(Gravity.CENTER_VERTICAL);
+    statusName = new TextView(this);
+    statusName.setTextColor(INK);
+    statusName.setTextSize(18);
+    statusName.setTypeface(Typeface.DEFAULT_BOLD);
+    statusRow.addView(statusName, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+    statusChip = chip("", ACCENT);
+    statusRow.addView(statusChip);
+    statusCard.addView(statusRow);
     status = new TextView(this);
-    status.setTextColor(Color.WHITE);
-    status.setTextSize(15);
-    status.setPadding(0, 14 * dp, 0, 6 * dp);
-    root.addView(status);
+    status.setTextColor(MUTE);
+    status.setTextSize(13.5f);
+    status.setLineSpacing(3 * dp, 1f);
+    LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+    slp.topMargin = 10 * dp;
+    statusCard.addView(status, slp);
 
-    // Team radio: type a message to the rest of your team. The driver relieving another in an
-    // endurance stint types "BOX BOX BOX" here; it lands on every teammate's floating window.
-    radioBox = new LinearLayout(this);
-    radioBox.setOrientation(LinearLayout.VERTICAL);
-    root.addView(radioBox);
-
-    radioLabel = label("TEAM RADIO");
+    // ---- team radio ---------------------------------------------------------
+    radioBox = card();
+    addTop(root, radioBox, 14);
+    radioLabel = sectionTitle("TEAM RADIO");
     radioBox.addView(radioLabel);
-
-    LinearLayout radioRow = new LinearLayout(this);
-    radioRow.setOrientation(LinearLayout.HORIZONTAL);
+    LinearLayout radioRow = row();
     fRadio = field("BOX BOX BOX", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-    LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0,
-        ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-    radioRow.addView(fRadio, rlp);
-    radioSend = new Button(this);
-    radioSend.setText("Send");
-    radioSend.setAllCaps(false);
-    radioSend.setTextSize(15);
-    radioSend.setTextColor(Color.parseColor("#05070a"));
-    radioSend.setBackgroundColor(0xFF00A3FF);
+    radioRow.addView(fRadio, grow());
+    radioSend = sendBtn("Send", BLUE, ACCENT_INK);
     radioSend.setOnClickListener(v -> sendRadio());
-    radioRow.addView(radioSend);
+    radioRow.addView(radioSend, sendLp());
     radioBox.addView(radioRow);
 
-    // Report an incident: which car, and what happened. It goes to race control's queue only,
-    // not to the other driver and not on air.
-    reportBox = new LinearLayout(this);
-    reportBox.setOrientation(LinearLayout.VERTICAL);
-    root.addView(reportBox);
-    reportBox.addView(label("REPORT AN INCIDENT"));
-    LinearLayout reportRow = new LinearLayout(this);
-    reportRow.setOrientation(LinearLayout.HORIZONTAL);
-    fAgainst = field("Car #", InputType.TYPE_CLASS_NUMBER);
-    reportRow.addView(fAgainst, new LinearLayout.LayoutParams(78 * dp,
-        ViewGroup.LayoutParams.WRAP_CONTENT));
+    // ---- report an incident -------------------------------------------------
+    reportBox = card();
+    addTop(root, reportBox, 14);
+    reportBox.addView(sectionTitle("REPORT AN INCIDENT"));
+    LinearLayout reportRow = row();
+    fAgainst = field("#", InputType.TYPE_CLASS_NUMBER);
+    reportRow.addView(fAgainst, new LinearLayout.LayoutParams(64 * dp, 48 * dp));
     fReport = field("Pushed me wide at turn 3", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-    reportRow.addView(fReport, new LinearLayout.LayoutParams(0,
-        ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-    reportSend = new Button(this);
-    reportSend.setText("Report");
-    reportSend.setAllCaps(false);
-    reportSend.setTextSize(15);
-    reportSend.setTextColor(Color.WHITE);
-    reportSend.setBackgroundColor(0xFFFF453A);
+    LinearLayout.LayoutParams frlp = grow();
+    frlp.leftMargin = 8 * dp;
+    reportRow.addView(fReport, frlp);
+    reportSend = sendBtn("Send", FIELD, INK);
     reportSend.setOnClickListener(v -> sendReport());
-    reportRow.addView(reportSend);
+    reportRow.addView(reportSend, sendLp());
     reportBox.addView(reportRow);
     reportBox.addView(fine("Only race control sees this. They decide what happens: a report is not a penalty."));
 
-    // Appeal a penalty: the reason goes to the stewards, who uphold or overturn it.
-    LinearLayout appealBox = new LinearLayout(this);
-    appealBox.setOrientation(LinearLayout.VERTICAL);
-    root.addView(appealBox);
-    appealBox.addView(label("APPEAL A PENALTY"));
-    LinearLayout appealRow = new LinearLayout(this);
-    appealRow.setOrientation(LinearLayout.HORIZONTAL);
+    // ---- appeal a penalty ---------------------------------------------------
+    appealBox = card();
+    addTop(root, appealBox, 14);
+    appealBox.addView(sectionTitle("APPEAL A PENALTY"));
+    LinearLayout appealRow = row();
     fAppeal = field("Why you are appealing", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-    appealRow.addView(fAppeal, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-    appealSend = new Button(this);
-    appealSend.setText("Appeal");
-    appealSend.setAllCaps(false);
-    appealSend.setTextSize(15);
-    appealSend.setTextColor(Color.WHITE);
-    appealSend.setBackgroundColor(0xFFB3001B);
+    appealRow.addView(fAppeal, grow());
+    appealSend = sendBtn("Appeal", DANGER, Color.WHITE);
     appealSend.setOnClickListener(v -> sendAppeal());
-    appealRow.addView(appealSend);
+    appealRow.addView(appealSend, sendLp());
     appealBox.addView(appealRow);
     appealBox.addView(fine("Appeals your most recent penalty. The stewards decide; an overturned penalty is removed."));
 
-    permBtn = button("Allow drawing over other apps", 0xFFFFD60A, Color.parseColor("#05070a"));
+    // ---- the floating window ------------------------------------------------
+    permBtn = filledBtn("Allow drawing over other apps", WARN, ACCENT_INK);
     permBtn.setOnClickListener(v -> askOverlay());
-    root.addView(permBtn);
+    addTop(root, permBtn, 14);
 
-    floatBtn = button("Show floating flag", 0xFF00E0A4, Color.parseColor("#05070a"));
+    floatBtn = filledBtn("Show floating flag", ACCENT, ACCENT_INK);
     floatBtn.setOnClickListener(v -> toggleFloat());
-    root.addView(floatBtn);
+    addTop(root, floatBtn, 14);
 
-    settings = new LinearLayout(this);
-    settings.setOrientation(LinearLayout.VERTICAL);
-    root.addView(settings);
+    // ---- window settings ----------------------------------------------------
+    settings = card();
+    addTop(root, settings, 14);
 
-    settings.addView(label("WINDOW SIZE"));
+    settings.addView(sectionTitle("WINDOW SIZE"));
     sizeRow = new LinearLayout(this);
     sizeRow.setOrientation(LinearLayout.HORIZONTAL);
     // Presets are a shortcut, not the mechanism. The real control is dragging the window's
@@ -261,13 +263,17 @@ public class MainActivity extends Activity {
     settings.addView(sizeRow);
 
     hint = fine("Drag the window to move it. Drag its bottom-right corner to make it any size "
-        + "you like — there is no minimum beyond a thumbnail. It stays where you put it.");
+        + "you like, down to a thumbnail. It stays where you put it.");
     settings.addView(hint);
 
-    settings.addView(label("OPACITY"));
+    TextView opLabel = label("OPACITY");
+    settings.addView(opLabel);
     alpha = new SeekBar(this);
     alpha.setMax(100);
     alpha.setProgress(Api.prefs(this).getInt(Api.K_ALPHA, 100));
+    alpha.setProgressTintList(ColorStateList.valueOf(ACCENT));
+    alpha.setThumbTintList(ColorStateList.valueOf(ACCENT));
+    alpha.setProgressBackgroundTintList(ColorStateList.valueOf(BORDER));
     alpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
       @Override public void onProgressChanged(SeekBar s, int v, boolean user) {
         if (!user) return;
@@ -280,31 +286,27 @@ public class MainActivity extends Activity {
     });
     settings.addView(alpha);
 
-    subBox = new CheckBox(this);
-    subBox.setText("Show the instruction line");
-    subBox.setTextColor(Color.WHITE);
-    subBox.setChecked(Api.prefs(this).getBoolean(Api.K_SUB, true));
+    subBox = check("Show the instruction line", Api.prefs(this).getBoolean(Api.K_SUB, true));
     subBox.setOnCheckedChangeListener((v, on) -> {
       Api.prefs(this).edit().putBoolean(Api.K_SUB, on).apply();
       restartOverlayIfOn();
     });
     settings.addView(subBox);
 
-    boardBox = new CheckBox(this);
-    boardBox.setText("Show the pit board (gaps, laps left)");
-    boardBox.setTextColor(Color.WHITE);
-    boardBox.setChecked(Api.prefs(this).getBoolean(Api.K_BOARD, true));
+    boardBox = check("Show the pit board (gaps, laps left)", Api.prefs(this).getBoolean(Api.K_BOARD, true));
     boardBox.setOnCheckedChangeListener((v, on) -> {
       Api.prefs(this).edit().putBoolean(Api.K_BOARD, on).apply();
       restartOverlayIfOn();
     });
     settings.addView(boardBox);
 
-    signOut = button("Sign out", 0xFF1C2027, Color.WHITE);
+    signOut = ghostBtn("Sign out", DANGER);
     signOut.setOnClickListener(v -> doSignOut());
-    settings.addView(signOut);
+    addTop(root, signOut, 14);
 
     ScrollView sv = new ScrollView(this);
+    sv.setBackgroundColor(BG);
+    sv.setClipToPadding(false);
     sv.addView(root, new ViewGroup.LayoutParams(
         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     return sv;
@@ -322,50 +324,124 @@ public class MainActivity extends Activity {
     status.setText("");
   }
 
-  private void addSize(LinearLayout row, String name, int w, int h) {
-    Button b = new Button(this);
-    b.setText(name);
-    b.setAllCaps(false);
-    b.setTextSize(13);
-    b.setTextColor(Color.WHITE);
-    b.setBackgroundColor(0xFF1C2027);
-    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
-        ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-    lp.setMargins(2 * dp, 0, 2 * dp, 0);
-    b.setOnClickListener(v -> {
-      Api.prefs(this).edit().putInt(Api.K_W, w * dp).putInt(Api.K_H, h * dp).apply();
-      restartOverlayIfOn();
-      toast("Window set to " + name.toLowerCase());
-    });
-    row.addView(b, lp);
+  // ---------------------------------------------------------------- design system
+
+  /** A rounded surface: fill, an optional 1px-ish border, and a corner radius in dp. */
+  private GradientDrawable round(int fill, int stroke, float radiusDp) {
+    GradientDrawable g = new GradientDrawable();
+    g.setShape(GradientDrawable.RECTANGLE);
+    g.setColor(fill);
+    g.setCornerRadius(radiusDp * dp);
+    if (stroke != 0) g.setStroke(Math.max(1, (int) (1.2f * dp)), stroke);
+    return g;
   }
 
-  private TextView title(String s) {
+  /** The FRLcast wordmark with its icon tile. */
+  private View header() {
+    LinearLayout h = new LinearLayout(this);
+    h.setOrientation(LinearLayout.HORIZONTAL);
+    h.setGravity(Gravity.CENTER_VERTICAL);
+
+    TextView mark = new TextView(this);
+    mark.setText("F");
+    mark.setTextColor(ACCENT_INK);
+    mark.setTextSize(23);
+    mark.setTypeface(Typeface.DEFAULT_BOLD);
+    mark.setGravity(Gravity.CENTER);
+    mark.setBackground(round(ACCENT, 0, 13));
+    h.addView(mark, new LinearLayout.LayoutParams(44 * dp, 44 * dp));
+
+    LinearLayout col = new LinearLayout(this);
+    col.setOrientation(LinearLayout.VERTICAL);
+    TextView name = new TextView(this);
+    name.setText("FRLcast");
+    name.setTextColor(INK);
+    name.setTextSize(21);
+    name.setTypeface(Typeface.DEFAULT_BOLD);
+    col.addView(name);
+    TextView sub = new TextView(this);
+    sub.setText("DRIVER");
+    sub.setTextColor(ACCENT);
+    sub.setTextSize(10.5f);
+    sub.setLetterSpacing(0.28f);
+    sub.setTypeface(Typeface.DEFAULT_BOLD);
+    col.addView(sub);
+    LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+        ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+    clp.leftMargin = 12 * dp;
+    h.addView(col, clp);
+    return h;
+  }
+
+  /** A grouping card: rounded surface, hairline border, generous inner padding. */
+  private LinearLayout card() {
+    LinearLayout c = new LinearLayout(this);
+    c.setOrientation(LinearLayout.VERTICAL);
+    c.setBackground(round(CARD, BORDER, 18));
+    c.setPadding(16 * dp, 16 * dp, 16 * dp, 16 * dp);
+    return c;
+  }
+
+  /** Add a block to the root column with a top margin. */
+  private void addTop(LinearLayout parent, View v, int topDp) {
+    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+    lp.topMargin = topDp * dp;
+    parent.addView(v, lp);
+  }
+
+  private LinearLayout row() {
+    LinearLayout r = new LinearLayout(this);
+    r.setOrientation(LinearLayout.HORIZONTAL);
+    r.setGravity(Gravity.CENTER_VERTICAL);
+    return r;
+  }
+
+  private LinearLayout.LayoutParams grow() {
+    return new LinearLayout.LayoutParams(0, 48 * dp, 1f);
+  }
+
+  private LinearLayout.LayoutParams sendLp() {
+    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+        ViewGroup.LayoutParams.WRAP_CONTENT, 48 * dp);
+    lp.leftMargin = 8 * dp;
+    return lp;
+  }
+
+  /** The big card heading. */
+  private TextView sectionTitle(String s) {
     TextView t = new TextView(this);
     t.setText(s);
-    t.setTextColor(Color.WHITE);
-    t.setTextSize(24);
-    t.setLetterSpacing(0.12f);
-    t.setPadding(0, 0, 0, 12 * dp);
+    t.setTextColor(MUTE);
+    t.setTextSize(11.5f);
+    t.setLetterSpacing(0.16f);
+    t.setTypeface(Typeface.DEFAULT_BOLD);
+    t.setPadding(0, 0, 0, 11 * dp);
     return t;
   }
 
+  /** A field label. */
   private TextView label(String s) {
     TextView t = new TextView(this);
     t.setText(s);
-    t.setTextColor(Color.parseColor("#8b9099"));
+    t.setTextColor(MUTE);
     t.setTextSize(11);
-    t.setLetterSpacing(0.14f);
-    t.setPadding(0, 14 * dp, 0, 5 * dp);
+    t.setLetterSpacing(0.1f);
+    t.setTypeface(Typeface.DEFAULT_BOLD);
+    t.setPadding(2 * dp, 15 * dp, 0, 7 * dp);
     return t;
   }
 
   private TextView fine(String s) {
     TextView t = new TextView(this);
     t.setText(s);
-    t.setTextColor(Color.parseColor("#6b7079"));
+    t.setTextColor(FAINT);
     t.setTextSize(12);
-    t.setPadding(0, 12 * dp, 0, 0);
+    t.setLineSpacing(2 * dp, 1f);
+    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+    lp.topMargin = 12 * dp;
+    t.setLayoutParams(lp);
     return t;
   }
 
@@ -380,24 +456,101 @@ public class MainActivity extends Activity {
     if ((type & InputType.TYPE_TEXT_VARIATION_PASSWORD) != 0) {
       e.setTransformationMethod(PasswordTransformationMethod.getInstance());
     }
-    e.setTextColor(Color.WHITE);
-    e.setHintTextColor(Color.parseColor("#5a606b"));
-    e.setTextSize(17);
+    e.setBackground(round(FIELD, BORDER, 12));
+    e.setGravity(Gravity.CENTER_VERTICAL);
+    e.setMinHeight(48 * dp);
+    e.setPadding(14 * dp, 0, 14 * dp, 0);
+    e.setTextColor(INK);
+    e.setHintTextColor(FAINT);
+    e.setTextSize(16);
     return e;
   }
 
-  private Button button(String s, int bg, int fg) {
+  private Button baseBtn(String s, int fg, float size) {
     Button b = new Button(this);
     b.setText(s);
     b.setAllCaps(false);
-    b.setTextSize(16);
+    b.setTextSize(size);
     b.setTextColor(fg);
-    b.setBackgroundColor(bg);
+    b.setTypeface(Typeface.DEFAULT_BOLD);
+    b.setStateListAnimator(null);            // drop the default elevation shadow
+    b.setElevation(0);
+    return b;
+  }
+
+  /** A solid, tappable button with a ripple over its rounded fill. */
+  private Button filledBtn(String s, int bg, int fg) {
+    Button b = baseBtn(s, fg, 15.5f);
+    b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33000000), round(bg, 0, 14), null));
+    b.setPadding(0, 15 * dp, 0, 15 * dp);
+    return b;
+  }
+
+  /** An outlined button: transparent fill, hairline border, ink or accent text. */
+  private Button ghostBtn(String s, int textColor) {
+    Button b = baseBtn(s, textColor, 15f);
+    b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22FFFFFF), round(0x00000000, BORDER, 14), null));
+    b.setPadding(0, 14 * dp, 0, 14 * dp);
+    return b;
+  }
+
+  /** The small button that sits beside a field in a row. */
+  private Button sendBtn(String s, int bg, int fg) {
+    Button b = baseBtn(s, fg, 14.5f);
+    int stroke = bg == FIELD ? BORDER : 0;
+    b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22FFFFFF), round(bg, stroke, 12), null));
+    b.setPadding(18 * dp, 0, 18 * dp, 0);
+    return b;
+  }
+
+  /** A rounded status pill: coloured text on a faint tint of the same colour. */
+  private TextView chip(String text, int color) {
+    TextView t = new TextView(this);
+    t.setText(text);
+    t.setTextColor(color);
+    t.setTextSize(11);
+    t.setLetterSpacing(0.1f);
+    t.setTypeface(Typeface.DEFAULT_BOLD);
+    t.setPadding(11 * dp, 5 * dp, 11 * dp, 5 * dp);
+    t.setBackground(round((color & 0x00FFFFFF) | 0x26000000, 0, 100));
+    return t;
+  }
+
+  private void setChip(String text, int color) {
+    if (text.isEmpty()) { statusChip.setVisibility(View.GONE); return; }
+    statusChip.setVisibility(View.VISIBLE);
+    statusChip.setText(text);
+    statusChip.setTextColor(color);
+    statusChip.setBackground(round((color & 0x00FFFFFF) | 0x26000000, 0, 100));
+  }
+
+  private CheckBox check(String s, boolean on) {
+    CheckBox c = new CheckBox(this);
+    c.setText(s);
+    c.setTextColor(INK);
+    c.setTextSize(14);
+    c.setChecked(on);
+    c.setButtonTintList(ColorStateList.valueOf(ACCENT));
     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    lp.setMargins(0, 10 * dp, 0, 0);
-    b.setLayoutParams(lp);
-    return b;
+    lp.topMargin = 10 * dp;
+    lp.leftMargin = -2 * dp;
+    c.setLayoutParams(lp);
+    return c;
+  }
+
+  private void addSize(LinearLayout rowV, String name, int w, int h) {
+    Button b = baseBtn(name, INK, 13f);
+    b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22FFFFFF), round(FIELD, BORDER, 11), null));
+    b.setPadding(0, 11 * dp, 0, 11 * dp);
+    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+    lp.setMargins(3 * dp, 0, 3 * dp, 0);
+    b.setOnClickListener(v -> {
+      Api.prefs(this).edit().putInt(Api.K_W, w * dp).putInt(Api.K_H, h * dp).apply();
+      restartOverlayIfOn();
+      toast("Window set to " + name.toLowerCase());
+    });
+    rowV.addView(b, lp);
   }
 
   private void toast(String s) {
@@ -420,6 +573,7 @@ public class MainActivity extends Activity {
       fPlayerId.setText(p.getString(Api.K_GAMEID, ""));
     }
 
+    statusCard.setVisibility(in ? View.VISIBLE : View.GONE);
     permBtn.setVisibility(in && !canDraw ? View.VISIBLE : View.GONE);
     floatBtn.setVisibility(in && canDraw ? View.VISIBLE : View.GONE);
     settings.setVisibility(in ? View.VISIBLE : View.GONE);
@@ -427,30 +581,37 @@ public class MainActivity extends Activity {
 
     // Team radio only makes sense once accepted into the event and on a team.
     String myTeam = team.isEmpty() ? p.getString(Api.K_TEAM, "") : team;
-    boolean canRadio = in && "approved".equals(approval) && !myTeam.isEmpty();
+    boolean approved = "approved".equals(approval);
+    boolean canRadio = in && approved && !myTeam.isEmpty();
     radioBox.setVisibility(canRadio ? View.VISIBLE : View.GONE);
-    // Reports are for drivers in the event, team or not.
-    reportBox.setVisibility(in && "approved".equals(approval) ? View.VISIBLE : View.GONE);
+    // Reports and appeals are for drivers in the event, team or not.
+    reportBox.setVisibility(in && approved ? View.VISIBLE : View.GONE);
+    appealBox.setVisibility(in && approved ? View.VISIBLE : View.GONE);
 
     if (!in) { status.setText(""); return; }
 
-    String team = p.getString(Api.K_TEAM, "");
-    StringBuilder sb = new StringBuilder(p.getString(Api.K_NICK, "") + " #" + p.getString(Api.K_NUM, "")
-        + (team.isEmpty() ? "" : " · " + team));
+    String storedTeam = p.getString(Api.K_TEAM, "");
+    statusName.setText(p.getString(Api.K_NICK, "") + "  #" + p.getString(Api.K_NUM, "")
+        + (storedTeam.isEmpty() ? "" : "  ·  " + storedTeam));
+
     // What race control has decided matters more than being signed in: a driver who has
     // registered but not been accepted gets no flags, and needs to know that is why.
+    String detail;
     if ("pending".equals(approval)) {
-      sb.append(" — waiting for race control.\nThey can see your name. Flags start once they let you in.");
+      setChip("PENDING", WARN);
+      detail = "Waiting for race control. They can see your name; flags start once they let you in.";
     } else if ("rejected".equals(approval)) {
-      sb.append(" — race control has not accepted this sign-in.\nAsk them, then reopen the app.");
-    } else if ("approved".equals(approval)) {
-      sb.append(" — you are in the event");
+      setChip("NOT IN", DANGER);
+      detail = "Race control has not accepted this sign-in. Ask them, then reopen the app.";
+    } else if (approved) {
+      setChip("IN THE EVENT", ACCENT);
+      detail = checkedIn ? "You are in the event and checked in for today." : "You are in the event.";
     } else {
-      sb.append(" — signed in");
+      setChip("SIGNED IN", MUTE);
+      detail = "Signed in.";
     }
-    if (checkedIn) sb.append("\nChecked in for today.");
-    if (!canDraw) sb.append("\n\nAndroid still needs permission to draw the window.");
-    status.setText(sb.toString());
+    if (!canDraw) detail += "\nAndroid still needs permission to draw the window.";
+    status.setText(detail);
   }
 
   private final Runnable approvalPoll = this::pollApproval;
@@ -460,7 +621,7 @@ public class MainActivity extends Activity {
    *
    * Someone who has just registered is sitting on this screen waiting to be let in; making
    * them close and reopen the app to find out would be the wrong answer to the only
-   * question they have. It stops when the activity does — from then on the floating window
+   * question they have. It stops when the activity does: from then on the floating window
    * is what carries the event.
    */
   private void pollApproval() {
@@ -556,8 +717,8 @@ public class MainActivity extends Activity {
      *
      * A code stays a code; a link copied out of race control keeps only the code inside it;
      * an address on this network keeps only its host and port. Storing that rather than the
-     * raw text means the field says NDL3 next time, and everything downstream — the overlay
-     * service included — reads one shape.
+     * raw text means the field says NDL3 next time, and everything downstream, the overlay
+     * service included, reads one shape.
      */
     final String code = Target.eventCode(typed);
     final String host = code.isEmpty() ? Api.normaliseHost(typed) : code;
@@ -575,7 +736,7 @@ public class MainActivity extends Activity {
     // event. Said here rather than after thirty seconds of trying to reach port 4700 on it.
     if (code.isEmpty() && Target.isWebsite(typed)) {
       status.setText("That is the website address, not an event. Type the event code your "
-          + "race control gave you — four to twelve letters, like NDL3.");
+          + "race control gave you: four to twelve letters, like NDL3.");
       return;
     }
     if (num.isEmpty()) { status.setText("Type your race number"); return; }
@@ -597,11 +758,7 @@ public class MainActivity extends Activity {
           JSONObject d = o.optJSONObject("driver");
           String gotNick = d != null ? d.optString("nick", nick) : o.optString("nick", nick);
           String gotNum  = d != null ? d.optString("num", num)   : o.optString("num", num);
-          // The team as the event now holds it, which is not always what was typed: an
-          // empty box leaves the stored one alone, and the answer says which won.
           String gotTeam = d != null ? d.optString("team", team)  : o.optString("team", team);
-          // The player ID the event now holds. The laptop server sends none, so it falls back
-          // to what was typed; the hosted event echoes the stored one, which wins.
           String gotGameId = d != null ? d.optString("gameId", gameId) : o.optString("gameId", gameId);
           Api.prefs(this).edit()
               .putString(Api.K_HOST, host)
