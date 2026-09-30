@@ -38,6 +38,8 @@ import java.util.Set;
 public class OverlayService extends Service {
 
   public static final String ACTION_STOP = "com.frl.driver.STOP";
+  /** Change the live window's opacity without tearing it down and putting it back up. */
+  public static final String ACTION_ALPHA = "com.frl.driver.ALPHA";
   private static final String CHANNEL = "frl-flag";
   // Its own channel, at high importance, so a penalty pushes a heads-up banner over the
   // game instead of sliding quietly into the shade behind the ongoing service notice.
@@ -95,9 +97,22 @@ public class OverlayService extends Service {
   @Override public IBinder onBind(Intent i) { return null; }
 
   @Override public int onStartCommand(Intent intent, int flags, int startId) {
-    if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+    String action = intent == null ? null : intent.getAction();
+    if (ACTION_STOP.equals(action)) {
       stopSelf();
       return START_NOT_STICKY;
+    }
+    // Opacity is applied to the live view, not by restarting the window. Restarting on every
+    // step of the slider drag stops and starts the service dozens of times a second, which
+    // Android will not tolerate and the app is killed. This just repaints the view instead.
+    if (ACTION_ALPHA.equals(action)) {
+      if (running && view != null) {
+        int pct = Math.max(25, Api.prefs(this).getInt(Api.K_ALPHA, 100));
+        view.setAlpha(pct / 100f);
+      } else {
+        stopSelf();          // an alpha ping with no window: never start a bare service from it
+      }
+      return START_STICKY;
     }
     if (running) return START_STICKY;
 

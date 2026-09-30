@@ -279,7 +279,13 @@ public class MainActivity extends Activity {
         if (!user) return;
         int pct = Math.max(25, v);        // fully invisible is a window you cannot find
         Api.prefs(MainActivity.this).edit().putInt(Api.K_ALPHA, pct).apply();
-        restartOverlayIfOn();
+        // Applied live to the running window: a restart per slider step stops and starts the
+        // service dozens of times a second and Android kills the app for it.
+        if (isOverlayOn()) {
+          Intent i = new Intent(MainActivity.this, OverlayService.class);
+          i.setAction(OverlayService.ACTION_ALPHA);
+          startService(i);
+        }
       }
       @Override public void onStartTrackingTouch(SeekBar s) {}
       @Override public void onStopTrackingTouch(SeekBar s) {}
