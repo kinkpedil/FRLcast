@@ -5,7 +5,5 @@
   this file in the release commit. Leave both sections empty for a small fix.
 -->
 ## en
-- Driver app: fixed a crash where lowering the overlay opacity closed the app. Opacity now changes the live window smoothly, without restarting it.
 
 ## id
-- Aplikasi driver: perbaikan crash saat menurunkan opacity overlay yang menutup aplikasi. Opacity kini berubah langsung dan mulus, tanpa memulai ulang jendela.
