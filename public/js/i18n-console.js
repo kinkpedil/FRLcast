@@ -103,8 +103,8 @@
     'Drivers sign in on their phone at': 'Pembalap mendaftar dari HP di',
     'Accepting one puts them on the grid and starts sending them flags.':
       'Menerima satu pendaftaran langsung menaruhnya di grid dan mulai mengirimi bendera.',
-    'Their phone will warn about the certificate the first time — that is expected on a private network. Tapping through it is what lets flag alerts work at all; on the plain':
-      'HP mereka akan memperingatkan soal sertifikat saat pertama kali — itu wajar di jaringan pribadi. Menekan lanjut adalah yang membuat notifikasi bendera bisa jalan; di alamat',
+    'Their phone will warn about the certificate the first time: that is expected on a private network. Tapping through it is what lets flag alerts work at all; on the plain':
+      'HP mereka akan memperingatkan soal sertifikat saat pertama kali: itu wajar di jaringan pribadi. Menekan lanjut adalah yang membuat notifikasi bendera bisa jalan; di alamat',
     'address Android silently blocks them.': 'biasa, Android memblokirnya diam-diam.',
 
     'Sessions & grid': 'Sesi & grid',
@@ -112,7 +112,7 @@
     'Grid from current order': 'Grid dari urutan sekarang',
     'Clear grid': 'Kosongkan grid',
     'Before the flag the grid decides the running order. Without one the leaderboard falls back to roster order, which is not the order on track.':
-      'Sebelum bendera, grid yang menentukan urutan. Tanpa grid, leaderboard memakai urutan daftar pembalap — dan itu bukan urutan di trek.',
+      'Sebelum bendera, grid yang menentukan urutan. Tanpa grid, leaderboard memakai urutan daftar pembalap: dan itu bukan urutan di trek.',
 
     '0 open': '0 terbuka',
     'Time penalty': 'Penalti waktu',
@@ -139,8 +139,8 @@
     'Laps before an unserved drive-through becomes a black flag':
       'Lap sebelum drive-through yang tidak dijalani jadi bendera hitam',
     '0 = off': '0 = mati',
-    'Only jump starts and track limits can be detected — both are geometry the system already measures. Contact and blocking are judgement calls and are never raised automatically.':
-      'Hanya start mencuri dan batas trek yang bisa dideteksi — keduanya geometri yang memang sudah diukur sistem. Kontak dan menghalangi adalah penilaian manusia, dan tidak pernah diangkat otomatis.',
+    'Only jump starts and track limits can be detected: both are geometry the system already measures. Contact and blocking are judgement calls and are never raised automatically.':
+      'Hanya start mencuri dan batas trek yang bisa dideteksi: keduanya geometri yang memang sudah diukur sistem. Kontak dan menghalangi adalah penilaian manusia, dan tidak pernah diangkat otomatis.',
 
     'Highlights for the VOD': 'Highlight untuk VOD',
     'not recording': 'tidak merekam',
@@ -207,7 +207,7 @@
     'Changing these affects rounds banked from now on. To apply them to a round already banked, press':
       'Mengubah ini berlaku untuk ronde yang disimpan mulai sekarang. Untuk menerapkannya ke ronde yang sudah tersimpan, tekan',
     'Rescore': 'Hitung ulang',
-    'on that round — deliberately, one at a time.': 'di ronde itu — sengaja, satu per satu.',
+    'on that round: deliberately, one at a time.': 'di ronde itu: sengaja, satu per satu.',
     'Export': 'Ekspor',
     'Standings CSV': 'CSV klasemen',
     'Turn on the': 'Nyalakan',
@@ -254,18 +254,18 @@
       '(LDPlayer / BlueStacks / scrcpy) dari daftar window.',
     'Pick the driver first': 'Pilih pembalapnya dulu',
     ", then click their car in the image above. That pixel's colour is used directly, which is far more accurate than guessing at a colour picker.":
-      ', lalu klik mobilnya di gambar di atas. Warna piksel itu langsung dipakai — jauh lebih akurat daripada menebak lewat color picker.',
+      ', lalu klik mobilnya di gambar di atas. Warna piksel itu langsung dipakai: jauh lebih akurat daripada menebak lewat color picker.',
     'Draw tool': 'Alat gambar',
-    'Minimap zone — find the cars': 'Area minimap — cari mobilnya',
-    'Finish line — click 2 points': 'Garis finis — klik 2 titik',
-    'Sector line — click 2 points': 'Garis sektor — klik 2 titik',
+    'Minimap zone: find the cars': 'Area minimap: cari mobilnya',
+    'Finish line: click 2 points': 'Garis finis: klik 2 titik',
+    'Sector line: click 2 points': 'Garis sektor: klik 2 titik',
     'Pit lane zone': 'Area pit lane',
     'Trigger zone (image match)': 'Area pemicu (cocokkan gambar)',
-    'OCR — lap counter': 'OCR — penghitung lap',
-    'OCR — lap time': 'OCR — waktu lap',
-    'OCR — position': 'OCR — posisi',
-    'OCR — speed': 'OCR — kecepatan',
-    'OCR — driver name': 'OCR — nama pembalap',
+    'OCR: lap counter': 'OCR: penghitung lap',
+    'OCR: lap time': 'OCR: waktu lap',
+    'OCR: position': 'OCR: posisi',
+    'OCR: speed': 'OCR: kecepatan',
+    'OCR: driver name': 'OCR: nama pembalap',
     'Model zone (ONNX)': 'Area model (ONNX)',
     'Mode': 'Mode',
     'Draw regions': 'Gambar area',
@@ -284,8 +284,8 @@
     'above and click two points across the track on the minimap. Add':
       'di atas lalu klik dua titik memotong trek di minimap. Tambahkan',
     'Sector line': 'Garis sektor',
-    's in racing order — 2 sector lines gives you 3 sectors.':
-      ' sesuai urutan balapan — 2 garis sektor memberi 3 sektor.',
+    's in racing order: 2 sector lines gives you 3 sectors.':
+      ' sesuai urutan balapan: 2 garis sektor memberi 3 sektor.',
     'Regions': 'Area',
     'Nothing calibrated yet.': 'Belum ada yang dikalibrasi.',
     'Tracking': 'Pelacakan',
@@ -300,11 +300,11 @@
     'if the car is small on screen.': 'kalau mobilnya kecil di layar.',
     'Engine settings': 'Pengaturan mesin',
     'Tracking method': 'Metode pelacakan',
-    "Colour — match the car's colour": 'Warna — cocokkan warna mobil',
-    'Motion — find what moves against the static circuit':
-      'Gerak — cari yang bergerak terhadap sirkuit yang diam',
-    'Hybrid — colour first, motion fills the gaps':
-      'Hibrida — warna dulu, gerak menutup celahnya',
+    "Colour: match the car's colour": 'Warna: cocokkan warna mobil',
+    'Motion: find what moves against the static circuit':
+      'Gerak: cari yang bergerak terhadap sirkuit yang diam',
+    'Hybrid: colour first, motion fills the gaps':
+      'Hibrida: warna dulu, gerak menutup celahnya',
     'Motion sensitivity': 'Sensitivitas gerak',
     'Detection FPS': 'FPS deteksi',
     'Min lap (s)': 'Lap minimum (dtk)',
@@ -349,7 +349,7 @@
     'Toggle what is on screen. Changes hit OBS in under a frame.':
       'Nyalakan atau matikan apa yang tampil. Perubahan sampai ke OBS dalam kurang dari satu frame.',
     'Editing scene': 'Sedang mengedit scene',
-    '— switch scenes on the Event scenes page.': '— ganti scene di halaman Scene event.',
+    ': switch scenes on the Event scenes page.': ': ganti scene di halaman Scene event.',
     'Visibility': 'Tampil',
     'Leaderboard (left rail)': 'Leaderboard (rel kiri)',
     'Timing tower (right rail)': 'Timing tower (rel kanan)',
@@ -381,13 +381,13 @@
     'Most places gained': 'Naik posisi terbanyak',
     'Copied': 'Disalin',
     'Endurance: a race run to a clock. Positions rank by distance; it ends when the timer runs out and scores the championship.': 'Endurance: balapan berbasis waktu. Posisi diurut berdasarkan jarak; selesai saat waktu habis dan dihitung ke championship.',
-    'Practice: a timed session for laps only — it changes nothing.': 'Practice: sesi berwaktu untuk latihan lap saja — tidak mengubah apa pun.',
+    'Practice: a timed session for laps only. It changes nothing.': 'Practice: sesi berwaktu untuk latihan lap saja: tidak mengubah apa pun.',
     'Qualifying: a timed session; the chequered flag sets the starting grid by best lap.': 'Qualifying: sesi berwaktu; bendera kotak-kotak menyusun grid start berdasarkan lap terbaik.',
     'Grid reversed': 'Grid dibalik',
     'Grid randomised': 'Grid diacak',
     'Shuffle into a random grid?': 'Acak jadi grid random?',
     'Sent': 'Terkirim',
-    'Failed — check the URL': 'Gagal — cek URL',
+    'Failed: check the URL': 'Gagal: cek URL',
     'Paste a webhook URL first': 'Tempel URL webhook dulu',
     'Sending…': 'Mengirim…',
     'Result': 'Hasil',
@@ -426,8 +426,8 @@
     'Driver B': 'Pembalap B',
     'Motion check': 'Cek animasi',
     'Play animation rehearsal': 'Putar gladi animasi',
-    'Replays every overlay animation on all connected overlays — entrance, position swap, lap pulse, best-lap sweep, flag wipe — without touching race data. Use it to confirm motion is reaching OBS. Most overlay motion is':
-      'Memutar ulang tiap animasi overlay di semua overlay yang tersambung — masuknya widget, tukar posisi, denyut lap, sapuan lap terbaik, usapan bendera — tanpa menyentuh data balapan. Pakai untuk memastikan animasinya sampai ke OBS. Sebagian besar animasi overlay itu',
+    'Replays every overlay animation on all connected overlays: entrance, position swap, lap pulse, best-lap sweep, flag wipe: without touching race data. Use it to confirm motion is reaching OBS. Most overlay motion is':
+      'Memutar ulang tiap animasi overlay di semua overlay yang tersambung: masuknya widget, tukar posisi, denyut lap, sapuan lap terbaik, usapan bendera: tanpa menyentuh data balapan. Pakai untuk memastikan animasinya sampai ke OBS. Sebagian besar animasi overlay itu',
     'event-driven': 'digerakkan kejadian',
     ': with the race idle and no laps coming in, there is nothing to animate.':
       ': kalau balapan siaga dan tidak ada lap masuk, tidak ada yang bisa dianimasikan.',
@@ -442,11 +442,11 @@
     'Browser Source, and only one. Every copy works the same lines out from the same race and would speak them in chorus. Its audio arrives in the OBS mixer, so put it under the game.':
       'Browser Source, dan hanya satu. Tiap salinan menghitung kalimat yang sama dari balapan yang sama dan akan bicara berbarengan. Suaranya masuk ke mixer OBS, jadi taruh levelnya di bawah suara game.',
     'How much it talks': 'Seberapa banyak dia bicara',
-    'Calm — flags, penalties, the lead': 'Tenang — bendera, penalti, pimpinan',
-    'Normal — and overtakes, fastest laps, pit stops':
-      'Normal — plus salip-menyalip, lap tercepat, pit stop',
-    'Busy — and the outlook, gaps, who is in trouble':
-      'Ramai — plus prediksi, gap, siapa yang bermasalah',
+    'Calm: flags, penalties, the lead': 'Tenang: bendera, penalti, pimpinan',
+    'Normal: and overtakes, fastest laps, pit stops':
+      'Normal: plus salip-menyalip, lap tercepat, pit stop',
+    'Busy: and the outlook, gaps, who is in trouble':
+      'Ramai: plus prediksi, gap, siapa yang bermasalah',
     'Voice language': 'Bahasa suara',
     'Indonesian': 'Indonesia',
     'English': 'Inggris',
@@ -462,8 +462,8 @@
       'dalam suara apa pun yang dipunyai mesin ini, bukan satu bahasa dibaca oleh mulut bahasa lain.',
     'This list is': 'Daftar ini milik',
     'this': 'mesin ini',
-    "machine's. If OBS runs somewhere else, that machine needs the same voice installed — the overlay says so if it is missing, and falls back to the best one it has for the language.":
-      '. Kalau OBS jalan di komputer lain, mesin itu butuh suara yang sama terpasang — overlay akan memberi tahu kalau tidak ada, dan turun ke suara terbaik yang dia punya untuk bahasa itu.',
+    "machine's. If OBS runs somewhere else, that machine needs the same voice installed: the overlay says so if it is missing, and falls back to the best one it has for the language.":
+      '. Kalau OBS jalan di komputer lain, mesin itu butuh suara yang sama terpasang: overlay akan memberi tahu kalau tidak ada, dan turun ke suara terbaik yang dia punya untuk bahasa itu.',
     'Show the caption on screen': 'Tampilkan teks di layar',
     'How to say a name': 'Cara melafalkan nama',
     'Every speech engine mangles a racing name eventually. Write it the way it should sound and it applies everywhere it is spoken.':
@@ -487,8 +487,8 @@
     'Layout editor': 'Editor tata letak',
     'Arrange every widget on one 1920×1080 canvas, then point OBS at a single Browser Source.':
       'Atur tiap widget di satu kanvas 1920×1080, lalu arahkan OBS ke satu Browser Source.',
-    '— only the widgets that scene shows appear here. Other scenes keep their own arrangement.':
-      '— hanya widget yang ditampilkan scene itu yang muncul di sini. Scene lain punya susunannya sendiri.',
+    ': only the widgets that scene shows appear here. Other scenes keep their own arrangement.':
+      ': hanya widget yang ditampilkan scene itu yang muncul di sini. Scene lain punya susunannya sendiri.',
     'Canvas': 'Kanvas',
     'Use game frame as backdrop': 'Pakai frame game sebagai latar',
     'Clear backdrop': 'Hapus latar',
@@ -507,28 +507,28 @@
     'Drop shadow': 'Bayangan',
     'Lite mode': 'Mode ringan',
     'low-end GPU': 'GPU kelas bawah',
-    'Turns off the ambient animation and the shadows on the overlay. Event animation — a position swap, a lap landing, a flag change — keeps running.':
-      'Mematikan animasi ambient dan bayangan di overlay. Animasi event — tukar posisi, lap masuk, ganti bendera — tetap jalan.',
+    'Turns off the ambient animation and the shadows on the overlay. Event animation: a position swap, a lap landing, a flag change: keeps running.':
+      'Mematikan animasi ambient dan bayangan di overlay. Animasi event: tukar posisi, lap masuk, ganti bendera: tetap jalan.',
     'Whole layout': 'Seluruh tata letak',
     'Reset all positions': 'Reset semua posisi',
-    'Layout and style are saved with the event, so OBS picks them up on the next frame — no need to refresh the Browser Source.':
-      'Tata letak dan gaya disimpan bersama event, jadi OBS mengambilnya di frame berikutnya — tidak perlu me-refresh Browser Source.',
+    'Layout and style are saved with the event, so OBS picks them up on the next frame: no need to refresh the Browser Source.':
+      'Tata letak dan gaya disimpan bersama event, jadi OBS mengambilnya di frame berikutnya: tidak perlu me-refresh Browser Source.',
 
     // ---------------------------------------------------------------- OBS setup
     'Add each of these as a': 'Tambahkan tiap alamat ini sebagai',
     ', 1920 × 1080, with a transparent background.': ', 1920 × 1080, dengan latar transparan.',
-    'Recommended — one source': 'Disarankan — satu sumber',
+    'Recommended: one source': 'Disarankan: satu sumber',
     'All-in-one': 'Semua dalam satu',
     'One Browser Source carries every widget. Arrange them on the':
       'Satu Browser Source membawa semua widget. Aturlah di halaman',
-    'page instead of adding a source per widget — each extra Browser Source is a whole extra browser process for OBS to composite.':
-      'daripada menambah satu sumber per widget — tiap Browser Source tambahan adalah satu proses browser penuh yang harus digabung OBS.',
+    'page instead of adding a source per widget: each extra Browser Source is a whole extra browser process for OBS to composite.':
+      'daripada menambah satu sumber per widget: tiap Browser Source tambahan adalah satu proses browser penuh yang harus digabung OBS.',
     'Commentator': 'Komentator',
     'A Browser Source that makes sound rather than pictures. Its audio arrives in the OBS mixer, so set its level under the game. Add it':
       'Browser Source yang menghasilkan suara, bukan gambar. Suaranya masuk ke mixer OBS, jadi atur levelnya di bawah suara game. Tambahkan',
     'once': 'sekali saja',
-    '— a second copy would work out the same lines and speak them in chorus. Switch it on and choose how much it talks on the':
-      '— salinan kedua akan menghitung kalimat yang sama dan bicara berbarengan. Nyalakan dan atur seberapa banyak dia bicara di halaman',
+    ': a second copy would work out the same lines and speak them in chorus. Switch it on and choose how much it talks on the':
+      ': salinan kedua akan menghitung kalimat yang sama dan bicara berbarengan. Nyalakan dan atur seberapa banyak dia bicara di halaman',
     'page.': '.',
     'Individual sources (only if you need per-widget fades in OBS)':
       'Sumber terpisah (hanya kalau kamu butuh fade per widget di OBS)',
@@ -543,22 +543,22 @@
     'Shutdown source when not visible': 'Shutdown source when not visible',
     'off, and leave': ', dan biarkan',
     'Refresh browser when scene becomes active': 'Refresh browser when scene becomes active',
-    'off — the overlay reconnects on its own.':
-      'tetap mati — overlay menyambung ulang sendiri.',
+    'off: the overlay reconnects on its own.':
+      'tetap mati: overlay menyambung ulang sendiri.',
     '4. Custom CSS field in OBS: leave empty. The pages are already transparent.':
       '4. Kolom Custom CSS di OBS: biarkan kosong. Halamannya memang sudah transparan.',
     '5. Keep this operator tab open on a second monitor. Capture and detection run in this tab.':
       '5. Biarkan tab operator ini terbuka di monitor kedua. Capture dan deteksi berjalan di tab ini.',
     'Network': 'Jaringan',
-    'Different IPs on WiFi and Ethernet are normal. What matters is that both devices sit on the same subnet — then the second device just opens the address below.':
-      'IP berbeda di WiFi dan Ethernet itu wajar. Yang penting kedua perangkat berada di subnet yang sama — setelah itu perangkat kedua tinggal membuka alamat di bawah.',
+    'Different IPs on WiFi and Ethernet are normal. What matters is that both devices sit on the same subnet: then the second device just opens the address below.':
+      'IP berbeda di WiFi dan Ethernet itu wajar. Yang penting kedua perangkat berada di subnet yang sama: setelah itu perangkat kedua tinggal membuka alamat di bawah.',
     'Connected right now': 'Terhubung sekarang',
     'Multi-device setup': 'Setup banyak perangkat',
-    'Open this on the machine that shows the game. It runs capture and detection and nothing else, and shares a preview so you can still draw regions from the operator panel on another device. Everything else — race control, drivers, overlays, layout — is done from this panel over the network.':
-      'Buka ini di komputer yang menampilkan game. Dia hanya menjalankan capture dan deteksi, lalu membagikan pratinjau supaya kamu tetap bisa menggambar area dari panel operator di perangkat lain. Sisanya — race control, pembalap, overlay, tata letak — dikerjakan dari panel ini lewat jaringan.',
+    'Open this on the machine that shows the game. It runs capture and detection and nothing else, and shares a preview so you can still draw regions from the operator panel on another device. Everything else: race control, drivers, overlays, layout: is done from this panel over the network.':
+      'Buka ini di komputer yang menampilkan game. Dia hanya menjalankan capture dan deteksi, lalu membagikan pratinjau supaya kamu tetap bisa menggambar area dari panel operator di perangkat lain. Sisanya: race control, pembalap, overlay, tata letak: dikerjakan dari panel ini lewat jaringan.',
     'Remote lap trigger': 'Pemicu lap jarak jauh',
-    'Any device on your LAN can fire a lap with a plain GET request — handy for a phone or a Stream Deck:':
-      'Perangkat mana pun di jaringanmu bisa mencatat lap lewat GET biasa — berguna untuk HP atau Stream Deck:',
+    'Any device on your LAN can fire a lap with a plain GET request: handy for a phone or a Stream Deck:':
+      'Perangkat mana pun di jaringanmu bisa mencatat lap lewat GET biasa: berguna untuk HP atau Stream Deck:',
     'Driver IDs are listed on the Drivers page.':
       'ID pembalap ada di halaman Pembalap.',
 
@@ -583,7 +583,7 @@
     'Other client': 'Klien lain',
     'No rounds banked yet. Finish a race, then': 'Belum ada ronde tersimpan. Selesaikan balapan, lalu',
     // ---------------------------------------------------------------- found by ?i18n=debug
-    'FR Legends — Broadcast Operator': 'FR Legends — Operator Siaran',
+    'FR Legends: Broadcast Operator': 'FR Legends: Operator Siaran',
     '⇤ Left': '⇤ Kiri',
     '↔ Centre': '↔ Tengah',
     'Right ⇥': 'Kanan ⇥',
@@ -603,7 +603,7 @@
     'PNG, JPEG, WebP or SVG, under 2MB. A transparent PNG sits best on the bar.':
       'PNG, JPEG, WebP, atau SVG, di bawah 2MB. PNG transparan paling pas di bar.',
     'Overlay style': 'Gaya overlay',
-    'Reason — shown on the broadcast': 'Alasan — tampil di siaran',
+    'Reason: shown on the broadcast': 'Alasan: tampil di siaran',
     'One message per line': 'Satu pesan per baris',
     'Search… try: sector, OBS, colour, throttle': 'Cari… misal: sektor, OBS, warna, throttle',
     // The placeholder holds a newline; norm() collapses it, so the key is a space.
@@ -621,8 +621,8 @@
       'Biru sejuk di atas navy pekat. Tenang, mudah dibaca di atas gameplay terang.',
     'Warm amber on brown-black. Suits evening and drift events.':
       'Amber hangat di atas cokelat-hitam. Cocok untuk event malam dan drift.',
-    'Light panels with dark text — the one to use over dark gameplay.':
-      'Panel terang dengan teks gelap — pilihan untuk di atas gameplay gelap.',
+    'Light panels with dark text: the one to use over dark gameplay.':
+      'Panel terang dengan teks gelap: pilihan untuk di atas gameplay gelap.',
     'No colour at all. Driver colours still show, nothing else competes with them.':
       'Tanpa warna sama sekali. Warna pembalap tetap tampil, tidak ada yang menyainginya.',
     'Amber terminal. Monospace throughout, square corners, scanline-era.':
@@ -657,14 +657,64 @@
     'No rounds banked yet. Finish a race, then press': 'Belum ada ronde tersimpan. Selesaikan balapan, lalu tekan',
     'No classified sessions yet. Press': 'Belum ada sesi tersimpan. Tekan',
     'when one finishes to archive the result.': 'saat satu sesi selesai untuk mengarsipkan hasilnya.',
-    'No grid set — the field will line up in roster order.':
-      'Grid belum diatur — peserta akan berbaris sesuai urutan daftar.',
+    'No grid set: the field will line up in roster order.':
+      'Grid belum diatur: peserta akan berbaris sesuai urutan daftar.',
     'Pick a pair in the bracket below to put it on air.':
       'Pilih satu pasangan di bracket bawah untuk menayangkannya.',
     'Enter qualifying scores, then press Build bracket.':
       'Isi skor kualifikasi, lalu tekan Susun bracket.',
-    'Flags are automatic — setting one by hand takes control':
-      'Bendera otomatis — mengatur satu secara manual akan mengambil alih',
+    'Flag held manually': 'Bendera dipegang manual',
+    'Lap for drivers 1 to 8': 'Lap untuk pembalap 1 sampai 8',
+    'Start / green flag': 'Mulai / bendera hijau',
+    'Status': 'Status',
+    'Flag': 'Bendera',
+    'Close pit lane': 'Tutup pit lane',
+    'Open pit lane': 'Buka pit lane',
+    'Start lights': 'Lampu start',
+    '+ Red': '+ Merah',
+    'Lights out': 'Lampu padam',
+    'Message to all': 'Pesan ke semua',
+    'Send to all': 'Kirim ke semua',
+    'Radio': 'Radio',
+    'One box per button. Type anything you want, add or remove buttons, then Save.': 'Satu kotak per tombol. Ketik apa saja, tambah atau hapus tombol, lalu Simpan.',
+    '+ Add button': '+ Tambah tombol',
+    'Penalties': 'Penalti',
+    'Automatic findings and flags': 'Temuan dan bendera otomatis',
+    'Laps to black flag (0 = off)': 'Lap sampai bendera hitam (0 = mati)',
+    'Only jump starts and track limits can be detected: both are geometry the system already measures. Contact and blocking are judgement calls and are never raised automatically. The black flag applies to a drive through left unserved for that many laps.': 'Hanya jump start dan track limits yang bisa dideteksi: keduanya geometri yang sudah diukur sistem. Kontak dan blocking adalah keputusan steward dan tidak pernah dinaikkan otomatis. Bendera hitam berlaku untuk drive through yang tidak dijalani selama jumlah lap itu.',
+    'Drivers report an incident from the driver app. A report is not a decision: Investigate opens an investigation on the reported car (with the penalty type and seconds chosen under Penalties), then you decide it there. The driver\'s own words stay here and never go on air.': 'Pembalap melaporkan insiden dari aplikasi driver. Laporan bukan keputusan: Investigasi membuka investigasi pada mobil yang dilaporkan (dengan jenis penalti dan detik yang dipilih di Penalti), lalu kamu memutuskannya di sana. Kata-kata pembalap tetap di sini dan tidak pernah tayang.',
+    'Penalty appeals': 'Banding penalti',
+    'A driver can appeal a penalty from the app. Uphold keeps the penalty; Overturn drops it. Your note is the ruling.': 'Pembalap bisa mengajukan banding penalti dari aplikasi. Tegakkan mempertahankan penalti; Batalkan menghapusnya. Catatanmu adalah putusannya.',
+    'Official PDF': 'PDF resmi',
+    'Certificates': 'Sertifikat',
+    'The classification as it stands now: a CSV, a printable sheet, or podium certificates.': 'Klasemen saat ini: sebagai CSV, lembar cetak, atau sertifikat podium.',
+    'Manual control': 'Kontrol manual',
+    'Manual mode': 'Mode manual',
+    'For a setup with no camera. Drag a driver to change position, or use the arrows. Add a lap with the current time, or type a lap time first. Order and laps are set entirely by hand.': 'Untuk setup tanpa kamera. Seret pembalap untuk mengubah posisi, atau pakai tombol panah. Tambah lap dengan waktu sekarang, atau ketik waktu lap dulu. Urutan dan lap diatur sepenuhnya manual.',
+    'Endurance stints': 'Stint endurance',
+    'Driver swaps for endurance. Set each car\'s crew, then tap a name when they take over. The lower third and report follow the current driver.': 'Pergantian pembalap untuk endurance. Atur kru tiap mobil, lalu ketuk nama saat dia mengambil alih. Lower third dan laporan mengikuti pembalap yang sedang menyetir.',
+    'Race (laps)': 'Balapan (lap)',
+    'Endurance (time)': 'Endurance (waktu)',
+    'Session minutes': 'Menit sesi',
+    'Shown with a ~ mark on the overlay': 'Ditandai ~ di overlay',
+    'Public live timing': 'Timing langsung publik',
+    'A no-login page viewers can open to follow the race live on their phone.': 'Halaman tanpa login yang bisa dibuka penonton untuk mengikuti balapan langsung dari HP.',
+    'Control room': 'Ruang kontrol',
+    'A second-screen monitor: the live program next to flag, clock and classification.': 'Monitor layar kedua: siaran langsung di samping bendera, jam, dan klasemen.',
+    'Their phone will warn about the certificate the first time. That is expected on a private network. Tapping through it is what lets flag alerts work at all; on the plain': 'HP mereka akan memperingatkan soal sertifikat pertama kali. Itu wajar di jaringan pribadi. Melewatinya yang membuat notifikasi bendera bisa jalan; di alamat',
+    'Offset, if Record in OBS was pressed a moment earlier or later': 'Geser, kalau Record di OBS ditekan sedikit lebih awal atau lambat',
+    'Highlight reel': 'Cuplikan highlight',
+    'Undo last race-control action (Ctrl+Z)': 'Batalkan aksi race control terakhir (Ctrl+Z)',
+    'e.g. Race starts in 2 min': 'mis. Balapan mulai 2 menit lagi',
+    'Edit the quick radio presets': 'Ubah preset radio cepat',
+    'Reason, shown on the broadcast': 'Alasan, tampil di siaran',
+    'Open a formal classification sheet to print or save as PDF': 'Buka lembar klasifikasi resmi untuk dicetak atau disimpan sebagai PDF',
+    'Podium certificates for the winners, ready to print': 'Sertifikat podium untuk pemenang, siap cetak',
+    'Lap hotkey': 'Tombol pintas lap',
+    'Automatic flags are standing by.': 'Bendera otomatis menunggu.',
+    'Automatic. Setting a flag by hand takes control.': 'Otomatis. Memasang bendera manual mengambil alih kendali.',
+    'Flags are automatic: setting one by hand takes control':
+      'Bendera otomatis: mengatur satu secara manual akan mengambil alih',
     'Automatic flags are off': 'Bendera otomatis dimatikan',
     'Logo and flag are both on screen the whole time':
       'Logo dan bendera sama-sama tampil sepanjang waktu',
@@ -693,21 +743,21 @@
     // The firewall walkthrough, which is the longest thing an operator reads here.
     'Use this': 'Pakai ini',
     'The other device must be on the same': 'Perangkat satunya harus berada di',
-    'network — check its IP starts the same way. If it does and the page still will not load, Windows Firewall is blocking the port: Windows denies inbound connections by default, and a server started from a terminal never raises the usual prompt.':
-      'yang sama — periksa apakah IP-nya diawali sama. Kalau sudah sama dan halamannya tetap tidak terbuka, Windows Firewall memblokir port-nya: Windows menolak koneksi masuk secara bawaan, dan server yang dijalankan dari terminal tidak pernah memunculkan izin yang biasa.',
+    'network: check its IP starts the same way. If it does and the page still will not load, Windows Firewall is blocking the port: Windows denies inbound connections by default, and a server started from a terminal never raises the usual prompt.':
+      'yang sama: periksa apakah IP-nya diawali sama. Kalau sudah sama dan halamannya tetap tidak terbuka, Windows Firewall memblokir port-nya: Windows menolak koneksi masuk secara bawaan, dan server yang dijalankan dari terminal tidak pernah memunculkan izin yang biasa.',
     '1. Open a terminal as Administrator on this machine':
       '1. Buka terminal sebagai Administrator di komputer ini',
     '(Win+X → Terminal (Admin)).': '(Win+X → Terminal (Admin)).',
     '2. PowerShell': '2. PowerShell',
-    '— this is what Terminal (Admin) opens:': '— ini yang dibuka Terminal (Admin):',
+    ': this is what Terminal (Admin) opens:': ': ini yang dibuka Terminal (Admin):',
     'or Command Prompt': 'atau Command Prompt',
-    '— the netsh form only works in cmd.exe, PowerShell eats its quotes:':
-      '— bentuk netsh hanya jalan di cmd.exe, PowerShell memakan tanda kutipnya:',
+    ': the netsh form only works in cmd.exe, PowerShell eats its quotes:':
+      ': bentuk netsh hanya jalan di cmd.exe, PowerShell memakan tanda kutipnya:',
     '3. Verify': '3. Pastikan',
-    '— in any terminal,': '— di terminal mana pun,',
+    ': in any terminal,': ': di terminal mana pun,',
     'should print the rule.': 'akan menampilkan aturannya.',
     '4. Test': '4. Uji',
-    '— from the other device open': '— dari perangkat satunya, buka',
+    ': from the other device open': ': dari perangkat satunya, buka',
     ', or run': ', atau jalankan',
 
     // Widget names, as they appear in a scene summary rather than on a toggle.

@@ -648,13 +648,14 @@ function renderRace() {
     const pb = $('#btnPitToggle');
     if (pb) {
       const closed = r.pitOpen === false;
-      pb.textContent = closed ? 'Open pit lane' : 'Close pit lane';
+      pb.textContent = t(closed ? 'Open pit lane' : 'Close pit lane');
       pb.classList.toggle('on', closed);
     }
     const dots = $('#lightDots');
     if (dots) {
       const n = r.lights || 0;
-      dots.textContent = n >= 6 ? '🟢🟢🟢🟢🟢' : '🔴'.repeat(n) + '⚫'.repeat(5 - n);
+      dots.innerHTML = [0, 1, 2, 3, 4].map((i) =>
+        `<i class="${n >= 6 ? 'go' : i < n ? 'red' : ''}"></i>`).join('');
     }
   }
 
@@ -676,7 +677,7 @@ function renderRace() {
   if ($('#cfgMinsField')) $('#cfgMinsField').style.display = timed ? '' : 'none';
   const hint = $('#sessionHint');
   if (hint) {
-    if (st === 'practice') { hint.style.display = ''; hint.textContent = t('Practice: a timed session for laps only — it changes nothing.'); }
+    if (st === 'practice') { hint.style.display = ''; hint.textContent = t('Practice: a timed session for laps only. It changes nothing.'); }
     else if (st === 'qualifying') { hint.style.display = ''; hint.textContent = t('Qualifying: a timed session; the chequered flag sets the starting grid by best lap.'); }
     else if (st === 'endurance') { hint.style.display = ''; hint.textContent = t('Endurance: a race run to a clock. Positions rank by distance; it ends when the timer runs out and scores the championship.'); }
     else { hint.style.display = 'none'; }
@@ -701,14 +702,14 @@ function renderRace() {
   $('#liveTable').dataset.sig = tableSig;
 
   $('#liveTable').innerHTML = `
-    <tr><th>P</th><th></th><th>Driver</th><th>Laps</th><th>Last</th><th>Best</th><th>Gap</th><th>Actions</th></tr>
+    <tr><th style="width:36px">P</th><th style="width:10px"></th><th>Driver</th><th>Laps</th><th>Last</th><th>Best</th><th>Gap</th><th></th></tr>
     ${rows.map((d, i) => `
       <tr class="${state.overlay.focusDriverId === d.id ? 'focus' : ''}" data-id="${d.id}">
         <td class="cnum">${d.position}</td>
         <td><span class="swatch" style="background:${d.color}"></span></td>
-        <td>
-          <b>${esc(d.name)}</b> <span class="dim mono">#${esc(d.num)}</span>
-          ${i < HOTKEYS.length ? `<span class="hot">${HOTKEYS[i].toUpperCase()}</span>` : ''}
+        <td class="dcell">
+          <span class="dnum">${esc(d.num)}</span><span class="dname">${esc(d.name)}</span>
+          ${i < HOTKEYS.length ? `<span class="hot" title="Lap hotkey">${HOTKEYS[i].toUpperCase()}</span>` : ''}
           ${d.pit ? '<span class="hot" style="color:var(--yellow)">PIT</span>' : ''}
           ${d.dnf ? `<span class="hot" style="color:var(--red)">${d.retired ? 'RET' : 'DNF'}</span>` : ''}
           ${d.penaltySec ? `<span class="hot" style="color:var(--red)">+${d.penaltySec}s</span>` : ''}
@@ -935,7 +936,7 @@ $('#btnVision').onclick = () => {
   // target === 'node'
   if (nodeStatus && nodeFresh()) {
     if (!nodeStatus.hasCapture) {
-      return toast(`${nodeStatus.label} has no game window selected yet — pick it once on that machine`);
+      return toast(`${nodeStatus.label} has no game window selected yet: pick it once on that machine`);
     }
     bus.signal('node-control', { to: nodeStatus.id, action: nodeStatus.running ? 'stop' : 'start' });
     toast(nodeStatus.running ? `Stopping detection on ${nodeStatus.label}` : `Starting detection on ${nodeStatus.label}`);
@@ -982,7 +983,7 @@ function renderVisionButton() {
       ? `Stop detection on ${nodeStatus.label}`
       : `Start detection on ${nodeStatus.label}`;
     setHint(nodeStatus.hasCapture
-      ? `Detection runs on <b>${esc(nodeStatus.label)}</b> — the only machine that can see the game window. This button controls it from here.`
+      ? `Detection runs on <b>${esc(nodeStatus.label)}</b>: the only machine that can see the game window. This button controls it from here.`
       : `<b>${esc(nodeStatus.label)}</b> is connected but has no game window selected. Do that once on that machine, then start detection from here.`);
     return;
   }
@@ -1043,7 +1044,7 @@ function drawPreviewBase() {
   pctx.fillRect(0, 0, 214, 20);
   pctx.fillStyle = 'rgba(255,255,255,.78)';
   pctx.font = '600 11px Inter, sans-serif';
-  pctx.fillText(`remote preview — ${remotePreview.label}`, 6, 14);
+  pctx.fillText(`remote preview: ${remotePreview.label}`, 6, 14);
   $('#stageEmpty').style.display = 'none';
 }
 
@@ -1060,7 +1061,7 @@ function drawPreviewOff() {
   pctx.fillStyle = 'rgba(255,255,255,.45)';
   pctx.font = '600 13px Inter, sans-serif';
   pctx.textAlign = 'center';
-  pctx.fillText('Preview off — detection is still running', preview.width / 2, preview.height / 2);
+  pctx.fillText('Preview off: detection is still running', preview.width / 2, preview.height / 2);
   pctx.font = '500 11px Inter, sans-serif';
   pctx.fillStyle = 'rgba(255,255,255,.28)';
   pctx.fillText('turn it back on to draw or check regions', preview.width / 2, preview.height / 2 + 20);
@@ -1118,16 +1119,16 @@ function renderPerf() {
     vision.running ? `Detection <b>${vision.fps}</b> of ${vision.targetFps} fps` : 'Detection idle',
     (state && state.vision.sourceFps != null)
       ? `Frames delivered by the capture <b>${state.vision.sourceFps}/s</b>` +
-        (state.vision.sourceFps < 8 ? ' — the source is the bottleneck, not the detector' : '')
+        (state.vision.sourceFps < 8 ? ': the source is the bottleneck, not the detector' : '')
       : '',
     // Which estimator is driving the pins, and whether the circuit has been worked out.
     state && state.vision.circuit
-      ? `Circuit learned — <b>${state.vision.circuit}</b> segments, tracking cars <b>along the track</b>`
+      ? `Circuit learned: <b>${state.vision.circuit}</b> segments, tracking cars <b>along the track</b>`
       : (state && state.vision.active
-          ? 'Circuit not learned yet — tracking cars on the plane. It is worked out from the first full lap a car drives.'
+          ? 'Circuit not learned yet: tracking cars on the plane. It is worked out from the first full lap a car drives.'
           : ''),
     copied
-      ? `Pixels read per frame <b>${(copied / 1000).toFixed(0)}k</b> of ${(full / 1000).toFixed(0)}k — <b>${saving.toFixed(1)}%</b> of the frame never touched`
+      ? `Pixels read per frame <b>${(copied / 1000).toFixed(0)}k</b> of ${(full / 1000).toFixed(0)}k: <b>${saving.toFixed(1)}%</b> of the frame never touched`
       : (state && (state.calibration.rois || []).length
           ? 'Regions are calibrated but detection is not running'
           : 'No regions calibrated yet'),
@@ -1283,7 +1284,7 @@ $('#btnRelearn').onclick = () => {
     + '\nTiming lines and regions are not touched.';
   if (!confirm(msg)) return;
   setCalibration({ learnedPath: [] });
-  toast('Circuit cleared — it will be relearned over the next full lap');
+  toast('Circuit cleared: it will be relearned over the next full lap');
 };
 
 // ---------------------------------------------------------------- templates & branding
@@ -1508,8 +1509,8 @@ function renderChampionship() {
   if (from && from.dataset.sig !== sig) {
     from.dataset.sig = sig;
     from.innerHTML = (state.sessions || []).length
-      ? (state.sessions || []).map((x) => `<option value="${x.id}">${esc(x.name)} — ${x.results.length} cars</option>`).join('')
-      : `<option value="">— ${t('no classified sessions')} —</option>`;
+      ? (state.sessions || []).map((x) => `<option value="${x.id}">${esc(x.name)}: ${x.results.length} cars</option>`).join('')
+      : `<option value="">-- ${t('no classified sessions')} --</option>`;
   }
 }
 
@@ -1638,7 +1639,7 @@ function renderAppeals() {
   const label = { open: 'OPEN', upheld: 'UPHELD', overturned: 'OVERTURNED' };
   box.innerHTML = appeals.map((a) => {
     const pen = (state.race.penalties || []).find((p) => p.id === a.penaltyId);
-    const penTxt = pen ? `${pen.type}${pen.seconds ? ' ' + pen.seconds + 's' : ''}${pen.reason ? ' — ' + esc(pen.reason) : ''}` : (a.penaltyId ? 'penalty' : 'no specific penalty');
+    const penTxt = pen ? `${pen.type}${pen.seconds ? ' ' + pen.seconds + 's' : ''}${pen.reason ? ': ' + esc(pen.reason) : ''}` : (a.penaltyId ? 'penalty' : 'no specific penalty');
     return `<div class="incrow" style="border-bottom:1px solid var(--line);padding:8px 0">
       <div><b>#${esc(a.num)} ${esc(a.name)}</b> <span class="tag ${a.status}">${label[a.status] || a.status}</span></div>
       <div style="font-size:12px;color:var(--ink-mute)">vs ${penTxt}</div>
@@ -1765,8 +1766,8 @@ function renderRaceControl() {
   if (owner) {
     const manual = state.race.flagSource === 'operator';
     owner.innerHTML = manual
-      ? '<b style="color:#ffd60a">Flag held manually</b> — automatic flags are standing by'
-      : t(fl.auto ? 'Flags are automatic — setting one by hand takes control'
+      ? `<b style="color:#ffd60a">${t('Flag held manually')}</b>. ${t('Automatic flags are standing by.')}`
+      : t(fl.auto ? 'Automatic. Setting a flag by hand takes control.'
                   : 'Automatic flags are off');
   }
   const rel = $('#btnFlagRelease');
@@ -1796,7 +1797,7 @@ function renderRaceControl() {
   setNum('#ruAllowed', rules.trackLimitsAllowed ?? 3);
   setNum('#ruSecs', rules.trackLimitsSeconds ?? 5);
 
-  const name = (id) => (state.drivers.find((d) => d.id === id) || {}).name || '—';
+  const name = (id) => (state.drivers.find((d) => d.id === id) || {}).name || '--';
   const box = $('#penList');
   if (!box) return;
   const rows = pens.slice(0, 12);
@@ -1830,7 +1831,7 @@ $('#penAdd').onclick = () => {
   const driverId = $('#penDriver').value;
   if (!driverId) return toast('Pick a driver');
   const reason = $('#penReason').value.trim();
-  if (!reason) return toast('A penalty needs a reason — it goes out on the broadcast');
+  if (!reason) return toast('A penalty needs a reason: it goes out on the broadcast');
   bus.action('penalty.add', {
     driverId,
     kind: $('#penKind').value,
@@ -2224,7 +2225,7 @@ function renderGrid() {
   if (!box || !state) return;
   const grid = state.race.grid || [];
   if (!grid.length) {
-    box.innerHTML = '<p class="hint">No grid set — the field will line up in roster order.</p>';
+    box.innerHTML = '<p class="hint">No grid set: the field will line up in roster order.</p>';
     return;
   }
   const byId = new Map((state.drivers || []).map((d) => [d.id, d]));
@@ -2347,7 +2348,7 @@ function renderDriftBattle(D) {
     const leading = b.lead === who && b.status === 'running';
     return `<div class="dfside ${leading ? 'lead' : ''} ${b.winner === id ? 'won' : ''}">
       <span class="swatch" style="background:${dfColor(id)}"></span>
-      <b>${esc(dfName(id) || '—')}</b>
+      <b>${esc(dfName(id) || '--')}</b>
       <small>${b.status === 'running' ? (leading ? 'LEAD' : 'CHASE') : (b.winner === id ? 'WINNER' : '')}</small>
     </div>`;
   };
@@ -2366,8 +2367,8 @@ function renderDriftBattle(D) {
   box.innerHTML = `
     <div class="dfbattle">${side('a')}<div class="dfvs">VS</div>${side('b')}</div>
     <div class="row" style="margin:14px 0">
-      <button class="btn ${b.run === 1 ? 'primary' : ''}" id="dfRun1">Run 1 — ${esc(dfName(b.a) || 'A')} leads</button>
-      <button class="btn ${b.run === 2 ? 'primary' : ''}" id="dfRun2">Run 2 — ${esc(dfName(b.b) || 'B')} leads</button>
+      <button class="btn ${b.run === 1 ? 'primary' : ''}" id="dfRun1">Run 1: ${esc(dfName(b.a) || 'A')} leads</button>
+      <button class="btn ${b.run === 2 ? 'primary' : ''}" id="dfRun2">Run 2: ${esc(dfName(b.b) || 'B')} leads</button>
       <button class="btn ghost" id="dfClose" style="margin-left:auto">Close</button>
     </div>
     ${b.status === 'running' ? judges.join('') : `<p class="hint">Decided. ${esc(dfName(b.winner) || '')} advances.</p>`}`;
@@ -2395,8 +2396,8 @@ function renderDriftBracket(D) {
         const bye = !p.a || !p.b;
         const live = D.battle && D.battle.round === ri && D.battle.pair === pi;
         return `<div class="dfpair ${live ? 'live' : ''} ${p.winner ? 'done' : ''}" data-round="${ri}" data-pair="${pi}">
-          <div class="${p.winner === p.a ? 'w' : ''}"><span class="swatch" style="background:${dfColor(p.a)}"></span>${esc(dfName(p.a) || '—')}</div>
-          <div class="${p.winner === p.b ? 'w' : ''}"><span class="swatch" style="background:${dfColor(p.b)}"></span>${esc(dfName(p.b) || (bye ? 'BYE' : '—'))}</div>
+          <div class="${p.winner === p.a ? 'w' : ''}"><span class="swatch" style="background:${dfColor(p.a)}"></span>${esc(dfName(p.a) || '--')}</div>
+          <div class="${p.winner === p.b ? 'w' : ''}"><span class="swatch" style="background:${dfColor(p.b)}"></span>${esc(dfName(p.b) || (bye ? 'BYE' : '--'))}</div>
         </div>`;
       }).join('')}
     </div>`).join('') + '</div>' +
@@ -2430,9 +2431,9 @@ function renderToolHelp() {
   const tool = $('#roiTool').value;
   const h = ROI_HELP[tool] || {};
   $('#helpTitle').textContent = ROI_TYPES[tool]?.label || (tool === 'finish' ? 'Finish line' : tool === 'sector' ? 'Sector line' : tool);
-  $('#helpWhat').textContent = h.what || '—';
-  $('#helpHow').textContent = h.how || '—';
-  $('#helpGives').textContent = h.gives || '—';
+  $('#helpWhat').textContent = h.what || '--';
+  $('#helpHow').textContent = h.how || '--';
+  $('#helpGives').textContent = h.gives || '--';
 }
 $('#roiTool').addEventListener('change', () => { pendingLine = null; renderToolHelp(); });
 renderToolHelp();
@@ -2914,7 +2915,7 @@ function renderHealth() {
   bar.hidden = false;
   bar.classList.toggle('bad', vision.fps < target * 0.35);
   bar.innerHTML = document.hidden || vision.health === 'throttled'
-    ? `<span class="dotwarn"></span>Detection is being throttled — this tab is in the background and running at <b>${vision.fps} fps</b> of ${target}. Keep the operator panel visible on a second monitor while you stream.`
+    ? `<span class="dotwarn"></span>Detection is being throttled: this tab is in the background and running at <b>${vision.fps} fps</b> of ${target}. Keep the operator panel visible on a second monitor while you stream.`
     : `<span class="dotwarn"></span>Detection is running slowly: <b>${vision.fps} fps</b> of ${target}. Lower Detection FPS, or set Pixel sampling to <b>Every 2nd</b>.`;
 }
 
@@ -3061,9 +3062,9 @@ async function loadCatalog() {
     catalogLoaded = true;
     fillLangs();
     fillCatVoices();
-    if (note) note.textContent = `${d.voices.length} voices across ${new Set(d.voices.map((v) => v.code)).size} languages — pick a language above, then a voice.`;
+    if (note) note.textContent = `${d.voices.length} voices across ${new Set(d.voices.map((v) => v.code)).size} languages: pick a language above, then a voice.`;
   } catch (e) {
-    if (note) note.textContent = 'Voice catalog unavailable. Piper runs on the LOCAL console only — open http://localhost:4700, not the hosted site.';
+    if (note) note.textContent = 'Voice catalog unavailable. Piper runs on the LOCAL console only: open http://localhost:4700, not the hosted site.';
   }
 }
 
@@ -3081,7 +3082,7 @@ if ($('#btnComInstall')) $('#btnComInstall').onclick = async () => {
     catalogLoaded = false; await loadCatalog();       // refresh the ✓ marks first
     setVal('#comPiperVoice', key);
     com({ engine: 'piper', voice: key });
-    if (note) note.textContent = `Installed ${key} — set as the commentary voice.`;   // last, so it stays
+    if (note) note.textContent = `Installed ${key}: set as the commentary voice.`;   // last, so it stays
   } catch (e) {
     if (note) note.textContent = `Install failed: ${e.message}. Piper install works only on the local console at http://localhost:4700.`;
   }
@@ -3101,7 +3102,7 @@ if ($('#btnTmSave')) $('#btnTmSave').onclick = async () => {
     if ($('#tmApiKey')) $('#tmApiKey').value = '';    // don't leave the key on screen
     if (note) note.textContent = d.hasKey ? 'Key saved on this machine.' : 'Key cleared.';
   } catch (e) {
-    if (note) note.textContent = 'Save failed — this needs the local console (http://localhost:4700).';
+    if (note) note.textContent = 'Save failed: this needs the local console (http://localhost:4700).';
   }
 };
 if ($('#btnTmStart')) $('#btnTmStart').onclick = async () => {
@@ -3115,7 +3116,7 @@ if ($('#btnTmStart')) $('#btnTmStart').onclick = async () => {
     })).json();
     if (note) note.textContent = d.ok ? `Live on ${d.ip}.` : `Could not start: ${d.error || ''}`;
   } catch (e) {
-    if (note) note.textContent = 'Start failed — this needs the local console.';
+    if (note) note.textContent = 'Start failed: this needs the local console.';
   }
 };
 if ($('#btnTmStop')) $('#btnTmStop').onclick = async () => {
@@ -3336,7 +3337,7 @@ $('#btnTickerAuto').onclick = () => {
   const rows = classification(state);
   const fl = fastestLap(state);
   const lines = [
-    `${state.event.name} — ${state.event.round} — ${state.event.track}`,
+    `${state.event.name}: ${state.event.round}: ${state.event.track}`,
     ...rows.slice(0, 5).map((d) => `P${d.position} ${d.name} ${d.gap}`),
     fl ? `FASTEST LAP ${fl.name} ${fmtTime(fl.bestLap)}` : ''
   ].filter(Boolean);
@@ -3352,7 +3353,7 @@ function renderOverlayPage() {
   const sig = state.drivers.map((d) => d.id + d.name).join('|');
   if (sel.dataset.sig !== sig) {
     sel.dataset.sig = sig;
-    sel.innerHTML = `<option value="">— ${t('none')} —</option>` +
+    sel.innerHTML = `<option value="">-- ${t('none')} --</option>` +
       state.drivers.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join('');
   }
   if (sel.value !== cur) sel.value = cur;
@@ -3365,7 +3366,7 @@ function renderOverlayPage() {
     const el = $(id);
     if (el.dataset.sig !== sig) {
       el.dataset.sig = sig;
-      el.innerHTML = `<option value="">— ${t('none')} —</option>` +
+      el.innerHTML = `<option value="">-- ${t('none')} --</option>` +
         state.drivers.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join('');
     }
     if (document.activeElement !== el) el.value = val || '';
@@ -3378,7 +3379,7 @@ function renderOverlayPage() {
   if (rsel) {
     if (rsel.dataset.sig !== sig) {
       rsel.dataset.sig = sig;
-      rsel.innerHTML = `<option value="">— ${t('none')} —</option>` +
+      rsel.innerHTML = `<option value="">-- ${t('none')} --</option>` +
         state.drivers.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join('');
     }
     if (document.activeElement !== rsel) rsel.value = radio.driverId || '';
@@ -3397,7 +3398,7 @@ function renderOverlayPage() {
   if ($('#pollResult')) {
     const last = ((state.overlay && state.overlay.pollHistory) || [])[0];
     $('#pollResult').textContent = last && last.winner
-      ? `${t('Last poll')}: ${last.question ? last.question + ' — ' : ''}${last.winner.label} (${last.total} ${t('votes')})`
+      ? `${t('Last poll')}: ${last.question ? last.question + ': ' : ''}${last.winner.label} (${last.total} ${t('votes')})`
       : '';
   }
 
@@ -3494,7 +3495,7 @@ if ($('#btnPollClose')) $('#btnPollClose').onclick = () => {
   const entry = { question: p.question || '', at: Date.now(), total, options: snap, winner: total ? winner : null };
   const hist = [entry, ...((state.overlay && state.overlay.pollHistory) || [])].slice(0, 20);
   bus.action('overlay.update', { patch: { poll: { ...p, open: false }, pollHistory: hist } });
-  toast(entry.winner ? `${t('Poll closed')} — ${entry.winner.label} (${Math.round(max / total * 100)}%)` : t('Poll closed'));
+  toast(entry.winner ? `${t('Poll closed')}: ${entry.winner.label} (${Math.round(max / total * 100)}%)` : t('Poll closed'));
 };
 
 // Sponsors: one per line, "Label | logoURL" (URL optional).
@@ -3905,16 +3906,16 @@ async function renderNetwork() {
   const cmd = `netsh advfirewall firewall add rule name="FRL Broadcast ${net.port}" dir=in action=allow protocol=TCP localport=${net.port} profile=private remoteip=${cidr}`;
 
   $('#netFirewall').innerHTML =
-    `The other device must be on the same <b>${best.subnet}</b> network — check its IP starts the same way. ` +
+    `The other device must be on the same <b>${best.subnet}</b> network: check its IP starts the same way. ` +
     `If it does and the page still will not load, Windows Firewall is blocking the port: Windows denies inbound ` +
     `connections by default, and a server started from a terminal never raises the usual prompt.<br><br>` +
     `<b>1. Open a terminal as Administrator on this machine</b> (Win+X → Terminal (Admin)).<br><br>` +
-    `<b>2. PowerShell</b> — this is what Terminal (Admin) opens:<br>` +
+    `<b>2. PowerShell</b>: this is what Terminal (Admin) opens:<br>` +
     `<code id="fwPs">${esc(ps)}</code> <button class="btn sm" id="btnCopyPs" style="margin-left:6px">Copy</button><br><br>` +
-    `<b>or Command Prompt</b> — the netsh form only works in cmd.exe, PowerShell eats its quotes:<br>` +
+    `<b>or Command Prompt</b>: the netsh form only works in cmd.exe, PowerShell eats its quotes:<br>` +
     `<code id="fwCmd">${esc(cmd)}</code> <button class="btn sm" id="btnCopyFw" style="margin-left:6px">Copy</button><br><br>` +
-    `<b>3. Verify</b> — in any terminal, <code>Get-NetFirewallRule -DisplayName "FRL Broadcast ${net.port}"</code> should print the rule.<br>` +
-    `<b>4. Test</b> — from the other device open <code>http://${best.address}:${net.port}/api/ping</code>, or run ` +
+    `<b>3. Verify</b>: in any terminal, <code>Get-NetFirewallRule -DisplayName "FRL Broadcast ${net.port}"</code> should print the rule.<br>` +
+    `<b>4. Test</b>: from the other device open <code>http://${best.address}:${net.port}/api/ping</code>, or run ` +
     `<code>Test-NetConnection ${best.address} -Port ${net.port}</code> there.`;
 
   $('#btnCopyPs').onclick = () => { navigator.clipboard.writeText(ps); toast('PowerShell command copied'); };
@@ -4209,7 +4210,7 @@ requestAnimationFrame(previewLoop);
     p.push(k === ' ' ? 'space' : k);
     return p.join('+');
   }
-  const pretty = (c) => !c ? '—' : c.replace(/\+/g, ' + ').replace(/\barrowright\b/, '→').replace(/\barrowleft\b/, '←').toUpperCase();
+  const pretty = (c) => !c ? '--' : c.replace(/\+/g, ' + ').replace(/\barrowright\b/, '→').replace(/\barrowleft\b/, '←').toUpperCase();
 
   let capturing = null;   // action id awaiting a keypress
 
@@ -4278,7 +4279,7 @@ requestAnimationFrame(previewLoop);
   function fillScenes(names) {
     for (const [sel, key] of [['#obsSceneGreen', 'green'], ['#obsSceneCaution', 'caution']]) {
       const el = $(sel); if (!el) continue;
-      el.innerHTML = '<option value="">— none —</option>' + names.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      el.innerHTML = '<option value="">-- none --</option>' + names.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
       el.value = cfg[key] || '';
     }
   }
@@ -4372,7 +4373,7 @@ requestAnimationFrame(previewLoop);
     try {
       const r = await fetch(dc.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       dstat(r.ok ? t('Sent') : 'HTTP ' + r.status);
-    } catch (e) { dstat(t('Failed — check the URL')); }
+    } catch (e) { dstat(t('Failed: check the URL')); }
   }
 
   const FLAG_EMOJI = { green: '🟢', yellow: '🟡', safety: '🚨', vsc: '🟨', red: '🔴', formation: '🚦', finished: '🏁', idle: '⚪' };
@@ -4442,10 +4443,10 @@ requestAnimationFrame(previewLoop);
     const dnf = rows.filter((d) => d.dnf).length;
     const ev = s.event;
     const L = [];
-    L.push(`🏁 ${ev.name || 'Race'}${ev.round ? ' · ' + ev.round : ''}${ev.track ? ' — ' + ev.track : ''}`);
+    L.push(`🏁 ${ev.name || 'Race'}${ev.round ? ' · ' + ev.round : ''}${ev.track ? ': ' + ev.track : ''}`);
     L.push(`${win.name}${win.team ? ' (' + win.team + ')' : ''} ${t('wins')}${p2 ? ' ' + t('ahead of') + ' ' + p2.name : ''}.`);
     L.push(t('Podium') + ': ' + rows.slice(0, 3).map((d, i) => `${i + 1}. ${d.name}`).join(' · '));
-    if (fl && fl.bestLap != null) L.push(t('Fastest lap') + `: ${fl.name} — ${fmtTime(fl.bestLap)}.`);
+    if (fl && fl.bestLap != null) L.push(t('Fastest lap') + `: ${fl.name}: ${fmtTime(fl.bestLap)}.`);
     if (mover && moverN > 0) L.push(t('Most places gained') + `: ${mover.name} (+${moverN}).`);
     if (dnf) L.push(`${dnf} DNF.`);
     const lastPoll = ((s.overlay && s.overlay.pollHistory) || [])[0];
