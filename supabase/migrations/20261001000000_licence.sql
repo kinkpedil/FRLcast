@@ -4,6 +4,12 @@
 -- the same way it already keeps the operator's notes to each phone. This only teaches
 -- driver_state to hand that entry back. Nothing else changes, no table, no column, and the
 -- function body is otherwise the batch2 version, so re-running it is harmless.
+--
+-- Sessions (same day): a race night runs practice, qualifying and the race in one event,
+-- and the console stamps settings.sessionEpoch (epoch ms) each time it moves to the next
+-- session. The black flag and the drive-through countdown on the phone only look at
+-- penalties issued after it, so a practice decision does not follow a driver into the race.
+-- No epoch (an older event) means every penalty counts, as before.
 
 create or replace function public.driver_state(p_token uuid)
 returns json
@@ -20,6 +26,7 @@ declare
   v_time_left bigint;
   v_unserved  int;
   v_serve     int;
+  v_epoch     timestamptz;
 begin
   select * into v_account from public.driver_accounts
     where token = p_token and token_expires > now();
@@ -31,6 +38,8 @@ begin
   select * into v_reg    from public.registrations where account_id = v_account.id;
   select * into v_driver from public.drivers where id = v_reg.driver_id;
   v_best  := v_event.session_type in ('qualifying', 'practice');
+  v_epoch := case when coalesce(v_event.settings->>'sessionEpoch', '') ~ '^[0-9]+$'
+                  then to_timestamp((v_event.settings->>'sessionEpoch')::bigint / 1000.0) end;
   v_timed := v_event.session_type = 'endurance';
 
   -- Endurance time remaining (ms), from the green-flag stamp minus any red-flag pauses.
@@ -55,7 +64,8 @@ begin
       into v_serve
       from public.penalties p
      where p.driver_id = v_driver.id and p.type = 'drivethrough'
-       and p.status = 'applied' and not p.served;
+       and p.status = 'applied' and not p.served
+       and (v_epoch is null or p.created_at >= v_epoch);
   end if;
 
   return json_build_object(
@@ -88,7 +98,8 @@ begin
       'blackFlag', exists (
         select 1 from public.penalties p
          where p.driver_id = v_driver.id and p.status = 'applied'
-           and p.type in ('blackflag', 'dq') and not p.served),
+           and p.type in ('blackflag', 'dq') and not p.served
+           and (v_epoch is null or p.created_at >= v_epoch)),
       'cars', (select count(*) from public.drivers x where x.event_id = v_event.id),
       'session', v_event.session_type,
       'totalLaps', v_event.total_laps,

@@ -18,7 +18,7 @@
  * for a two hour event is around 1.26 GB of egress against a 5 GB monthly allowance.
  */
 
-import { labelGaps } from './timing.js';
+import { labelGaps, inSession } from './timing.js';
 
 const SUPABASE_ESM = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
@@ -263,8 +263,10 @@ export class CloudBus {
     const pens = [...this.penalties.values()]
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
+    // Only this session's decisions move the timing (see inSession in timing.js).
+    const epoch = Number(settings.sessionEpoch) || null;
     const drivers = [...this.drivers.values()].map((d) => {
-      const mine = pens.filter((p) => p.driver_id === d.id);
+      const mine = pens.filter((p) => p.driver_id === d.id && inSession({ at: new Date(p.created_at).getTime() }, { sessionEpoch: epoch }));
       return {
         id: d.id,
         num: d.num,
@@ -319,7 +321,9 @@ export class CloudBus {
         round: ev.round,
         track: ev.track,
         sessionType: ev.session_type,
-        sessionName: ev.session_label
+        sessionName: ev.session_label,
+        program: Array.isArray(settings.program) && settings.program.length ? settings.program : ['practice', 'qualifying', 'race'],
+        programDone: settings.programDone || {}
       },
       race: {
         status: ev.status,
@@ -343,7 +347,8 @@ export class CloudBus {
         grid: settings.grid || [],
         rules: settings.rules || {},
         flags: settings.flags || {},
-        lapChart: settings.lapChart || {}
+        lapChart: settings.lapChart || {},
+        sessionEpoch: Number(settings.sessionEpoch) || null
       },
       drivers,
       feed: this.feed.map((f) => ({

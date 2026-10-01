@@ -826,3 +826,43 @@ input.dfscore { width: 84px; height: 30px; }
 .licrow.ban .licst { color: #ff6b61; font-weight: 600; }
 .licrow.risk .licst { color: var(--yellow); }
 .pts { font-family: var(--mono); font-size: 11px; color: var(--yellow); margin-left: 4px; }
+
+/* ---------- sessions: the night's programme and the archive ---------- */
+
+.sess-prog { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.steps { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 1 1 auto; }
+.step { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 15px;
+        border: 1px solid var(--line-2); background: transparent; color: var(--ink-dim); font: 500 12px var(--sans); cursor: pointer; }
+.step:hover { color: var(--ink); border-color: rgba(255,255,255,.28); }
+.step i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-mute); flex: none; }
+.step.done { color: var(--ink); }
+.step.done i { background: var(--accent); }
+.step.cur { color: var(--ink); border-color: var(--accent); background: rgba(0,224,164,.08); font-weight: 600; }
+.step.cur i { background: var(--accent); box-shadow: 0 0 0 3px rgba(0,224,164,.18); }
+.step.cur.live i { background: #30d158; }
+.step small { font-size: 11px; color: var(--ink-mute); font-weight: 500; }
+.steps .arrow { color: var(--ink-mute); font-size: 12px; }
+.sess-prog-actions { display: flex; gap: 6px; }
+
+.sesstag { margin-left: 6px; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: rgba(0,224,164,.14); color: var(--accent); }
+
+.modal { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 24px;
+         background: rgba(5, 6, 9, .72); backdrop-filter: blur(3px); }
+.modal[hidden] { display: none; }
+.modal-card { width: min(1100px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column;
+              background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 12px; overflow: hidden; }
+.modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.modal-head h3 { margin: 0 0 4px; font-size: 17px; }
+.modal-body { padding: 4px 18px 18px; overflow: auto; }
+.smtable tr[data-drv] { cursor: pointer; }
+.smtable tr[data-drv]:hover td { background: rgba(255,255,255,.03); }
+.smtable tr.sel td { background: rgba(0,224,164,.07); }
+.smtable td.r, .smtable th.r { text-align: right; }
+.smtable .lapno { color: var(--ink-mute); font-size: 11px; margin-left: 4px; }
+.laplist { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; margin-top: 10px; }
+.lapcell { display: flex; justify-content: space-between; gap: 8px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px;
+           font: 500 12px var(--mono); background: var(--bg-3); }
+.lapcell b { color: var(--ink-mute); font-weight: 500; }
+.lapcell.best { border-color: #b026ff; color: #e6bbff; }
+.lapcell.none { color: var(--ink-mute); }
+.sec-title { margin: 18px 0 8px; font-size: 13px; font-weight: 600; }

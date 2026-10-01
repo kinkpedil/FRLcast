@@ -172,6 +172,12 @@ await q(db, `insert into public.penalties (event_id, driver_id, type, status, se
 await q(db, `update public.drivers set laps_done = 5 where num = '55'`);
 st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
 check('serve countdown reaches the phone', st.me.serveInLaps === 2, String(st.me.serveInLaps));
+// a new session began after that penalty: it belongs to the earlier session now
+await q(db, `update public.events set settings = jsonb_set(settings, '{sessionEpoch}',
+  to_jsonb((extract(epoch from now() + interval '1 minute') * 1000)::bigint)) where id = $1`, [ev]);
+st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
+check('earlier session drive-through is not counted', st.me.serveInLaps === null, String(st.me.serveInLaps));
+await q(db, `update public.events set settings = settings - 'sessionEpoch' where id = $1`, [ev]);
 await q(db, `delete from public.penalties where type = 'drivethrough'`);
 await q(db, `update public.drivers set laps_done = 5, car_class = 'GT3' where num = '55'`);
 check('car_class column mirrors', (await q(db, `select car_class from public.drivers where num='55'`))[0].car_class === 'GT3');

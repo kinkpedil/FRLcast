@@ -3,6 +3,7 @@ import { CloudPanelBus } from './cloudpanel.js';
 import { cloudOptions } from './cloudbus.js';
 import { THEMES } from './themes.js';
 import { LICENCE_DEFAULT, licenceFrom, licenceEntries, penaltyPoints } from './points.js';
+import { inSession } from './timing.js';
 import { Capture } from './capture.js';
 import { VisionEngine, ROI_TYPES, ROI_HELP } from './vision.js';
 import { Detector } from './detector.js';
@@ -638,6 +639,7 @@ function bindInput(sel, fn) {
 
 function renderRace() {
   const r = state.race;
+  renderProgram();
   $('#raceStatusPill').textContent = FLAG_LABEL[r.status] || r.status;
   $('#totalLapsSmall').textContent = `/${r.totalLaps}`;
   $('#leaderLapBig').firstChild.nodeValue = String(leaderLap(state));
@@ -1775,7 +1777,8 @@ function renderIncidents() {
 
 function renderRaceControl() {
   if (!state || currentPage !== 'race') return;
-  const pens = state.race.penalties || [];
+  // This session's decisions; earlier sessions keep theirs in the archive.
+  const pens = (state.race.penalties || []).filter((p) => inSession(p, state.race));
   const open = pens.filter((p) => p.status === 'investigating');
 
   const count = $('#penCount');
@@ -2264,10 +2267,11 @@ function renderSessions() {
     const when = new Date(s.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     return `<div class="sessrow">
       <div>
-        <b>${esc(s.name)}</b>
+        <b>${esc(s.name)}${s.finished ? `<span class="sesstag">${t('finished')}</span>` : ''}</b>
         <small>${when} · ${s.results.length} cars · ${esc(top)}</small>
       </div>
       <div class="row">
+        <button class="btn" data-view="${s.id}">${t('View')}</button>
         <button class="btn" data-grid="${s.id}">Grid</button>
         <button class="btn" data-grid="${s.id}" data-reverse="1">Reversed</button>
         <button class="btn ghost" data-del="${s.id}">✕</button>
@@ -2275,6 +2279,7 @@ function renderSessions() {
     </div>`;
   }).join('');
 
+  $$('#sessionList [data-view]').forEach((b) => { b.onclick = () => openSession(b.dataset.view); });
   $$('#sessionList [data-grid]').forEach((b) => {
     b.onclick = () => bus.action('grid.fromSession', { id: b.dataset.grid, reverse: !!b.dataset.reverse });
   });
@@ -4672,3 +4677,183 @@ $('#penKind').addEventListener('change', () => {
   const lic = (state && state.championship && state.championship.licence) || LICENCE_DEFAULT;
   if (lic.on) $('#penPts').placeholder = ptsLabel(penaltyPoints({ type: $('#penKind').value }, lic));
 });
+
+// ---------------------------------------------------------------- sessions: programme and archive
+
+const SESSION_LABEL = { practice: 'Practice', qualifying: 'Qualifying', race: 'Race', endurance: 'Endurance', drift: 'Drift' };
+const sessLabel = (type) => t(SESSION_LABEL[type] || String(type || ''));
+
+function nextInProgram() {
+  const prog = state.event.program || ['practice', 'qualifying', 'race'];
+  const i = prog.indexOf(state.event.sessionType || 'race');
+  return i > -1 && i < prog.length - 1 ? prog[i + 1] : null;
+}
+
+/**
+ * The night's sessions as steps: done, the one running now, the ones still to come.
+ * A finished step opens its record; a later one can be jumped to.
+ */
+function renderProgram() {
+  const box = $('#sessSteps');
+  if (!box || !state) return;
+  const ev = state.event, r = state.race;
+  const prog = ev.program || ['practice', 'qualifying', 'race'];
+  const done = ev.programDone || {};
+  const cur = ev.sessionType || 'race';
+  const running = !!r.startedAt && r.status !== 'finished' && r.status !== 'idle';
+  const sig = JSON.stringify([prog, done, cur, running, r.status, window.FRL_I18N && window.FRL_I18N.lang]);
+  if (box.dataset.sig !== sig) {
+    box.dataset.sig = sig;
+    box.innerHTML = prog.map((type, i) => {
+      const isCur = type === cur;
+      const state1 = isCur ? (r.status === 'finished' ? t('finished') : running ? t('running') : t('ready'))
+        : done[type] ? t('finished') : '';
+      return (i ? '<span class="arrow">→</span>' : '') +
+        `<button class="step ${isCur ? 'cur' : ''} ${isCur && running ? 'live' : ''} ${done[type] ? 'done' : ''}" data-step="${type}">
+          <i></i>${esc(sessLabel(type))}${state1 ? ` <small>${esc(state1)}</small>` : ''}</button>`;
+    }).join('');
+    $$('#sessSteps [data-step]').forEach((b) => {
+      b.onclick = () => {
+        const type = b.dataset.step;
+        if (type === (state.event.sessionType || 'race')) return;
+        const rec = (state.event.programDone || {})[type];
+        if (rec && (state.sessions || []).some((x) => x.id === rec)) return openSession(rec);
+        switchSession(type);
+      };
+    });
+  }
+  // Start names the session it starts.
+  const start = $('#btnStart');
+  if (start) start.textContent = `${t('Start')} ${sessLabel(cur).toLowerCase()}`;
+  const fin = $('#btnSessFinish');
+  if (fin) fin.disabled = !r.startedAt || r.status === 'finished';
+  const nx = $('#btnSessNext');
+  const next = nextInProgram();
+  if (nx) {
+    nx.hidden = !next;
+    nx.textContent = next ? `${t('Next')}: ${sessLabel(next)} →` : '';
+    nx.classList.toggle('primary', r.status === 'finished');
+  }
+}
+
+function switchSession(type) {
+  const r = state.race;
+  const unsaved = r.startedAt && r.status !== 'finished';
+  const msg = unsaved
+    ? t('The current session has not been finished, so it will not be saved. Switch anyway?')
+    : t('Move on to this session? The timing screen starts empty; finished sessions stay in the archive.');
+  if (!confirm(`${sessLabel(type)}: ${msg}`)) return;
+  bus.action('session.next', { sessionType: type });
+  toast(sessLabel(type));
+}
+
+$('#btnSessFinish').onclick = () => {
+  if (!state) return;
+  const name = state.event.sessionName || sessLabel(state.event.sessionType);
+  if (!confirm(`${t('Finish')} ${name}? ${t('It gets the chequered flag and is saved with every lap, best, last and previous lap, lap count and penalty.')}`)) return;
+  bus.action('session.finish');
+  toast(t('Session finished and saved'));
+};
+$('#btnSessNext').onclick = () => { const n = nextInProgram(); if (n) switchSession(n); };
+
+// ---------------------------------------------------------------- the session record
+
+let viewing = null;      // the archived session open in the viewer
+let viewingDrv = null;   // the driver whose laps are listed
+
+function openSession(id) {
+  const rec = (state.sessions || []).find((x) => x.id === id);
+  if (!rec) return toast(t('That session is no longer in the archive'));
+  viewing = rec;
+  viewingDrv = (rec.results[0] || {}).driverId || null;
+  renderSessionView();
+  $('#sessModal').hidden = false;
+}
+
+function closeSession() { $('#sessModal').hidden = true; viewing = null; }
+$('#smClose').onclick = closeSession;
+$('#sessModal').onclick = (e) => { if (e.target.id === 'sessModal') closeSession(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#sessModal').hidden) closeSession(); });
+
+const lt = (ms) => (ms == null ? '-' : fmtTime(ms));
+
+function renderSessionView() {
+  const rec = viewing;
+  if (!rec) return;
+  $('#smTitle').textContent = `${rec.name || sessLabel(rec.type)}`;
+  const when = new Date(rec.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const dur = rec.durationMs != null ? fmtClock(rec.durationMs) : '-';
+  $('#smMeta').textContent = [sessLabel(rec.type), when, `${t('Duration')} ${dur}`,
+    rec.fastest ? `${t('Fastest lap')} ${lt(rec.fastest.ms)} · ${rec.fastest.name}${rec.fastest.lap ? ` (L${rec.fastest.lap})` : ''}` : '',
+    rec.finished ? t('finished') : t('snapshot')].filter(Boolean).join(' · ');
+
+  const old = !rec.results.some((x) => Array.isArray(x.lapTimes));
+  $('#smTable').innerHTML = `<tr><th>P</th><th>#</th><th>${t('Driver')}</th><th class="r">${t('Laps')}</th>
+      <th class="r">${t('Best')}</th><th class="r">${t('Last')}</th><th class="r">${t('Previous')}</th>
+      <th class="r">${t('Gap')}</th><th class="r">${t('Pen')}</th></tr>` +
+    rec.results.map((x) => `<tr data-drv="${esc(x.driverId)}" class="${x.driverId === viewingDrv ? 'sel' : ''}">
+      <td class="cnum">${x.dnf ? (x.retired ? 'RET' : 'DNF') : x.position}</td>
+      <td class="mono dim">${esc(x.num)}</td>
+      <td class="dcell"><span class="swatch" style="background:${esc(x.color || '#666')}"></span> <span class="dname">${esc(x.name)}</span></td>
+      <td class="mono r">${x.lapsDone ?? '-'}</td>
+      <td class="mono r">${lt(x.bestLap)}${x.bestLapNo ? `<span class="lapno">L${x.bestLapNo}</span>` : ''}</td>
+      <td class="mono r dim">${lt(x.lastLap)}</td>
+      <td class="mono r dim">${lt(x.prevLap)}</td>
+      <td class="mono r dim">${esc(x.gap || '')}</td>
+      <td class="mono r">${x.penaltySec ? '+' + x.penaltySec + 's' : ''}</td>
+    </tr>`).join('');
+  $$('#smTable [data-drv]').forEach((tr) => {
+    tr.onclick = () => { viewingDrv = tr.dataset.drv; renderSessionView(); };
+  });
+
+  const d = rec.results.find((x) => x.driverId === viewingDrv);
+  const laps = (d && d.lapTimes) || [];
+  $('#smLaps').innerHTML = old
+    ? `<p class="hint">${t('This session was saved before lap-by-lap records existed.')}</p>`
+    : !d ? ''
+    : laps.length ? `<div class="laplist">${laps.map((ms, i) =>
+        `<div class="lapcell ${ms == null ? 'none' : ms === d.bestLap ? 'best' : ''}"><b>L${i + 1}</b>${lt(ms)}</div>`).join('')}</div>`
+    : `<p class="hint">${t('No laps recorded for this driver.')}</p>`;
+
+  const pens = rec.penalties || [];
+  $('#smPens').innerHTML = pens.length ? '<div class="penlist">' + pens.map((p) => `
+    <div class="penrow ${p.status}">
+      <span class="pdrv">${esc(p.name)} <span class="dim mono">#${esc(p.num)}</span></span>
+      <span class="pkind">${esc(p.text || p.type)}</span>
+      <span class="preason">${esc(p.reason)}${p.lap ? ` · L${p.lap}` : ''}</span>
+      <span class="pstatus">${p.status === 'dropped' ? 'no action' : p.status === 'investigating' ? 'open' : p.served ? 'served' : 'applied'}</span>
+    </div>`).join('') + '</div>'
+    : `<p class="hint">${t('No penalties in this session.')}</p>`;
+}
+
+/** One file per session: a row per driver with every lap, then the stewards' decisions. */
+$('#smCsv').onclick = () => {
+  const rec = viewing;
+  if (!rec) return;
+  const q = (v) => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const sec = (ms) => (ms == null ? '' : (ms / 1000).toFixed(3));
+  const most = rec.results.reduce((n, x) => Math.max(n, (x.lapTimes || []).length), 0);
+  const head = ['Pos', 'No', 'Driver', 'Team', 'Laps', 'Best', 'Best lap no', 'Last', 'Previous', 'Gap', 'Penalty s', 'Status']
+    .concat(Array.from({ length: most }, (_, i) => `L${i + 1}`));
+  const lines = [head.map(q).join(',')];
+  for (const x of rec.results) {
+    lines.push([x.position, x.num, x.name, x.team, x.lapsDone, sec(x.bestLap), x.bestLapNo || '', sec(x.lastLap),
+      sec(x.prevLap), x.gap, x.penaltySec || 0, x.dnf ? (x.retired ? 'RET' : 'DNF') : 'Classified']
+      .concat(Array.from({ length: most }, (_, i) => sec((x.lapTimes || [])[i])))
+      .map(q).join(','));
+  }
+  if ((rec.penalties || []).length) {
+    lines.push('');
+    lines.push(['Penalty', 'No', 'Driver', 'Decision', 'Reason', 'Lap', 'Status'].map(q).join(','));
+    for (const p of rec.penalties) lines.push(['', p.num, p.name, p.text, p.reason, p.lap, p.status].map(q).join(','));
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${String(rec.name || rec.type).replace(/[^\w-]+/g, '_')}_${new Date(rec.at).toISOString().slice(0, 16).replace(/[:T]/g, '-')}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};

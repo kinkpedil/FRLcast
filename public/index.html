@@ -52,6 +52,13 @@
       </div>
 
       <div class="card session">
+        <div class="sess-prog">
+          <div class="steps" id="sessSteps" data-i18n-skip></div>
+          <div class="sess-prog-actions">
+            <button class="btn sm" id="btnSessFinish">Finish session</button>
+            <button class="btn sm" id="btnSessNext" data-i18n-skip>Next session</button>
+          </div>
+        </div>
         <div class="sess-top">
           <div class="stats">
             <div class="stat">
@@ -1482,6 +1489,28 @@
     </section>
 
   </main>
+</div>
+
+<div class="modal" id="sessModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="smTitle">
+    <div class="modal-head">
+      <div style="min-width:0">
+        <h3 id="smTitle" data-i18n-skip></h3>
+        <p class="hint" id="smMeta" data-i18n-skip></p>
+      </div>
+      <div class="row" style="flex:none">
+        <button class="btn sm" id="smCsv">Export CSV</button>
+        <button class="btn sm ghost" id="smClose">Close</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="tbl-wrap"><table class="drivers smtable" id="smTable" data-i18n-skip></table></div>
+      <p class="hint" style="margin-top:8px">Pick a driver to see every lap.</p>
+      <div id="smLaps" data-i18n-skip></div>
+      <div class="sec-title">Penalties</div>
+      <div id="smPens" data-i18n-skip></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>

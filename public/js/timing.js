@@ -84,3 +84,19 @@ export function labelGaps(ranked, { drift = false, quali = false } = {}) {
 
   return ranked;
 }
+
+/**
+ * Whether a penalty belongs to the session now running.
+ *
+ * A race night runs practice, qualifying and the race one after another, and a decision is
+ * about the session it was made in: five seconds in practice must not be added to the race
+ * result. Each switch of session stamps race.sessionEpoch, and a penalty belongs to the
+ * session whose epoch it was issued after. Decided by time rather than by a tag on the
+ * penalty, because a hosted event reloads its penalties from a table that has no column for
+ * one; its created_at is enough. Before any switch (an older state) every penalty counts,
+ * which is how it always worked.
+ */
+export function inSession(p, race) {
+  const from = race && race.sessionEpoch;
+  return !from || (Number(p && p.at) || 0) >= from;
+}

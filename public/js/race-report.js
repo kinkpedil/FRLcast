@@ -19,7 +19,7 @@
  * below reads it except through gapTo().
  */
 
-import { fmtGap } from './timing.js';
+import { fmtGap, inSession } from './timing.js';
 import { scoreRound, standingsFrom } from './points.js';
 
 /** Milliseconds between two cars, or null when one of them has no time at all. */
@@ -143,7 +143,7 @@ export function buildReport(state) {
   // ---------------------------------------------------------------- stewarding
   const byId = new Map(drivers.map((d) => [d.id, d]));
   report.penalties = (race.penalties || [])
-    .filter((p) => p.status !== 'dropped')
+    .filter((p) => p.status !== 'dropped' && inSession(p, race))
     .map((p) => {
       const d = byId.get(p.driverId);
       return {

@@ -1,4 +1,4 @@
-import { labelGaps, fmtGap } from './timing.js';
+import { labelGaps, fmtGap, inSession } from './timing.js';
 import { scoreRound as scoreRows, standingsFrom, LICENCE_DEFAULT, licenceEntries, licenceFrom } from './points.js';
 import { paceOf } from './race-model.js';
 
@@ -34,7 +34,11 @@ function defaultState() {
       round: 'ROUND 1',
       track: 'EBISU MINAMI',
       sessionType: 'race', // race | qualifying | practice | drift
-      sessionName: 'FEATURE RACE'
+      sessionName: 'FEATURE RACE',
+      // The night's sessions in running order, and which of them have been finished
+      // (type -> the id of its archived record).
+      program: ['practice', 'qualifying', 'race'],
+      programDone: {}
     },
     race: {
       status: 'idle', // idle | formation | green | yellow | safety | vsc | white | red | finished
@@ -600,6 +604,8 @@ export class RaceState {
         const base = defaultState();
         this.state = { ...base, ...disk };
         this.state.event = { ...base.event, ...(disk.event || {}) };
+        if (!Array.isArray(this.state.event.program) || !this.state.event.program.length) this.state.event.program = base.event.program;
+        this.state.event.programDone = { ...(disk.event?.programDone || {}) };
         this.state.race = { ...base.race, ...(disk.race || {}) };
         this.state.overlay = { ...base.overlay, ...(disk.overlay || {}) };
         this.state.overlay.show = { ...base.overlay.show, ...(disk.overlay?.show || {}) };
@@ -705,6 +711,93 @@ export class RaceState {
     r.extAt = 0;
   }
 
+  /** The chequered flag's consequences, shared by the flag button and session.finish. */
+  chequered(now) {
+    const s = this.state;
+    s.race.finishedAt = now;
+    // Qualifying decides the grid: on the chequered flag the grid is set to the best-lap
+    // order, so the race that follows lines up by it.
+    if ((s.event.sessionType || 'race') === 'qualifying') {
+      s.race.grid = [...s.drivers].sort((a, b) => {
+        if (a.bestLap == null && b.bestLap == null) return 0;
+        if (a.bestLap == null) return 1;
+        if (b.bestLap == null) return -1;
+        return a.bestLap - b.bestLap;
+      }).map((d) => d.id);
+    }
+  }
+
+  /**
+   * The session as it stands, as a record that outlives it.
+   *
+   * A snapshot, not a reference: a name changed or a car removed after the session must not
+   * rewrite what happened in it. Every lap is kept (with its number; a lap with no valid
+   * time stays as null so the numbering holds), plus the last, the one before it and the
+   * best, and the decisions the stewards made in the session.
+   */
+  archiveSession(now, finished, a = {}) {
+    const s = this.state;
+    const r = s.race;
+    const rows = [...s.drivers].sort((x, y) => x.position - y.position);
+    const pens = (r.penalties || []).filter((p) => inSession(p, r));
+    const byId = new Map(s.drivers.map((d) => [d.id, d]));
+    const end = r.finishedAt || r.pausedAt || now;
+    let fastest = null;
+    const results = rows.map((d, i) => {
+      const laps = (d.lapTimes || []).map((ms) => (ms > 0 ? ms : null));
+      const valid = laps.filter((ms) => ms != null);
+      const bestLapNo = d.bestLap != null ? laps.indexOf(d.bestLap) + 1 || null : null;
+      if (d.bestLap != null && (!fastest || d.bestLap < fastest.ms)) {
+        fastest = { driverId: d.id, name: d.name, num: d.num, ms: d.bestLap, lap: bestLapNo };
+      }
+      return {
+        driverId: d.id,
+        position: i + 1,
+        num: d.num,
+        name: d.name,
+        team: d.team || '',
+        color: d.color,
+        lapsDone: d.lapsDone,
+        bestLap: d.bestLap,
+        bestLapNo,
+        lastLap: valid.length ? valid[valid.length - 1] : (d.lastLap ?? null),
+        prevLap: valid.length > 1 ? valid[valid.length - 2] : null,
+        lapTimes: laps.slice(0, 400),
+        totalMs: d.totalMs,
+        gap: d.gap || '',
+        penaltySec: (d.penaltySec || 0) + (d.penaltyServed || 0),
+        pitStops: d.pitStops || 0,
+        dnf: !!d.dnf,
+        retired: !!d.retired
+      };
+    });
+    return {
+      id: `s${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+      type: a.sessionType || s.event.sessionType || 'race',
+      name: a.name || s.event.sessionName || s.event.sessionType,
+      at: now,
+      finished: !!finished,
+      startedAt: r.startedAt || null,
+      finishedAt: r.finishedAt || null,
+      durationMs: r.startedAt ? Math.max(0, end - r.startedAt - (r.pausedTotal || 0)) : null,
+      totalLaps: r.totalLaps || 0,
+      timeLimitSec: r.timeLimitSec || 0,
+      fastest,
+      results,
+      penalties: pens.map((p) => {
+        const d = byId.get(p.driverId) || {};
+        return {
+          id: p.id, driverId: p.driverId, name: d.name || '', num: d.num || '',
+          type: p.type, seconds: p.seconds || 0, reason: p.reason || '', lap: p.lap || 0,
+          status: p.status, served: !!p.served, at: p.at, points: p.points ?? null,
+          text: p.status === 'investigating' ? 'UNDER INVESTIGATION' : this.penaltyHeadline(p)
+        };
+      }),
+      // The penalties decided in it, so banking this session later still charges them.
+      licence: licenceEntries(pens, s.drivers, s.championship.licence, s.championship.rounds)
+    };
+  }
+
   /** True while an outside feed (the timing API) owns the lap counts. */
   extLive() {
     const r = this.state.race;
@@ -748,16 +841,15 @@ export class RaceState {
         : 0;
       // Only penalties actually handed down count. An investigation still open must not
       // move anyone on the timing screen, that is the whole point of announcing one.
-      const served = (race.penalties || [])
-        .filter((p) => p.driverId === d.id && p.status === 'applied' && p.type === 'time')
+      const mine = (race.penalties || []).filter((p) => p.driverId === d.id && inSession(p, race));
+      const served = mine
+        .filter((p) => p.status === 'applied' && p.type === 'time')
         .reduce((n, p) => n + (p.seconds || 0), 0);
-      d.penaltyPending = (race.penalties || [])
-        .some((p) => p.driverId === d.id && p.status === 'investigating');
+      d.penaltyPending = mine.some((p) => p.status === 'investigating');
       // Derived, not stored: a black flag is a standing instruction that lasts exactly as
       // long as the decision behind it, so it is read from the decisions every time.
-      d.blackFlag = (race.penalties || [])
-        .some((p) => p.driverId === d.id && p.status === 'applied' &&
-                     (p.type === 'blackflag' || p.type === 'dq') && !p.served);
+      d.blackFlag = mine
+        .some((p) => p.status === 'applied' && (p.type === 'blackflag' || p.type === 'dq') && !p.served);
       d.penaltyServed = served;
       d.totalMs = base + (d.penaltySec + served) * 1000;
     }
@@ -1215,6 +1307,7 @@ export class RaceState {
     const unservedLaps = Math.max(0, rules.blackFlagUnserved || 0);
     if (unservedLaps && race.status !== 'finished') {
       for (const p of race.penalties || []) {
+        if (!inSession(p, race)) continue;
         if (p.status !== 'applied' || p.served || p.type !== 'drivethrough') continue;
         if (p.escalated) continue;
         const d = this.driver(p.driverId);
@@ -1571,6 +1664,7 @@ export class RaceState {
         Object.assign(s.event, a.patch || {});
         if (a.patch && a.patch.sessionType && a.patch.sessionType !== wasType) {
           this.newSession(now);
+          s.race.sessionEpoch = now;
           if (a.patch.sessionType === 'qualifying' && s.race.knockout) {
             Object.assign(s.race.knockout, { part: 1, out: {}, done: false });
           }
@@ -1688,21 +1782,74 @@ export class RaceState {
         // a call is the fastest way to stop trusting it.
         s.race.flagSource = 'operator';
         s.race.clearSince = null;
-        if (flag === 'finished') {
-          s.race.finishedAt = now;
-          // Qualifying decides the grid: on the chequered flag the grid is set to the
-          // best-lap order, so the race that follows lines up by it.
-          if ((s.event.sessionType || 'race') === 'qualifying') {
-            s.race.grid = [...s.drivers].sort((a, b) => {
-              if (a.bestLap == null && b.bestLap == null) return 0;
-              if (a.bestLap == null) return 1;
-              if (b.bestLap == null) return -1;
-              return a.bestLap - b.bestLap;
-            }).map((d) => d.id);
-          }
-        }
+        if (flag === 'finished') this.chequered(now);
         break;
       }
+
+      /*
+       * Finish the session: the chequered flag, then its full record into the archive.
+       * Nothing is cleared here; the timing screen keeps showing the result until the
+       * operator moves on with session.next.
+       */
+      case 'session.finish': {
+        if (s.race.status !== 'finished') {
+          if (s.race.status === 'red' && s.race.pausedAt) {
+            s.race.pausedTotal += now - s.race.pausedAt;
+            s.race.pausedAt = null;
+          }
+          s.race.status = 'finished';
+          s.race.flagSource = 'operator';
+          this.chequered(now);
+        }
+        // The positions the record keeps are the ones on screen now.
+        this.recompute();
+        const rec = this.archiveSession(now, true);
+        s.sessions.unshift(rec);
+        s.sessions = s.sessions.slice(0, 30);
+        s.event.programDone = { ...(s.event.programDone || {}), [rec.type]: rec.id };
+        this.pushFeed('flag', `${String(rec.name || rec.type).toUpperCase()} FINISHED`);
+        break;
+      }
+
+      /*
+       * Move on to the next session (or the one named): a clean timing screen for it, a new
+       * session epoch so penalties start afresh, and the label and length that type uses.
+       * The finished session stays in the archive with everything it recorded.
+       */
+      case 'session.next': {
+        const prog = (s.event.program && s.event.program.length) ? s.event.program : ['practice', 'qualifying', 'race'];
+        const cur = s.event.sessionType || 'race';
+        const target = a.sessionType || prog[Math.min(prog.length - 1, prog.indexOf(cur) + 1)] || cur;
+        const LABEL = { practice: 'PRACTICE', qualifying: 'QUALIFYING', race: 'RACE', endurance: 'ENDURANCE', drift: 'DRIFT' };
+        s.event.sessionType = target;
+        s.event.sessionName = a.name || LABEL[target] || String(target).toUpperCase();
+        if (['practice', 'qualifying', 'endurance'].includes(target) && !(s.race.timeLimitSec > 0)) {
+          s.race.timeLimitSec = target === 'endurance' ? 3600 : 900;
+        }
+        if (target === 'qualifying' && s.race.knockout) Object.assign(s.race.knockout, { part: 1, out: {}, done: false });
+        s.race.startedAt = null;
+        s.race.finishedAt = null;
+        s.race.pausedAt = null;
+        s.race.pausedTotal = 0;
+        s.race.lights = 0;
+        s.race.status = 'idle';
+        s.race.flagSource = 'auto';
+        s.race.clearSince = null;
+        s.messages = {};
+        s.appeals = [];
+        this.newSession(now);
+        s.race.sessionEpoch = now;
+        for (const d of s.drivers) resetDriverTiming(d, null);
+        s.records = { bestLap: { ms: null, driverId: null, lap: null }, bestSectors: [] };
+        s.feed = [];
+        this.pushFeed('flag', `${s.event.sessionName} · READY`);
+        break;
+      }
+
+      case 'session.programReset':
+        // A new race night: the steps go back to unfinished. The archive is untouched.
+        s.event.programDone = {};
+        break;
 
       case 'race.pit':
         // Pit lane open or closed. Its own control, not a flag: the operator can shut the
@@ -2720,27 +2867,8 @@ export class RaceState {
          * would let a name change or a colour edit after the session silently rewrite
          * what happened in it, and a deleted driver would tear a hole in the results.
          */
-        s.sessions.unshift({
-          id: `s${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`,
-          type: a.sessionType || s.event.sessionType,
-          name: a.name || s.event.sessionName || s.event.sessionType,
-          at: now,
-          results: rows.map((d, i) => ({
-            driverId: d.id,
-            position: i + 1,
-            num: d.num,
-            name: d.name,
-            color: d.color,
-            bestLap: d.bestLap,
-            lapsDone: d.lapsDone,
-            totalMs: d.totalMs,
-            dnf: !!d.dnf,
-            retired: !!d.retired
-          })),
-          // The penalties decided in it, so banking this session later still charges them.
-          licence: licenceEntries(s.race.penalties, s.drivers, s.championship.licence, s.championship.rounds)
-        });
-        s.sessions = s.sessions.slice(0, 20);
+        s.sessions.unshift(this.archiveSession(now, false, a));
+        s.sessions = s.sessions.slice(0, 30);
         this.pushFeed('flag', `${(a.name || s.event.sessionName || 'SESSION').toUpperCase()} CLASSIFIED`);
         break;
       }
