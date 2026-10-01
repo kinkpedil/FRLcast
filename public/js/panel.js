@@ -2268,7 +2268,7 @@ function renderSessions() {
     return `<div class="sessrow">
       <div>
         <b>${esc(s.name)}${s.finished ? `<span class="sesstag">${t('finished')}</span>` : ''}</b>
-        <small>${when} · ${s.results.length} cars · ${esc(top)}</small>
+        <small>${esc(roundName(s.roundId))}${roundName(s.roundId) ? ' · ' : ''}${when} · ${s.results.length} cars · ${esc(top)}</small>
       </div>
       <div class="row">
         <button class="btn" data-view="${s.id}">${t('View')}</button>
@@ -4696,6 +4696,7 @@ function nextInProgram() {
 function renderProgram() {
   const box = $('#sessSteps');
   if (!box || !state) return;
+  renderRoundChip();
   const ev = state.event, r = state.race;
   const prog = ev.program || ['practice', 'qualifying', 'race'];
   const done = ev.programDone || {};
@@ -4921,3 +4922,80 @@ function restartSession(rec) {
 
 $('#smResume').onclick = () => { if (viewing) resumeSession(viewing); };
 $('#smRestart').onclick = () => { if (viewing) restartSession(viewing); };
+
+// ---------------------------------------------------------------- rounds
+
+const roundName = (id) => {
+  const r = id && state && state.season ? (state.season.rounds || []).find((x) => x.id === id) : null;
+  return r ? r.name : '';
+};
+
+function renderRoundChip() {
+  const b = $('#roundBtn');
+  if (!b) return;
+  const season = state.season || { rounds: [] };
+  const cur = (season.rounds || []).find((x) => x.id === season.current);
+  const name = (cur && cur.name) || state.event.round || t('Round');
+  const total = (season.rounds || []).length;
+  const html = `${esc(name)}${total > 1 ? ` <small>${esc(t('of'))} ${total}</small>` : ''}`;
+  if (b.innerHTML !== html) b.innerHTML = html;
+  b.title = t('Rounds: switch to another round or start a new one');
+}
+
+/** What one round has done: a mark per session in the programme, and its points. */
+function roundSummary(round) {
+  const prog = state.event.program || ['practice', 'qualifying', 'race'];
+  const done = new Set((state.sessions || []).filter((x) => x.finished && x.roundId === round.id).map((x) => x.type));
+  const champ = (state.championship.rounds || []).find((c) => c.roundId === round.id);
+  const win = champ && champ.results.find((x) => x.position === 1 && !x.dnf);
+  return {
+    dots: prog.map((type) => `<i class="${done.has(type) ? 'ok' : ''}" title="${esc(sessLabel(type))}">${esc(sessLabel(type).charAt(0))}</i>`).join(''),
+    scored: champ ? `${t('Points scored')}${win ? ` · ${win.name} ${t('won')}` : ''}` : (done.size ? t('In progress') : t('Not started'))
+  };
+}
+
+$('#roundBtn').onclick = (e) => {
+  e.stopPropagation();
+  closeStepMenu();
+  const season = state.season || { rounds: [], current: null };
+  const rounds = [...(season.rounds || [])].reverse();
+  const menu = document.createElement('div');
+  menu.className = 'stepmenu roundmenu';
+  menu.id = 'stepMenu';
+  menu.innerHTML = `<div class="smhead">${esc(t('Rounds'))}</div>` +
+    (rounds.length ? rounds.map((r) => {
+      const sum = roundSummary(r);
+      return `<button class="rrow ${r.id === season.current ? 'cur' : ''}" data-round="${r.id}">
+        <b>${esc(r.name)}${r.track ? ` · ${esc(r.track)}` : ''}</b><span class="rdots">${sum.dots}</span>
+        <small>${esc(sum.scored)}</small></button>`;
+    }).join('') : `<p class="hint" style="padding:6px 10px">${esc(t('No rounds yet. The first one starts with your first session.'))}</p>`) +
+    `<div class="newround">
+      <input type="text" id="nrName" placeholder="${esc(t('Round name'))}" value="ROUND ${(season.rounds || []).length + 1}">
+      <input type="text" id="nrTrack" placeholder="${esc(t('Track'))}" value="${esc(state.event.track || '')}">
+      <button class="btn sm primary" id="nrGo">${esc(t('New round'))}</button>
+    </div>`;
+  document.body.appendChild(menu);
+  const rect = $('#roundBtn').getBoundingClientRect();
+  menu.style.left = Math.min(rect.left, window.innerWidth - menu.offsetWidth - 12) + 'px';
+  menu.style.top = (rect.bottom + 6) + 'px';
+  menu.querySelectorAll('[data-round]').forEach((b) => {
+    b.onclick = () => {
+      const id = b.dataset.round;
+      if (id === season.current) return closeStepMenu();
+      const warn = unsavedRun() ? t('The current session has not been finished, so it will not be saved.') + ' ' : '';
+      if (!confirm(`${roundName(id)}: ${warn}${t('Switch to this round? Its finished sessions are kept, and the timing screen goes to the first session it has not finished.')}`)) return;
+      closeStepMenu();
+      bus.action('round.open', { id });
+      toast(roundName(id));
+    };
+  });
+  $('#nrGo').onclick = () => {
+    const name = $('#nrName').value.trim();
+    const track = $('#nrTrack').value.trim();
+    const warn = unsavedRun() ? t('The current session has not been finished, so it will not be saved.') + ' ' : '';
+    if (!confirm(`${name || t('New round')}: ${warn}${t('Start a new round? The current one is kept with all its sessions and points, and the timing screen starts at the first session.')}`)) return;
+    closeStepMenu();
+    bus.action('round.new', { name, track });
+    toast(name || t('New round'));
+  };
+};

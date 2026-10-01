@@ -62,6 +62,7 @@ function settingsOf(state) {
     standings: state.standings,
     records: state.records,
     sessions: state.sessions,
+    season: state.season || { rounds: [], current: null },
     // The night's programme and where the current session began (penalties before it
     // belong to an earlier session). No columns for these, so they ride in the blob.
     program: state.event.program || null,

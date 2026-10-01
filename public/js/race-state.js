@@ -345,6 +345,13 @@ function defaultState() {
      */
     sessions: [],                // { id, type, name, at, results: [...] }
     /*
+     * The rounds one event code runs through: a league keeps the same code all season and
+     * runs a round on each race night. Each round owns the sessions finished in it (their
+     * roundId) and, once its race is finished, one scored entry in the championship
+     * (championship.rounds[].roundId).
+     */
+    season: { rounds: [], current: null },   // rounds: [{ id, name, track, at, closedAt }]
+    /*
      * The championship, which is the thing an event series is actually about.
      *
      * Rounds are stored as scored snapshots, not as links to sessions or drivers. A club
@@ -606,6 +613,10 @@ export class RaceState {
         this.state.event = { ...base.event, ...(disk.event || {}) };
         if (!Array.isArray(this.state.event.program) || !this.state.event.program.length) this.state.event.program = base.event.program;
         this.state.event.programDone = { ...(disk.event?.programDone || {}) };
+        this.state.season = {
+          rounds: Array.isArray(disk.season?.rounds) ? disk.season.rounds : [],
+          current: disk.season?.current || null
+        };
         this.state.race = { ...base.race, ...(disk.race || {}) };
         this.state.overlay = { ...base.overlay, ...(disk.overlay || {}) };
         this.state.overlay.show = { ...base.overlay.show, ...(disk.overlay?.show || {}) };
@@ -711,6 +722,181 @@ export class RaceState {
     r.extAt = 0;
   }
 
+  /**
+   * Put the timing screen on a session: its type, label and length, a clean board, a new
+   * session id (or the one given, for a re-run) and epoch. Shared by session.next and the
+   * round actions.
+   */
+  enterSession(now, target, a = {}) {
+    const s = this.state;
+    const LABEL = { practice: 'PRACTICE', qualifying: 'QUALIFYING', race: 'RACE', endurance: 'ENDURANCE', drift: 'DRIFT' };
+    s.event.sessionType = target;
+    s.event.sessionName = a.name || LABEL[target] || String(target).toUpperCase();
+    if (['practice', 'qualifying', 'endurance'].includes(target) && !(s.race.timeLimitSec > 0)) {
+      s.race.timeLimitSec = target === 'endurance' ? 3600 : 900;
+    }
+    if (target === 'qualifying' && s.race.knockout) Object.assign(s.race.knockout, { part: 1, out: {}, done: false });
+    s.race.startedAt = null;
+    s.race.finishedAt = null;
+    s.race.pausedAt = null;
+    s.race.pausedTotal = 0;
+    s.race.lights = 0;
+    s.race.status = 'idle';
+    s.race.flagSource = 'auto';
+    s.race.clearSince = null;
+    s.messages = {};
+    s.appeals = [];
+    this.newSession(now);
+    s.race.sessionEpoch = now;
+    // A re-run keeps the session's identity (its penalties and its archive slot).
+    s.race.sessionId = a.sessionId || sessionUid(now);
+    for (const d of s.drivers) resetDriverTiming(d, null);
+    s.records = { bestLap: { ms: null, driverId: null, lap: null }, bestSectors: [] };
+    s.feed = [];
+    this.pushFeed('flag', `${s.event.sessionName} · READY`);
+  }
+
+  /**
+   * Go back to an archived session: its type, name and length, its identity (so its
+   * penalties count again), and its timing rebuilt from the record, every lap where it was.
+   * A lap saved without a valid time is placed at the driver's median, so the lap count and
+   * the order stay right even where one time is unknown.
+   */
+  resumeSession(now, rec) {
+    const s = this.state;
+    if (!rec) return;
+    const start = rec.startedAt || now;
+    s.event.sessionType = rec.type;
+    s.event.sessionName = rec.name;
+    s.race.totalLaps = rec.totalLaps || s.race.totalLaps;
+    if (rec.timeLimitSec) s.race.timeLimitSec = rec.timeLimitSec;
+    this.newSession(start);
+    s.race.sessionEpoch = rec.epoch || start;
+    s.race.sessionId = rec.sid || rec.id;
+    s.race.startedAt = rec.startedAt || null;
+    s.race.finishedAt = rec.finished ? (rec.finishedAt || rec.at) : null;
+    s.race.pausedAt = null;
+    const span = (s.race.finishedAt || rec.at) - start;
+    s.race.pausedTotal = rec.durationMs != null ? Math.max(0, span - rec.durationMs) : 0;
+    s.race.status = rec.finished ? 'finished' : 'red';
+    s.race.flagSource = 'operator';
+    s.race.lights = 0;
+    const byId = new Map(rec.results.map((x) => [x.driverId, x]));
+    for (const d of s.drivers) {
+      resetDriverTiming(d, start);
+      const x = byId.get(d.id);
+      if (!x || !rec.startedAt) continue;
+      const laps = Array.isArray(x.lapTimes) ? x.lapTimes : [];
+      const known = laps.filter((ms) => ms > 0).sort((p, q) => p - q);
+      const median = known.length ? known[Math.floor(known.length / 2)] : 60000;
+      let t = start;
+      for (const ms of laps) { t += ms > 0 ? ms : median; d.crossings.push(t); }
+      d.dnf = !!x.dnf;
+      d.retired = !!x.retired;
+      d.pitStops = x.pitStops || 0;
+      d.finished = !!rec.finished && !x.dnf;
+    }
+    s.records = {
+      bestLap: rec.fastest ? { ms: rec.fastest.ms, driverId: rec.fastest.driverId, lap: rec.fastest.lap } : { ms: null, driverId: null, lap: null },
+      bestSectors: []
+    };
+    s.feed = [];
+    this.pushFeed('flag', `${String(rec.name || rec.type).toUpperCase()} · BACK IN SESSION`);
+  }
+
+  /**
+   * Keep the archive a size the hosted event can carry: a season of rounds is many sessions,
+   * and every one rides in the settings blob. The newest keep every lap; older ones keep
+   * their classification, best, last and previous lap and penalties, which is what the
+   * season pages and the championship read.
+   */
+  trimArchive() {
+    const s = this.state;
+    s.sessions = (s.sessions || []).slice(0, 60);
+    s.sessions.forEach((x, i) => {
+      if (i < 18) return;
+      for (const r of x.results || []) if (r.lapTimes) { r.lapCount = r.lapTimes.length; delete r.lapTimes; }
+    });
+  }
+
+  /** The round now running, made on first use from the event's own round name. */
+  ensureRound(now = Date.now()) {
+    const s = this.state;
+    s.season = s.season || { rounds: [], current: null };
+    let round = s.season.rounds.find((x) => x.id === s.season.current);
+    if (!round) {
+      round = {
+        id: `rd${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+        name: s.event.round || `ROUND ${s.season.rounds.length + 1}`,
+        track: s.event.track || '',
+        at: now,
+        closedAt: null
+      };
+      s.season.rounds.push(round);
+      s.season.current = round.id;
+    }
+    return round;
+  }
+
+  /**
+   * Score a round from its finished race: the race's classification for the points, the
+   * fastest-lap bonus from that race, pole from the same round's qualifying, and licence
+   * points from every session of the round. One championship entry per round: finishing
+   * the race again replaces it, so the table never counts a round twice.
+   */
+  scoreRoundFromRace(rec, now) {
+    const s = this.state;
+    const round = (s.season.rounds || []).find((x) => x.id === rec.roundId) || this.ensureRound(now);
+    const inRound = (s.sessions || []).filter((x) => x.finished && x.roundId === round.id);
+    const quali = inRound.find((x) => x.type === 'qualifying');
+    const poleId = quali && quali.results[0] && quali.results[0].bestLap != null ? quali.results[0].driverId : null;
+    const flId = rec.fastest ? rec.fastest.driverId : null;
+    const rows = rec.results.map((r) => ({
+      driverId: r.driverId, name: r.name, num: r.num, color: r.color,
+      position: r.position, dnf: !!r.dnf, retired: !!r.retired,
+      fastestLap: !!flId && r.driverId === flId,
+      pole: !!poleId && r.driverId === poleId
+    }));
+    // Licence points for the whole round: each type's newest finished session, merged.
+    const latest = {};
+    for (const x of inRound) if (!latest[x.type]) latest[x.type] = x;
+    const merged = new Map();
+    for (const x of Object.values(latest)) {
+      for (const e of x.licence || []) {
+        const m = merged.get(e.driverId) || { ...e, points: 0, items: [] };
+        m.points += e.points || 0;
+        m.items = m.items.concat(e.items || []);
+        merged.set(e.driverId, m);
+      }
+    }
+    const lic = s.championship.licence || LICENCE_DEFAULT;
+    const others = s.championship.rounds.filter((c) => c.roundId !== round.id);
+    const bannedBefore = new Set(licenceFrom(others, lic).filter((e) => e.banned).map((e) => e.driverId));
+    const entry = {
+      id: `r${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+      name: round.name,
+      at: rec.at,
+      roundId: round.id,
+      sessionId: rec.id,
+      results: this.scoreRound(rows),
+      licence: [...merged.values()]
+    };
+    const at = s.championship.rounds.findIndex((c) => c.roundId === round.id);
+    if (at > -1) s.championship.rounds[at] = entry; else s.championship.rounds.push(entry);
+    const charged = new Set(entry.licence.flatMap((e) => (e.items || []).map((it) => it.id)).filter(Boolean));
+    for (const p of s.race.penalties || []) if (charged.has(p.id)) p.banked = true;
+    round.closedAt = round.closedAt || now;
+    const win = entry.results.find((x) => x.position === 1 && !x.dnf);
+    this.pushFeed('flag', `${round.name} · POINTS SCORED${win ? ` · ${win.name} +${win.points}` : ''}`);
+    if (lic.on) {
+      for (const e of licenceFrom(s.championship.rounds, lic)) {
+        if (e.banned && !bannedBefore.has(e.driverId)) {
+          this.pushFeed('penalty', `${e.name} · RACE BAN NEXT ROUND (${e.bannedWith} LICENCE POINTS)`, e.driverId);
+        }
+      }
+    }
+  }
+
   /** The chequered flag's consequences, shared by the flag button and session.finish. */
   chequered(now) {
     const s = this.state;
@@ -778,6 +964,7 @@ export class RaceState {
       // replaces this record. epoch is when the session began, for the hosted phones.
       sid: r.sessionId || id,
       epoch: r.sessionEpoch || r.startedAt || null,
+      roundId: this.ensureRound(now).id,
       type: a.sessionType || s.event.sessionType || 'race',
       name: a.name || s.event.sessionName || s.event.sessionType,
       at: now,
@@ -1667,6 +1854,12 @@ export class RaceState {
       case 'event.update': {
         const wasType = s.event.sessionType;
         Object.assign(s.event, a.patch || {});
+        if (a.patch && (a.patch.round != null || a.patch.track != null)) {
+          const round = this.ensureRound(now);
+          if (a.patch.round != null) round.name = String(a.patch.round).slice(0, 40) || round.name;
+          if (a.patch.track != null) round.track = String(a.patch.track).slice(0, 60);
+          for (const c of s.championship.rounds) if (c.roundId === round.id) c.name = round.name;
+        }
         if (a.patch && a.patch.sessionType && a.patch.sessionType !== wasType) {
           this.newSession(now);
           s.race.sessionEpoch = now;
@@ -1815,9 +2008,74 @@ export class RaceState {
         const same = s.sessions.findIndex((x) => x.finished && x.sid && x.sid === rec.sid);
         if (same > -1) s.sessions.splice(same, 1);
         s.sessions.unshift(rec);
-        s.sessions = s.sessions.slice(0, 30);
+        this.trimArchive();
         s.event.programDone = { ...(s.event.programDone || {}), [rec.type]: rec.id };
         this.pushFeed('flag', `${String(rec.name || rec.type).toUpperCase()} FINISHED`);
+        // The race decides the round: its points go into the championship straight away.
+        if (rec.type === 'race' || rec.type === 'endurance') this.scoreRoundFromRace(rec, now);
+        break;
+      }
+
+      /*
+       * Rounds. New: the current round is closed, a fresh one opened on the first session of
+       * the programme with a clean timing screen. Open: back to an earlier round, its finished
+       * sessions marked done again, the timing screen on its first unfinished session (or back
+       * in its race, if every session was finished). Rename: name and track.
+       */
+      case 'round.new': {
+        const cur = this.ensureRound(now);
+        // A round nothing has happened in yet (no finished session, no points) is replaced
+        // rather than left behind as an empty entry.
+        const used = (s.sessions || []).some((x) => x.roundId === cur.id)
+          || s.championship.rounds.some((c) => c.roundId === cur.id);
+        if (used) cur.closedAt = cur.closedAt || now;
+        else s.season.rounds = s.season.rounds.filter((x) => x.id !== cur.id);
+        const n = s.season.rounds.length + 1;
+        const round = {
+          id: `rd${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+          name: String(a.name || `ROUND ${n}`).slice(0, 40),
+          track: String(a.track != null ? a.track : s.event.track || '').slice(0, 60),
+          at: now,
+          closedAt: null
+        };
+        s.season.rounds.push(round);
+        s.season.current = round.id;
+        s.event.round = round.name;
+        s.event.track = round.track;
+        s.event.programDone = {};
+        const prog = s.event.program && s.event.program.length ? s.event.program : ['practice', 'qualifying', 'race'];
+        this.enterSession(now, prog[0], {});
+        this.pushFeed('flag', `${round.name} · ${round.track ? round.track + ' · ' : ''}READY`);
+        break;
+      }
+
+      case 'round.open': {
+        const round = s.season.rounds.find((x) => x.id === a.id);
+        if (!round) break;
+        s.season.current = round.id;
+        s.event.round = round.name;
+        if (round.track) s.event.track = round.track;
+        // Which sessions of this round were finished: the newest record of each type.
+        const done = {};
+        for (const x of [...(s.sessions || [])].reverse()) {
+          if (x.finished && x.roundId === round.id) done[x.type] = x.id;
+        }
+        s.event.programDone = done;
+        const prog = s.event.program && s.event.program.length ? s.event.program : ['practice', 'qualifying', 'race'];
+        const next = prog.find((type) => !done[type]);
+        if (next) this.enterSession(now, next, {});
+        else this.resumeSession(now, (s.sessions || []).find((x) => x.id === done[prog[prog.length - 1]]));
+        break;
+      }
+
+      case 'round.rename': {
+        const round = s.season.rounds.find((x) => x.id === (a.id || s.season.current));
+        if (!round) break;
+        if (a.name != null) round.name = String(a.name).slice(0, 40) || round.name;
+        if (a.track != null) round.track = String(a.track).slice(0, 60);
+        if (round.id === s.season.current) { s.event.round = round.name; s.event.track = round.track; }
+        // The championship entry carries the round's name, so it follows.
+        for (const c of s.championship.rounds) if (c.roundId === round.id) c.name = round.name;
         break;
       }
 
@@ -1830,83 +2088,14 @@ export class RaceState {
         const prog = (s.event.program && s.event.program.length) ? s.event.program : ['practice', 'qualifying', 'race'];
         const cur = s.event.sessionType || 'race';
         const target = a.sessionType || prog[Math.min(prog.length - 1, prog.indexOf(cur) + 1)] || cur;
-        const LABEL = { practice: 'PRACTICE', qualifying: 'QUALIFYING', race: 'RACE', endurance: 'ENDURANCE', drift: 'DRIFT' };
-        s.event.sessionType = target;
-        s.event.sessionName = a.name || LABEL[target] || String(target).toUpperCase();
-        if (['practice', 'qualifying', 'endurance'].includes(target) && !(s.race.timeLimitSec > 0)) {
-          s.race.timeLimitSec = target === 'endurance' ? 3600 : 900;
-        }
-        if (target === 'qualifying' && s.race.knockout) Object.assign(s.race.knockout, { part: 1, out: {}, done: false });
-        s.race.startedAt = null;
-        s.race.finishedAt = null;
-        s.race.pausedAt = null;
-        s.race.pausedTotal = 0;
-        s.race.lights = 0;
-        s.race.status = 'idle';
-        s.race.flagSource = 'auto';
-        s.race.clearSince = null;
-        s.messages = {};
-        s.appeals = [];
-        this.newSession(now);
-        s.race.sessionEpoch = now;
-        // A re-run keeps the session's identity (its penalties and its archive slot).
-        s.race.sessionId = a.sessionId || sessionUid(now);
-        for (const d of s.drivers) resetDriverTiming(d, null);
-        s.records = { bestLap: { ms: null, driverId: null, lap: null }, bestSectors: [] };
-        s.feed = [];
-        this.pushFeed('flag', `${s.event.sessionName} · READY`);
+        this.enterSession(now, target, a);
         break;
       }
 
-      /*
-       * Go back to an archived session: its type, name and length, its identity (so its
-       * penalties count again), and its timing rebuilt from the record, every lap where it
-       * was. The operator can correct it and finish it again, which replaces the record.
-       * A lap saved without a valid time is placed at the driver's median, so the lap count
-       * and the order stay right even where one time is unknown.
-       */
-      case 'session.resume': {
-        const rec = (s.sessions || []).find((x) => x.id === a.id);
-        if (!rec) break;
-        const start = rec.startedAt || now;
-        s.event.sessionType = rec.type;
-        s.event.sessionName = rec.name;
-        s.race.totalLaps = rec.totalLaps || s.race.totalLaps;
-        if (rec.timeLimitSec) s.race.timeLimitSec = rec.timeLimitSec;
-        this.newSession(start);
-        s.race.sessionEpoch = rec.epoch || start;
-        s.race.sessionId = rec.sid || rec.id;
-        s.race.startedAt = rec.startedAt || null;
-        s.race.finishedAt = rec.finished ? (rec.finishedAt || rec.at) : null;
-        s.race.pausedAt = null;
-        const span = (s.race.finishedAt || rec.at) - start;
-        s.race.pausedTotal = rec.durationMs != null ? Math.max(0, span - rec.durationMs) : 0;
-        s.race.status = rec.finished ? 'finished' : 'red';
-        s.race.flagSource = 'operator';
-        s.race.lights = 0;
-        const byId = new Map(rec.results.map((x) => [x.driverId, x]));
-        for (const d of s.drivers) {
-          resetDriverTiming(d, start);
-          const x = byId.get(d.id);
-          if (!x || !rec.startedAt) continue;
-          const laps = Array.isArray(x.lapTimes) ? x.lapTimes : [];
-          const known = laps.filter((ms) => ms > 0).sort((p, q) => p - q);
-          const median = known.length ? known[Math.floor(known.length / 2)] : 60000;
-          let t = start;
-          for (const ms of laps) { t += ms > 0 ? ms : median; d.crossings.push(t); }
-          d.dnf = !!x.dnf;
-          d.retired = !!x.retired;
-          d.pitStops = x.pitStops || 0;
-          d.finished = !!rec.finished && !x.dnf;
-        }
-        s.records = {
-          bestLap: rec.fastest ? { ms: rec.fastest.ms, driverId: rec.fastest.driverId, lap: rec.fastest.lap } : { ms: null, driverId: null, lap: null },
-          bestSectors: []
-        };
-        s.feed = [];
-        this.pushFeed('flag', `${String(rec.name || rec.type).toUpperCase()} · BACK IN SESSION`);
+      case 'session.resume':
+        // Go back to an archived session (see resumeSession).
+        this.resumeSession(now, (s.sessions || []).find((x) => x.id === a.id));
         break;
-      }
 
       case 'session.programReset':
         // A new race night: the steps go back to unfinished. The archive is untouched.
@@ -2932,7 +3121,7 @@ export class RaceState {
          * what happened in it, and a deleted driver would tear a hole in the results.
          */
         s.sessions.unshift(this.archiveSession(now, false, a));
-        s.sessions = s.sessions.slice(0, 30);
+        this.trimArchive();
         this.pushFeed('flag', `${(a.name || s.event.sessionName || 'SESSION').toUpperCase()} CLASSIFIED`);
         break;
       }

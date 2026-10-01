@@ -664,6 +664,19 @@
     'Enter qualifying scores, then press Build bracket.':
       'Isi skor kualifikasi, lalu tekan Susun bracket.',
     'Flag held manually': 'Bendera dipegang manual',
+    'of': 'dari',
+    'Rounds: switch to another round or start a new one': 'Ronde: pindah ke ronde lain atau mulai ronde baru',
+    'Points scored': 'Poin sudah dihitung',
+    'won': 'menang',
+    'In progress': 'Sedang berjalan',
+    'Not started': 'Belum dimulai',
+    'No rounds yet. The first one starts with your first session.': 'Belum ada ronde. Ronde pertama dimulai bersama sesi pertamamu.',
+    'Round name': 'Nama ronde',
+    'New round': 'Ronde baru',
+    'Switch to this round? Its finished sessions are kept, and the timing screen goes to the first session it has not finished.':
+      'Pindah ke ronde ini? Sesi yang sudah selesai tetap tersimpan, dan layar timing pindah ke sesi pertama yang belum selesai.',
+    'Start a new round? The current one is kept with all its sessions and points, and the timing screen starts at the first session.':
+      'Mulai ronde baru? Ronde saat ini tetap tersimpan lengkap dengan sesi dan poinnya, dan layar timing mulai dari sesi pertama.',
     'View results': 'Lihat hasil',
     'Reset this session': 'Reset sesi ini',
     'Return to this session': 'Kembali ke sesi ini',

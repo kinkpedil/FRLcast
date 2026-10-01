@@ -874,3 +874,27 @@ input.dfscore { width: 84px; height: 30px; }
 .stepmenu button:hover { background: var(--bg-3); }
 .stepmenu button.warn { color: #ff8a80; }
 .stepmenu .smhead { padding: 6px 10px 8px; font-size: 11px; color: var(--ink-mute); border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+
+/* ---------- rounds: one event code, a season of race nights ---------- */
+
+.roundchip { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px 0 12px; border-radius: 7px;
+             border: 1px solid var(--line-2); background: var(--bg-3); color: var(--ink); font: 600 12px var(--sans);
+             cursor: pointer; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.roundchip:hover { border-color: rgba(255,255,255,.28); }
+.roundchip small { font-weight: 500; color: var(--ink-mute); }
+.roundchip::after { content: ''; width: 5px; height: 5px; border-right: 1.5px solid var(--ink-mute); border-bottom: 1.5px solid var(--ink-mute); transform: rotate(45deg) translateY(-2px); }
+.roundmenu { min-width: 320px; max-height: 70vh; overflow: auto; }
+.roundmenu .rrow { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 6px;
+                   background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.roundmenu .rrow:hover { background: var(--bg-3); }
+.roundmenu .rrow.cur { background: rgba(0,224,164,.08); }
+.roundmenu .rrow b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.roundmenu .rrow small { grid-column: 1 / -1; font-size: 11px; color: var(--ink-mute); }
+.roundmenu .rdots { display: inline-flex; gap: 3px; align-items: center; font: 600 10px var(--mono); color: var(--ink-mute); }
+.roundmenu .rdots i { font-style: normal; width: 16px; height: 16px; border-radius: 4px; display: grid; place-items: center; background: var(--bg-3); }
+.roundmenu .rdots i.ok { background: rgba(0,224,164,.18); color: var(--accent); }
+.roundmenu .newround { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; padding: 8px 6px 4px; border-top: 1px solid var(--line); margin-top: 4px; }
+.roundmenu .newround input { height: 30px; font-size: 12px; }
+
+/* A button hidden by the script stays hidden: .btn sets a display that would beat [hidden]. */
+.btn[hidden] { display: none; }
