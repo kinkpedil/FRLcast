@@ -67,6 +67,10 @@ function settingsOf(state) {
     program: state.event.program || null,
     programDone: state.event.programDone || {},
     sessionEpoch: state.race.sessionEpoch || null,
+    sessionId: state.race.sessionId || null,
+    // Which session each penalty was issued in: the penalties table has no column for it.
+    penaltySessions: Object.fromEntries((state.race.penalties || [])
+      .filter((p) => p.session).map((p) => [p.id, p.session])),
     commentary: state.commentary,
     grid: state.race.grid,
     rules: state.race.rules,

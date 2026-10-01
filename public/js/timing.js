@@ -97,6 +97,9 @@ export function labelGaps(ranked, { drift = false, quali = false } = {}) {
  * which is how it always worked.
  */
 export function inSession(p, race) {
+  // A penalty issued in a known session belongs to that session, wherever the operator has
+  // gone since (going back to an earlier session brings its decisions back with it).
+  if (race && race.sessionId && p && p.session) return p.session === race.sessionId;
   const from = race && race.sessionEpoch;
   return !from || (Number(p && p.at) || 0) >= from;
 }

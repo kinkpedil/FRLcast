@@ -4713,13 +4713,7 @@ function renderProgram() {
           <i></i>${esc(sessLabel(type))}${state1 ? ` <small>${esc(state1)}</small>` : ''}</button>`;
     }).join('');
     $$('#sessSteps [data-step]').forEach((b) => {
-      b.onclick = () => {
-        const type = b.dataset.step;
-        if (type === (state.event.sessionType || 'race')) return;
-        const rec = (state.event.programDone || {})[type];
-        if (rec && (state.sessions || []).some((x) => x.id === rec)) return openSession(rec);
-        switchSession(type);
-      };
+      b.onclick = (e) => { e.stopPropagation(); stepMenu(b, b.dataset.step); };
     });
   }
   // Start names the session it starts.
@@ -4857,3 +4851,73 @@ $('#smCsv').onclick = () => {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 };
+
+// ---------------------------------------------------------------- what a step can do
+
+/**
+ * The menu a session step opens. A finished session can be looked at, returned to (its
+ * timing rebuilt from the record, to correct and finish again) or run again from zero; the
+ * session running now can be reset; one still to come can be switched to.
+ */
+function stepMenu(btn, type) {
+  closeStepMenu();
+  const ev = state.event;
+  const cur = ev.sessionType || 'race';
+  const recId = (ev.programDone || {})[type];
+  const rec = recId ? (state.sessions || []).find((x) => x.id === recId) : null;
+  const items = [];
+  if (rec) items.push(['view', t('View results')]);
+  if (type === cur) items.push(['reset', t('Reset this session'), 'warn']);
+  else if (rec) items.push(['resume', t('Return to this session')], ['restart', t('Restart this session')]);
+  else items.push(['switch', t('Switch to this session')]);
+
+  const menu = document.createElement('div');
+  menu.className = 'stepmenu';
+  menu.id = 'stepMenu';
+  menu.innerHTML = `<div class="smhead">${esc(sessLabel(type))}${rec ? ' · ' + esc(t('finished')) : ''}</div>` +
+    items.map(([k, label, cls]) => `<button data-k="${k}" class="${cls || ''}">${esc(label)}</button>`).join('');
+  document.body.appendChild(menu);
+  const r = btn.getBoundingClientRect();
+  menu.style.left = Math.min(r.left, window.innerWidth - menu.offsetWidth - 12) + 'px';
+  menu.style.top = (r.bottom + 6) + 'px';
+  menu.onclick = (e) => {
+    const k = e.target.closest('[data-k]') && e.target.closest('[data-k]').dataset.k;
+    if (!k) return;
+    closeStepMenu();
+    if (k === 'view') openSession(rec.id);
+    else if (k === 'reset') {
+      if (confirm(t('Reset the session? All lap times for this session are cleared.'))) bus.action('race.reset');
+    }
+    else if (k === 'resume') resumeSession(rec);
+    else if (k === 'restart') restartSession(rec);
+    else if (k === 'switch') switchSession(type);
+  };
+}
+function closeStepMenu() { const m = $('#stepMenu'); if (m) m.remove(); }
+document.addEventListener('click', (e) => { if (!e.target.closest('#stepMenu')) closeStepMenu(); });
+window.addEventListener('scroll', closeStepMenu, { passive: true });
+
+/** True when leaving now would lose a session that was started and never finished. */
+function unsavedRun() {
+  const r = state.race;
+  return !!r.startedAt && r.status !== 'finished';
+}
+
+function resumeSession(rec) {
+  const warn = unsavedRun() ? t('The current session has not been finished, so it will not be saved.') + ' ' : '';
+  if (!confirm(`${rec.name}: ${warn}${t('Go back to this session? Its timing comes back from the record so you can correct it, carry on, or finish it again (which replaces the saved result).')}`)) return;
+  bus.action('session.resume', { id: rec.id });
+  closeSession();
+  toast(t('Back in') + ' ' + rec.name);
+}
+
+function restartSession(rec) {
+  const warn = unsavedRun() ? t('The current session has not been finished, so it will not be saved.') + ' ' : '';
+  if (!confirm(`${rec.name}: ${warn}${t('Run this session again from zero? The saved result stays until you finish the new run, which replaces it.')}`)) return;
+  bus.action('session.next', { sessionType: rec.type, sessionId: rec.sid || rec.id, name: rec.name });
+  closeSession();
+  toast(rec.name);
+}
+
+$('#smResume').onclick = () => { if (viewing) resumeSession(viewing); };
+$('#smRestart').onclick = () => { if (viewing) restartSession(viewing); };

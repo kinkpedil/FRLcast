@@ -771,8 +771,13 @@ export class RaceState {
         retired: !!d.retired
       };
     });
+    const id = `s${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`;
     return {
-      id: `s${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+      id,
+      // Which session this is: the same across a re-run or a return, so finishing it again
+      // replaces this record. epoch is when the session began, for the hosted phones.
+      sid: r.sessionId || id,
+      epoch: r.sessionEpoch || r.startedAt || null,
       type: a.sessionType || s.event.sessionType || 'race',
       name: a.name || s.event.sessionName || s.event.sessionType,
       at: now,
@@ -1665,6 +1670,7 @@ export class RaceState {
         if (a.patch && a.patch.sessionType && a.patch.sessionType !== wasType) {
           this.newSession(now);
           s.race.sessionEpoch = now;
+          s.race.sessionId = sessionUid(now);
           if (a.patch.sessionType === 'qualifying' && s.race.knockout) {
             Object.assign(s.race.knockout, { part: 1, out: {}, done: false });
           }
@@ -1804,6 +1810,10 @@ export class RaceState {
         // The positions the record keeps are the ones on screen now.
         this.recompute();
         const rec = this.archiveSession(now, true);
+        // Finishing a session again (after going back to it, or re-running it) replaces its
+        // earlier record rather than leaving two versions of the same session.
+        const same = s.sessions.findIndex((x) => x.finished && x.sid && x.sid === rec.sid);
+        if (same > -1) s.sessions.splice(same, 1);
         s.sessions.unshift(rec);
         s.sessions = s.sessions.slice(0, 30);
         s.event.programDone = { ...(s.event.programDone || {}), [rec.type]: rec.id };
@@ -1839,10 +1849,62 @@ export class RaceState {
         s.appeals = [];
         this.newSession(now);
         s.race.sessionEpoch = now;
+        // A re-run keeps the session's identity (its penalties and its archive slot).
+        s.race.sessionId = a.sessionId || sessionUid(now);
         for (const d of s.drivers) resetDriverTiming(d, null);
         s.records = { bestLap: { ms: null, driverId: null, lap: null }, bestSectors: [] };
         s.feed = [];
         this.pushFeed('flag', `${s.event.sessionName} · READY`);
+        break;
+      }
+
+      /*
+       * Go back to an archived session: its type, name and length, its identity (so its
+       * penalties count again), and its timing rebuilt from the record, every lap where it
+       * was. The operator can correct it and finish it again, which replaces the record.
+       * A lap saved without a valid time is placed at the driver's median, so the lap count
+       * and the order stay right even where one time is unknown.
+       */
+      case 'session.resume': {
+        const rec = (s.sessions || []).find((x) => x.id === a.id);
+        if (!rec) break;
+        const start = rec.startedAt || now;
+        s.event.sessionType = rec.type;
+        s.event.sessionName = rec.name;
+        s.race.totalLaps = rec.totalLaps || s.race.totalLaps;
+        if (rec.timeLimitSec) s.race.timeLimitSec = rec.timeLimitSec;
+        this.newSession(start);
+        s.race.sessionEpoch = rec.epoch || start;
+        s.race.sessionId = rec.sid || rec.id;
+        s.race.startedAt = rec.startedAt || null;
+        s.race.finishedAt = rec.finished ? (rec.finishedAt || rec.at) : null;
+        s.race.pausedAt = null;
+        const span = (s.race.finishedAt || rec.at) - start;
+        s.race.pausedTotal = rec.durationMs != null ? Math.max(0, span - rec.durationMs) : 0;
+        s.race.status = rec.finished ? 'finished' : 'red';
+        s.race.flagSource = 'operator';
+        s.race.lights = 0;
+        const byId = new Map(rec.results.map((x) => [x.driverId, x]));
+        for (const d of s.drivers) {
+          resetDriverTiming(d, start);
+          const x = byId.get(d.id);
+          if (!x || !rec.startedAt) continue;
+          const laps = Array.isArray(x.lapTimes) ? x.lapTimes : [];
+          const known = laps.filter((ms) => ms > 0).sort((p, q) => p - q);
+          const median = known.length ? known[Math.floor(known.length / 2)] : 60000;
+          let t = start;
+          for (const ms of laps) { t += ms > 0 ? ms : median; d.crossings.push(t); }
+          d.dnf = !!x.dnf;
+          d.retired = !!x.retired;
+          d.pitStops = x.pitStops || 0;
+          d.finished = !!rec.finished && !x.dnf;
+        }
+        s.records = {
+          bestLap: rec.fastest ? { ms: rec.fastest.ms, driverId: rec.fastest.driverId, lap: rec.fastest.lap } : { ms: null, driverId: null, lap: null },
+          bestSectors: []
+        };
+        s.feed = [];
+        this.pushFeed('flag', `${String(rec.name || rec.type).toUpperCase()} · BACK IN SESSION`);
         break;
       }
 
@@ -2708,6 +2770,8 @@ export class RaceState {
           lap: d.lapsDone,
           status,
           auto,
+          // The session it was issued in (see inSession in timing.js).
+          session: s.race.sessionId || null,
           // Licence points: the steward's own figure, or null to use the league's table.
           points: a.points != null && a.points !== '' && Number.isFinite(Number(a.points))
             ? Math.max(0, Math.round(Number(a.points))) : null
@@ -3029,6 +3093,11 @@ function reindexLines(lines) {
     .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
     .map((l, i) => ({ ...l, index: i + 1, name: l.name || `Sector ${i + 1}` }));
   return [...finish.map((l) => ({ ...l, index: 0, name: l.name || 'Finish line' })), ...sectors];
+}
+
+/** An id for one session of the night (kept by its penalties and its archived record). */
+function sessionUid(now) {
+  return `q${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
 
 function resetDriverTiming(d, startedAt) {

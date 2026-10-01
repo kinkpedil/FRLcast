@@ -664,6 +664,18 @@
     'Enter qualifying scores, then press Build bracket.':
       'Isi skor kualifikasi, lalu tekan Susun bracket.',
     'Flag held manually': 'Bendera dipegang manual',
+    'View results': 'Lihat hasil',
+    'Reset this session': 'Reset sesi ini',
+    'Return to this session': 'Kembali ke sesi ini',
+    'Restart this session': 'Ulangi sesi ini',
+    'Switch to this session': 'Pindah ke sesi ini',
+    'The current session has not been finished, so it will not be saved.': 'Sesi saat ini belum diselesaikan, jadi tidak akan tersimpan.',
+    'Go back to this session? Its timing comes back from the record so you can correct it, carry on, or finish it again (which replaces the saved result).':
+      'Kembali ke sesi ini? Timing-nya dipulihkan dari rekaman, jadi bisa kamu koreksi, lanjutkan, atau selesaikan lagi (yang akan mengganti hasil tersimpan).',
+    'Run this session again from zero? The saved result stays until you finish the new run, which replaces it.':
+      'Ulangi sesi ini dari nol? Hasil tersimpan tetap ada sampai putaran baru diselesaikan, lalu digantikan.',
+    'Back in': 'Kembali ke',
+    'Reset the session? All lap times for this session are cleared.': 'Reset sesi? Semua waktu lap sesi ini dihapus.',
     'Finish session': 'Selesaikan sesi',
     'Next session': 'Sesi berikutnya',
     'Next': 'Berikutnya',

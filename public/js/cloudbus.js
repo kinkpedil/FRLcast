@@ -265,8 +265,11 @@ export class CloudBus {
 
     // Only this session's decisions move the timing (see inSession in timing.js).
     const epoch = Number(settings.sessionEpoch) || null;
+    const psess = settings.penaltySessions || {};
+    const sessRace = { sessionEpoch: epoch, sessionId: settings.sessionId || null };
     const drivers = [...this.drivers.values()].map((d) => {
-      const mine = pens.filter((p) => p.driver_id === d.id && inSession({ at: new Date(p.created_at).getTime() }, { sessionEpoch: epoch }));
+      const mine = pens.filter((p) => p.driver_id === d.id
+        && inSession({ at: new Date(p.created_at).getTime(), session: psess[p.id] }, sessRace));
       return {
         id: d.id,
         num: d.num,
@@ -341,14 +344,15 @@ export class CloudBus {
         penalties: pens.map((p) => ({
           id: p.id, driverId: p.driver_id, type: p.type, seconds: p.seconds,
           reason: p.reason, lap: p.lap, status: p.status, served: p.served,
-          auto: p.auto, at: ms(p.created_at)
+          auto: p.auto, at: ms(p.created_at), session: psess[p.id] || null
         })),
         // Settings the console keeps as one blob rather than as columns nothing queries.
         grid: settings.grid || [],
         rules: settings.rules || {},
         flags: settings.flags || {},
         lapChart: settings.lapChart || {},
-        sessionEpoch: Number(settings.sessionEpoch) || null
+        sessionEpoch: Number(settings.sessionEpoch) || null,
+        sessionId: settings.sessionId || null
       },
       drivers,
       feed: this.feed.map((f) => ({

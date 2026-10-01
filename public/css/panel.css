@@ -866,3 +866,11 @@ input.dfscore { width: 84px; height: 30px; }
 .lapcell.best { border-color: #b026ff; color: #e6bbff; }
 .lapcell.none { color: var(--ink-mute); }
 .sec-title { margin: 18px 0 8px; font-size: 13px; font-weight: 600; }
+
+.stepmenu { position: fixed; z-index: 70; min-width: 220px; padding: 6px; border-radius: 10px;
+            background: var(--bg-2); border: 1px solid var(--line-2); box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+.stepmenu button { display: flex; width: 100%; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border: 0; border-radius: 6px;
+                   background: transparent; color: var(--ink); font: 500 13px var(--sans); text-align: left; cursor: pointer; }
+.stepmenu button:hover { background: var(--bg-3); }
+.stepmenu button.warn { color: #ff8a80; }
+.stepmenu .smhead { padding: 6px 10px 8px; font-size: 11px; color: var(--ink-mute); border-bottom: 1px solid var(--line); margin-bottom: 4px; }
