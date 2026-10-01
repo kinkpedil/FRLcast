@@ -664,6 +664,9 @@
     'Enter qualifying scores, then press Build bracket.':
       'Isi skor kualifikasi, lalu tekan Susun bracket.',
     'Flag held manually': 'Bendera dipegang manual',
+    'Race control (steward decisions)': 'Race control (keputusan steward)',
+    'Show this decision on the broadcast again': 'Tayangkan keputusan ini lagi di siaran',
+    'On air': 'Tayangkan',
     'Licence points': 'Poin lisensi',
     'On': 'Aktif',
     "Every decided penalty also costs points on the driver's licence. Reaching the limit when a round is banked earns a race ban for the next round, and the licence starts again from zero. Open investigations and dropped penalties never count.":

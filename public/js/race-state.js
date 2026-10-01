@@ -164,7 +164,10 @@ function defaultState() {
         rivalry: false,
         podium: false,
         reactions: false,
-        ticker: false
+        ticker: false,
+        // On unless a scene turns it off, so an event that already has its scenes saved
+        // gets the steward banner too: a decision is always worth putting on air.
+        racecontrol: true
       },
       /*
        * Which two cars the head-to-head compares.
@@ -516,9 +519,11 @@ function makeDriver(partial, index) {
  */
 function defaultScenes() {
   const keys = Object.keys(defaultState().overlay.show);
+  // The race-control banner rides along in every scene where cars are on track.
+  const TRACK = new Set(['practice', 'qualifying', 'race', 'battles', 'drift', 'grid']);
   const show = (...on) => { const s = {}; for (const k of keys) s[k] = on.includes(k); return s; };
   const L = (m) => m;   // just readability
-  return [
+  const scenes = [
     { id: 'preshow', name: 'Pre-show', show: show('status', 'countdown', 'sponsor', 'qr', 'intro', 'rivalry'),
       layout: L({ countdown: { x: 810, y: 360, scale: 1 }, intro: { x: 48, y: 858, scale: 1 },
                   sponsor: { x: 770, y: 1002, scale: 1 }, qr: { x: 1648, y: 812, scale: 1 },
@@ -550,6 +555,8 @@ function defaultScenes() {
     { id: 'podium', name: 'Podium', show: show('status', 'podium', 'sponsor'),
       layout: L({ podium: { x: 480, y: 250, scale: 1 }, sponsor: { x: 770, y: 1010, scale: 1 } }) }
   ];
+  for (const sc of scenes) sc.show.racecontrol = TRACK.has(sc.id);
+  return scenes;
 }
 
 // Actions too frequent or too cosmetic to be worth an undo snapshot: they would bury the
@@ -2564,6 +2571,17 @@ export class RaceState {
         this.pushFeed('penalty', status === 'investigating'
           ? `${d.name} · UNDER INVESTIGATION: ${p.reason}`
           : `${d.name} · ${this.penaltyText(p)}`, d.id);
+        break;
+      }
+
+      case 'penalty.announce': {
+        // Put a decision back on air: the race-control banner and the ticker read the feed.
+        const p = (s.race.penalties || []).find((x) => x.id === a.id);
+        const d = p && this.driver(p.driverId);
+        if (!p || !d || p.status === 'dropped') break;
+        this.pushFeed('penalty', p.status === 'investigating'
+          ? `${d.name} · UNDER INVESTIGATION: ${p.reason}`
+          : `${d.name} · ${p.served ? 'PENALTY SERVED' : this.penaltyText(p)}`, d.id);
         break;
       }
 

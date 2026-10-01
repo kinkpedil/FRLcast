@@ -1871,6 +1871,7 @@ function renderRaceControl() {
             // added to the result, there is nothing for anyone to carry out.
             ? `<button class="btn" data-serve="${p.id}">Served</button>`
             : `<span class="pstatus">${p.status === 'applied' ? (p.served ? 'served' : 'applied') : 'no action'}</span>`}
+        ${p.status !== 'dropped' ? `<button class="btn ghost" data-onair="${p.id}" title="${t('Show this decision on the broadcast again')}">${t('On air')}</button>` : ''}
         <button class="btn ghost" data-del="${p.id}">✕</button>
       </span>
     </div>`).join('') + '</div>'
@@ -1879,6 +1880,9 @@ function renderRaceControl() {
   $$('#penList [data-apply]').forEach((b) => { b.onclick = () => bus.action('penalty.resolve', { id: b.dataset.apply }); });
   $$('#penList [data-drop]').forEach((b) => { b.onclick = () => bus.action('penalty.resolve', { id: b.dataset.drop, drop: true }); });
   $$('#penList [data-serve]').forEach((b) => { b.onclick = () => bus.action('penalty.serve', { id: b.dataset.serve }); });
+  $$('#penList [data-onair]').forEach((b) => {
+    b.onclick = () => { bus.action('penalty.announce', { id: b.dataset.onair }); toast(t('On air')); };
+  });
   $$('#penList [data-del]').forEach((b) => {
     b.onclick = () => { if (confirm('Delete this record entirely?')) bus.action('penalty.remove', { id: b.dataset.del }); };
   });
@@ -2129,7 +2133,8 @@ const WIDGET_LABELS = {
   lowerThird: 'Lower third', gap: 'Gap bar', results: 'Results',
   trackmap: 'Track map', battle: 'Tandem battle', bracket: 'Bracket',
   grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings',
-  pit: 'Pit lane', lights: 'Start lights', catching: 'Catching', rivalry: 'Rivalry', podium: 'Podium', reactions: 'Crowd reactions'
+  pit: 'Pit lane', lights: 'Start lights', catching: 'Catching', rivalry: 'Rivalry', podium: 'Podium', reactions: 'Crowd reactions',
+  racecontrol: 'Race control'
 };
 
 function renderScenes() {
@@ -3603,7 +3608,8 @@ const LAYOUT_LABELS = {
   lowerthird: 'Lower third', gap: 'Gap bar', results: 'Results',
   trackmap: 'Track map', battle: 'Tandem battle', bracket: 'Bracket',
   grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings', ticker: 'Ticker', fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta / time attack', radio: 'Team radio', poll: 'Audience poll', sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code',
-  pit: 'Pit lane', lights: 'Start lights', catching: 'Catching', rivalry: 'Rivalry', podium: 'Podium', reactions: 'Crowd reactions'
+  pit: 'Pit lane', lights: 'Start lights', catching: 'Catching', rivalry: 'Rivalry', podium: 'Podium', reactions: 'Crowd reactions',
+  racecontrol: 'Race control'
 };
 
 // Force every overlay to redraw the current layout. Changes already reach OBS live; this

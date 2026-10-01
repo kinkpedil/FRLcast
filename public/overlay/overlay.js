@@ -41,7 +41,7 @@ if (params.get('motion') === 'full') document.documentElement.classList.add('mot
 const editing = params.get('edit') === '1';
 if (editing) document.documentElement.classList.add('edit');
 
-const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr', 'pit', 'lights', 'catching', 'rivalry', 'podium', 'reactions'];
+const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr', 'pit', 'lights', 'catching', 'rivalry', 'podium', 'reactions', 'racecontrol'];
 const LABELS = {
   status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower',
   lowerthird: 'Lower third', gap: 'Gap bar', results: 'Results',
@@ -50,7 +50,8 @@ const LABELS = {
   fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta / time attack', radio: 'Team radio', poll: 'Audience poll',
   sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code',
   pit: 'Pit lane', lights: 'Start lights', catching: 'Catching',
-  rivalry: 'Rivalry', podium: 'Podium celebration', reactions: 'Crowd reactions'
+  rivalry: 'Rivalry', podium: 'Podium celebration', reactions: 'Crowd reactions',
+  racecontrol: 'Race control'
 };
 const STAGE_W = 1920;
 const STAGE_H = 1080;
@@ -213,6 +214,17 @@ function build() {
           <div class="fl-tag">FASTEST LAP</div>
           <div class="fl-name" id="flName">--</div>
           <div class="fl-time" id="flTime">--</div>
+        </div>
+      </div>`,
+    racecontrol: `
+      <div class="widget" id="racecontrol">
+        <div class="card rc-card">
+          <div class="rc-tag"><i></i>RACE CONTROL</div>
+          <div class="rc-main">
+            <div class="rc-who"><span class="rc-num" id="rcNum"></span><span class="rc-name" id="rcName"></span></div>
+            <div class="rc-what" id="rcWhat"></div>
+            <div class="rc-why" id="rcWhy"></div>
+          </div>
         </div>
       </div>`,
     sectors: `
@@ -1345,6 +1357,67 @@ function updateSkinHeader() {
   }
 }
 
+/*
+ * The race-control banner: every steward decision goes on air for a few seconds.
+ *
+ * It reads the event feed rather than the penalty list, because the feed is what records
+ * the moment a decision was made (issued, upheld, dropped, served, a licence ban) and it
+ * reaches a hosted overlay the same way it reaches a local one, with no new column.
+ *
+ * The hold is timed from when this overlay first saw the entry, not from the entry's own
+ * stamp: the stamp is the server's clock and the streaming PC's clock can be a few seconds
+ * off, which would cut the banner short or hold it too long. An entry older than a minute
+ * when first seen (an OBS source reloaded mid-race) is history, and is not replayed.
+ */
+const RC_HOLD_MS = 9000;
+const rcSeen = new Map();      // feed key -> local time first seen
+let rcTimer = null;
+
+function rcCurrent() {
+  const now = Date.now();
+  for (const f of (state.feed || []).slice(0, 12)) {
+    if (f.kind !== 'penalty' || !f.text) continue;
+    const key = `${f.t}|${f.text}`;
+    if (!rcSeen.has(key)) rcSeen.set(key, Math.abs(now - (f.t || 0)) < 60000 ? now : 0);
+    const seen = rcSeen.get(key);
+    // The newest penalty entry decides: an older one never comes back over a newer one.
+    return seen && now - seen < RC_HOLD_MS ? { f, left: RC_HOLD_MS - (now - seen) } : null;
+  }
+  return null;
+}
+
+function renderRaceControl() {
+  const box = document.getElementById('racecontrol');
+  if (!box) return;
+  const on = state.overlay.show.racecontrol !== false;
+  let cur = on ? rcCurrent() : null;
+  // In the layout editor (and a rehearsal) the banner shows a sample so it can be placed.
+  if (!cur && on && (forced || editing)) {
+    const d = (state.drivers || [])[0] || { name: 'DRIVER', num: '1', id: '' };
+    cur = { f: { text: `${d.name} · +5s PENALTY: Track limits`, driverId: d.id }, left: 0 };
+  }
+  show('racecontrol', !!cur);
+  clearTimeout(rcTimer);
+  if (!cur) return;
+  if (cur.left > 0) rcTimer = setTimeout(renderRaceControl, cur.left + 50);
+
+  const d = (state.drivers || []).find((x) => x.id === cur.f.driverId) || null;
+  const text = String(cur.f.text);
+  const cut = text.indexOf(' · ');
+  const rest = cut > -1 ? text.slice(cut + 3) : text;
+  const colon = rest.indexOf(': ');
+  const what = colon > -1 ? rest.slice(0, colon) : rest;
+  const why = colon > -1 ? rest.slice(colon + 2) : '';
+  const tone = /INVESTIGATION/.test(what) ? 'inv' : /NO FURTHER ACTION|SERVED/.test(what) ? 'ok' : 'pen';
+  box.dataset.tone = tone;
+  box.style.setProperty('--c', (d && d.color) || '#ff453a');
+  setText(document.getElementById('rcNum'), d ? String(d.num) : '', null);
+  setText(document.getElementById('rcName'), d ? rowName(d) : (cut > -1 ? text.slice(0, cut) : ''), null);
+  setText(document.getElementById('rcWhat'), what, null);
+  setText(document.getElementById('rcWhy'), why, null);
+  document.getElementById('rcWhy').hidden = !why;
+}
+
 /** The fastest-lap banner: whoever holds the best lap, in their team colour. */
 function renderFastLap() {
   const fl = fastestLap(state);
@@ -1965,6 +2038,7 @@ function renderInner() {
   show('ticker', vis.ticker && tickerItems().length > 0);
   show('fastlap', vis.fastlap);
   if (shown.fastlap) renderFastLap();
+  renderRaceControl();
   show('sectors', vis.sectors);
   if (shown.sectors) renderSectors(rows);
   show('delta', vis.delta);
