@@ -181,6 +181,15 @@ function render(s) {
   const lic = s.me && s.me.licence;
   if (lic && lic.banned) mine.push(['black', 'RACE BAN THIS ROUND (licence points)']);
   else if (lic && (lic.points || lic.pending)) mine.push(['inv', `LICENCE ${lic.points}${lic.pending ? ' + ' + lic.pending : ''} / ${lic.threshold} PTS`]);
+  // A drift event: on track (and whether leading or chasing), up next, the battle result.
+  const dr = s.me && s.me.drift;
+  if (dr) {
+    if (dr.onTrack === 'battle' && dr.battle) mine.push(['blue', `RUN ${dr.battle.run}: YOU ${dr.battle.role === 'lead' ? 'LEAD' : 'CHASE'} vs ${dr.battle.opponent}`]);
+    else if (dr.onTrack === 'solo') mine.push(['blue', 'YOUR QUALIFYING RUN']);
+    else if (dr.upNext) mine.push(['inv', `UP NEXT: ${dr.upNext.round} vs ${dr.upNext.opponent}`]);
+    if (dr.battle && dr.battle.result) mine.push([dr.battle.result === 'won' ? 'pen' : 'black', dr.battle.result === 'won' ? `YOU BEAT ${dr.battle.opponent}` : `OUT: ${dr.battle.opponent} WON`]);
+    if (dr.qualiRank) mine.push(['inv', `QUALIFYING P${dr.qualiRank} · ${dr.qualiBest}`]);
+  }
   const box = $('#mine');
   const sig = mine.map((m) => m.join()).join('|');
   if (box.dataset.sig !== sig) {

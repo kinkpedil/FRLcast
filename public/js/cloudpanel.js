@@ -84,6 +84,10 @@ export class CloudPanelBus {
       await this.pullIncidents();
       clearInterval(this.incTimer);
       this.incTimer = setInterval(() => this.pullIncidents(), 5000);
+      // Drift judges on their phones: the key their links carry, and the calls they send.
+      await this.syncJudgeKey(true);
+      clearInterval(this.judgeTimer);
+      this.judgeTimer = setInterval(() => this.pullJudges(), 1500);
 
       document.documentElement.classList.remove('disconnected');
       this.handlers.open.forEach((f) => f());
@@ -110,6 +114,51 @@ export class CloudPanelBus {
 
     } catch (err) {
       this.fail(err.message || String(err));
+    }
+  }
+
+  // ---------------------------------------------------------------- drift judges
+
+  /**
+   * The judges' key is kept in its own owner-only table (never in the public settings blob).
+   * On open it is read back into the state; after that a new key made here is written out.
+   */
+  async syncJudgeKey(load) {
+    if (this.noJudges || !this.event) return;
+    const key = this.race.state.drift && this.race.state.drift.judgeKey;
+    if (load) {
+      const { data, error } = await this.sb.from('event_judge_keys').select('key').eq('event_id', this.event.id).maybeSingle();
+      if (error) { if (judgeTableMissing(error)) this.noJudges = true; return; }
+      this.judgeKeySent = (data && data.key) || '';
+      if (data && data.key && data.key !== key) this.race.apply({ type: 'drift.judgeKey', key: data.key });
+      return;
+    }
+    if (key && key !== this.judgeKeySent) {
+      const { error } = await this.sb.from('event_judge_keys')
+        .upsert({ event_id: this.event.id, key, updated_at: new Date().toISOString() });
+      if (!error) this.judgeKeySent = key;
+    }
+  }
+
+  /** New calls from the judges' phones, applied in the order they were made. */
+  async pullJudges() {
+    if (this.noJudges || !this.event) return;
+    await this.syncJudgeKey(false);
+    if (this.judgeCursor == null) {
+      // The first read only finds where the list ends: calls made before this console
+      // opened belong to a battle that is already over.
+      const { data, error } = await this.sb.from('judge_inputs').select('id')
+        .eq('event_id', this.event.id).order('id', { ascending: false }).limit(1);
+      if (error) { if (judgeTableMissing(error)) this.noJudges = true; return; }
+      this.judgeCursor = data && data[0] ? data[0].id : 0;
+      return;
+    }
+    const { data, error } = await this.sb.from('judge_inputs').select('id,judge,kind,payload')
+      .eq('event_id', this.event.id).gt('id', this.judgeCursor).order('id', { ascending: true }).limit(50);
+    if (error) { if (judgeTableMissing(error)) this.noJudges = true; return; }
+    for (const r of data || []) {
+      this.judgeCursor = r.id;
+      this.race.apply({ type: 'drift.judge', judge: r.judge - 1, kind: r.kind, ...(r.payload || {}) });
     }
   }
 
@@ -295,4 +344,9 @@ export class CloudPanelBus {
   }
 
   raw() { /* the socket protocol has no meaning here */ }
+}
+
+/** The judges migration (20261002000000_judges.sql) is not on this project yet. */
+function judgeTableMissing(err) {
+  return /judge_inputs|event_judge_keys|does not exist|schema cache|42P01|PGRST20/i.test(String(err && (err.message || err.code) || err));
 }

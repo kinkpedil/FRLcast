@@ -10,6 +10,9 @@
 -- session. The black flag and the drive-through countdown on the phone only look at
 -- penalties issued after it, so a practice decision does not follow a driver into the race.
 -- No epoch (an older event) means every penalty counts, as before.
+--
+-- Drift (2026-10-02): me.drift carries the driver's own view of a drift event from
+-- settings.driftView (on track, lead or chase, up next, the battle result).
 
 create or replace function public.driver_state(p_token uuid)
 returns json
@@ -111,6 +114,8 @@ begin
       'lights', coalesce((v_event.settings->>'lights')::int, 0),
       -- Licence points (null when the league has them off): points, pending, threshold, banned.
       'licence', v_event.settings->'licence'->v_driver.id::text,
+      -- A drift event as this driver sees it (on track, lead or chase, up next, result).
+      'drift', v_event.settings->'driftView'->v_driver.id::text,
       'lapsLeft', case when v_event.total_laps > 0 and not v_timed and not v_best
                        then greatest(0, v_event.total_laps - v_driver.laps_done) end,
       'gapMs', case when v_driver.position > 1 then (

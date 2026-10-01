@@ -898,3 +898,32 @@ input.dfscore { width: 84px; height: 30px; }
 
 /* A button hidden by the script stays hidden: .btn sets a display that would beat [hidden]. */
 .btn[hidden] { display: none; }
+
+/* ---------- drift: runs on track, judges, results ---------- */
+
+.dfsolo-who { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.dfsolo-who b { font-size: 18px; }
+.dfsolo-who small { color: var(--ink-mute); }
+.dfjgrid { display: grid; gap: 6px; }
+.dfjrow { display: grid; grid-template-columns: 74px repeat(3, minmax(0, 1fr)) 70px auto; gap: 6px; align-items: center; }
+.dfjrow.single { grid-template-columns: 74px minmax(0, 1fr) 70px auto; }
+.dfjrow > span { font-size: 12px; color: var(--ink-mute); display: flex; align-items: center; gap: 6px; }
+.dfjrow input { height: 32px; text-align: center; font-family: var(--mono); }
+.dfjrow .tot { font-family: var(--mono); font-weight: 700; text-align: right; }
+.dfjrow.done input { border-color: rgba(0,224,164,.45); }
+.jdot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-mute); display: inline-block; }
+.jdot.on { background: var(--accent); }
+.dfscore-big { font-family: var(--mono); font-size: 34px; font-weight: 800; color: var(--accent); }
+.dfjhead { display: grid; grid-template-columns: 74px repeat(3, minmax(0, 1fr)) 70px auto; gap: 6px; font-size: 11px; color: var(--ink-mute); margin-bottom: 2px; }
+.dfjhead span:nth-child(n+2) { text-align: center; }
+.dflinks { display: grid; gap: 6px; }
+.dflink { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 12px; }
+.dflink code { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dfres { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.dfres > div { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.dfres > div:last-child { border-bottom: 0; }
+.dfres .p { font-family: var(--mono); font-weight: 700; }
+.dfres small { color: var(--ink-mute); font-size: 11px; }
+.dfqrun { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.dfqrun small { font-size: 10px; color: var(--ink-mute); font-family: var(--mono); }
+.dfthird { margin-top: 14px; max-width: 220px; }

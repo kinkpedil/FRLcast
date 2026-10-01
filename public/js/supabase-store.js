@@ -56,7 +56,9 @@ function iso(ms) { return ms ? new Date(ms).toISOString() : null; }
 function settingsOf(state) {
   return {
     overlay: state.overlay,
-    drift: state.drift,
+    // The judges' key stays out: this blob is readable by anyone with the event code.
+    drift: { ...state.drift, judgeKey: undefined },
+    driftView: state.driftView || {},
     calibration: state.calibration,
     championship: state.championship,
     standings: state.standings,

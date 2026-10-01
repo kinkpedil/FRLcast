@@ -71,6 +71,9 @@ public class OverlayService extends Service {
   // changes rather than on every poll it stays true.
   private Spotter spot;
   private boolean lastBlack = false, lastBlue = false;
+  // What the spotter last said about a drift event: each call once, when it changes.
+  private String lastDriftTrack = "", lastDriftResult = "", lastDriftNext = "";
+  private String lastDriftScore = "";
   private int lastLights = 0, lastLeft = -1, lastServe = -1;
   private String lastMsg = "";
   // The last team-radio message shown. null means "not seeded yet": the first poll after the
@@ -308,6 +311,24 @@ public class OverlayService extends Service {
       // A note race control typed for this driver.
       else if (!opMsg.isEmpty()) personal = opMsg;
       else if (me.optBoolean("blueFlag")) personal = "BLUE FLAG: LET THEM BY";
+      else {
+        // A drift event: on track first, then the result, then who is up next.
+        JSONObject dr = me.optJSONObject("drift");
+        if (dr != null) {
+          JSONObject bt = dr.optJSONObject("battle");
+          JSONObject nx = dr.optJSONObject("upNext");
+          if ("battle".equals(dr.optString("onTrack")) && bt != null) {
+            personal = "RUN " + bt.optInt("run", 1) + ": YOU " + ("lead".equals(bt.optString("role")) ? "LEAD" : "CHASE")
+                + " vs " + bt.optString("opponent");
+          } else if ("solo".equals(dr.optString("onTrack"))) {
+            personal = "YOUR QUALIFYING RUN";
+          } else if (bt != null && !bt.isNull("result") && !bt.optString("result").isEmpty()) {
+            personal = "won".equals(bt.optString("result")) ? "YOU BEAT " + bt.optString("opponent") : "OUT: " + bt.optString("opponent") + " WON";
+          } else if (nx != null) {
+            personal = "UP NEXT: " + nx.optString("round") + " vs " + nx.optString("opponent");
+          }
+        }
+      }
     }
 
     view.update(flag, who, personal);
@@ -340,6 +361,7 @@ public class OverlayService extends Service {
       }
       lastBlack = black; lastBlue = blue; lastLights = lights;
       lastMsg = opMsg; lastLeft = left; lastServe = serve;
+      driftCalls(me.optJSONObject("drift"), seeded);
     }
 
     if (!flag.equals(lastFlag)) {
@@ -350,6 +372,43 @@ public class OverlayService extends Service {
       }
       lastFlag = flag;
     }
+  }
+
+  /**
+   * The spotter's calls for a drift event: going out on a qualifying run, each run of a
+   * battle (lead or chase), the battle's result, the score of a run, and being up next.
+   * Each is said once, when it changes; nothing on the first poll.
+   */
+  private void driftCalls(JSONObject dr, boolean seeded) {
+    String track = "", result = "", next = "", score = "";
+    String trackCall = null, resultCall = null, nextCall = null, scoreCall = null;
+    if (dr != null) {
+      JSONObject bt = dr.optJSONObject("battle");
+      if ("solo".equals(dr.optString("onTrack"))) { track = "solo"; trackCall = "Your qualifying run. Go."; }
+      else if ("battle".equals(dr.optString("onTrack")) && bt != null) {
+        track = "battle" + bt.optInt("run") + bt.optString("role") + bt.optInt("omt");
+        trackCall = (bt.optInt("omt") > 0 ? "One more time. " : "") + "Run " + (bt.optInt("run") == 2 ? "two" : "one")
+            + ", you " + ("lead".equals(bt.optString("role")) ? "lead" : "chase") + ".";
+      }
+      if (bt != null && !bt.isNull("result") && !bt.optString("result").isEmpty()) {
+        result = bt.optString("result") + bt.optString("opponent");
+        resultCall = "won".equals(bt.optString("result")) ? "You win the battle." : "Battle lost.";
+      }
+      if (dr.optBoolean("champion")) { result = "champion"; resultCall = "You win the event!"; }
+      JSONObject nx = dr.optJSONObject("upNext");
+      if (nx != null) { next = nx.optString("round") + nx.optString("opponent"); nextCall = "You're up next, against " + nx.optString("opponent") + "."; }
+      if (!dr.isNull("lastScore") && dr.has("lastScore")) {
+        score = String.valueOf(dr.optDouble("lastScore"));
+        scoreCall = "Score " + score.replace(".0", "") + ".";
+      }
+    }
+    if (seeded && spot != null) {
+      if (!track.isEmpty() && !track.equals(lastDriftTrack)) spot.urgent(trackCall);
+      if (!result.isEmpty() && !result.equals(lastDriftResult)) spot.urgent(resultCall);
+      if (!score.isEmpty() && !score.equals(lastDriftScore)) spot.info(scoreCall);
+      if (!next.isEmpty() && !next.equals(lastDriftNext) && track.isEmpty()) spot.info(nextCall);
+    }
+    lastDriftTrack = track; lastDriftResult = result; lastDriftNext = next; lastDriftScore = score;
   }
 
   /**
@@ -394,6 +453,12 @@ public class OverlayService extends Service {
     if (me.has("pitOpen")) {
       if (b.length() > 0) b.append("  ");
       b.append(me.optBoolean("pitOpen", true) ? "PIT OPEN" : "PIT CLOSED");
+    }
+    // A drift event: the qualifying place and best score instead of gaps.
+    JSONObject drq = me.optJSONObject("drift");
+    if (drq != null && drq.optInt("qualiRank", 0) > 0) {
+      if (b.length() > 0) b.append("  ");
+      b.append("QUALI P").append(drq.optInt("qualiRank")).append(" ").append(drq.optString("qualiBest"));
     }
     // Licence points, when the league uses them: the count (this session after the plus),
     // or the ban the driver is serving.

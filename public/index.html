@@ -843,6 +843,8 @@
               <label class="toggle"><span>Championship standings</span><input type="checkbox" data-show="standings"><i class="sw"></i></label>
               <label class="toggle"><span>Fastest lap banner</span><input type="checkbox" data-show="fastlap"><i class="sw"></i></label>
               <label class="toggle"><span>Race control (steward decisions)</span><input type="checkbox" data-show="racecontrol"><i class="sw"></i></label>
+              <label class="toggle"><span>Drift run (score reveal)</span><input type="checkbox" data-show="driftsolo"><i class="sw"></i></label>
+              <label class="toggle"><span>Drift qualifying board</span><input type="checkbox" data-show="driftq"><i class="sw"></i></label>
               <label class="toggle"><span>Sector times (focus driver)</span><input type="checkbox" data-show="sectors"><i class="sw"></i></label>
               <label class="toggle"><span>Team radio card</span><input type="checkbox" data-show="radio"><i class="sw"></i></label>
               <label class="toggle"><span>Sponsor rotator</span><input type="checkbox" data-show="sponsor"><i class="sw"></i></label>
@@ -1234,49 +1236,85 @@
 
     <section class="page" id="page-drift">
       <h2>Drift battles</h2>
-      <p class="lede">Tandem knockout: judged qualifying runs seed the bracket, then two runs per battle with the lead swapped, and the judges call it.</p>
+      <p class="lede">Judged qualifying runs seed the bracket, then two runs per battle with the lead swapped, and the judges call it. Judges can score from their phones.</p>
 
-      <div class="card">
-        <h3>Format</h3>
-        <div class="body">
-          <div class="grid2">
-            <label>Bracket size
-              <select id="dfSize">
-                <option value="4">Top 4</option>
-                <option value="8">Great 8</option>
-                <option value="16" selected>Top 16</option>
-                <option value="32">Top 32</option>
-              </select>
-            </label>
-            <label>Judges
-              <select id="dfJudges"><option>1</option><option>3</option><option>5</option></select>
-            </label>
-            <label>Qualifying runs
-              <select id="dfRuns"><option>1</option><option>2</option><option>3</option></select>
-            </label>
-            <label>Max One More Time
-              <select id="dfOmt"><option>0</option><option>1</option><option>2</option></select>
-            </label>
+      <div class="split">
+        <div>
+          <div class="card" id="dfSoloCard">
+            <h3>Run on track <span class="right" id="dfSoloHead"></span></h3>
+            <div class="body" id="dfSolo"></div>
           </div>
-          <p class="hint">Empty seats become byes, so an eleven-car entry fits a sixteen-car bracket without inventing drivers.</p>
+
+          <div class="card">
+            <h3>Qualifying <span class="right"><button class="btn sm" id="dfBuild">Build bracket</button></span></h3>
+            <div class="body">
+              <div id="dfQual"></div>
+              <p class="hint" style="margin-top:8px">Best run counts. Order here becomes the seeding. Press On track to put a driver's next run in front of the judges, or type a score straight in.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Battle <span class="right" id="dfBattleRound"></span></h3>
+            <div class="body" id="dfBattle"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h3>Format</h3>
+            <div class="body">
+              <div class="grid2">
+                <label class="field"><span>Bracket size</span>
+                  <select id="dfSize">
+                    <option value="4">Top 4</option>
+                    <option value="8">Great 8</option>
+                    <option value="16" selected>Top 16</option>
+                    <option value="32">Top 32</option>
+                  </select>
+                </label>
+                <label class="field"><span>Judges</span>
+                  <select id="dfJudges"><option>1</option><option>3</option><option>5</option></select>
+                </label>
+                <label class="field"><span>Qualifying runs</span>
+                  <select id="dfRuns"><option>1</option><option>2</option><option>3</option></select>
+                </label>
+                <label class="field"><span>Max One More Time</span>
+                  <select id="dfOmt"><option>0</option><option>1</option><option>2</option></select>
+                </label>
+                <label class="field"><span>Qualifying score</span>
+                  <select id="dfScoring">
+                    <option value="categories">Line, Angle, Style</option>
+                    <option value="single">One number</option>
+                  </select>
+                </label>
+              </div>
+              <div class="grid3" id="dfCats" style="margin-top:10px">
+                <label class="field"><span>Line max</span><input type="number" min="1" max="100" data-cat="line"></label>
+                <label class="field"><span>Angle max</span><input type="number" min="1" max="100" data-cat="angle"></label>
+                <label class="field"><span>Style max</span><input type="number" min="1" max="100" data-cat="style"></label>
+              </div>
+              <label class="toggle" style="margin-top:10px"><span>Battle for third place <b>The two beaten semi-finalists meet once more</b></span><input type="checkbox" id="dfThird"><i class="sw"></i></label>
+              <p class="hint" style="margin-top:8px">Empty seats become byes, so an eleven-car entry fits a sixteen-car bracket without inventing drivers.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Judges <span class="right"><button class="btn sm ghost" id="dfKey">New links</button></span></h3>
+            <div class="body">
+              <div id="dfJudgeLinks"></div>
+              <p class="hint" style="margin-top:8px">Each judge opens their own link on a phone and scores runs and calls battles from it. New links cuts off every link handed out before.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Result</h3>
+            <div class="body" id="dfResult"></div>
+          </div>
         </div>
       </div>
 
-      <div class="card">
-        <h3>Qualifying <span class="right"><button class="btn" id="dfBuild">Build bracket</button></span></h3>
-        <div class="body">
-          <div id="dfQual"></div>
-          <p class="hint">Best run counts. Order here becomes the seeding.</p>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Battle <span class="right" id="dfBattleRound"></span></h3>
-        <div class="body" id="dfBattle"></div>
-      </div>
-
-      <div class="card">
-        <h3>Bracket <span class="right"><button class="btn" id="dfReset">Clear bracket</button></span></h3>
+      <div class="card" style="margin-top:16px">
+        <h3>Bracket <span class="right"><button class="btn sm ghost" id="dfReset">Clear bracket</button></span></h3>
         <div class="body"><div id="dfBracket"></div></div>
       </div>
     </section>

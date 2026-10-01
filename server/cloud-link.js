@@ -55,6 +55,7 @@ class Query {
   select(cols = '*') { this.params.push(`select=${encodeURIComponent(cols)}`); return this; }
   update(patch) { this.method = 'PATCH'; this.body = patch; this.prefer = 'return=minimal'; return this; }
   insert(rows) { this.method = 'POST'; this.body = rows; this.prefer = 'return=minimal'; return this; }
+  upsert(rows) { this.method = 'POST'; this.body = rows; this.prefer = 'resolution=merge-duplicates,return=minimal'; return this; }
   delete() { this.method = 'DELETE'; this.prefer = 'return=minimal'; return this; }
   eq(col, v) { this.params.push(`${col}=eq.${encodeURIComponent(v)}`); return this; }
   gt(col, v) { this.params.push(`${col}=gt.${encodeURIComponent(v)}`); return this; }
@@ -209,6 +210,9 @@ export class CloudLink {
     name = String(name || '').trim().slice(0, 60) || 'UNTITLED EVENT';
     if (!/^[A-Z0-9]{4,12}$/.test(code)) throw new Error('An event code is 4 to 12 letters or digits.');
     await this.token();
+    // Judges' calls and key belong to one event: start over for the new one.
+    this.judgeCursor = null;
+    this.judgeKeySent = '';
     const { error } = await this.from('events').insert({ owner: this.saved.userId, code, name });
     if (error) {
       // Codes are unique across every league on the site, so a common one may be taken.
@@ -266,9 +270,21 @@ export class CloudLink {
     // reads them by the hosted (uuid) id. Without remapping the keys, an operator message or
     // a stint would be filed under the local id and never reach the phone on a hosted event.
     const remapKeys = (obj) => { const out = {}; for (const k of Object.keys(obj || {})) out[U(k)] = obj[k]; return out; };
-    return { ...s, drivers, race, feed, overlay,
+    const dr = s.drift || {};
+    const pairU = (p) => (p ? { ...p, a: p.a ? U(p.a) : p.a, b: p.b ? U(p.b) : p.b, winner: p.winner ? U(p.winner) : p.winner } : p);
+    const drift = {
+      ...dr,
+      judgeKey: undefined,
+      qualifying: (dr.qualifying || []).map((e) => ({ ...e, driverId: U(e.driverId) })),
+      bracket: (dr.bracket || []).map((r) => ({ ...r, pairs: (r.pairs || []).map(pairU) })),
+      battle: dr.battle ? pairU(dr.battle) : null,
+      solo: dr.solo ? { ...dr.solo, driverId: U(dr.solo.driverId) } : null,
+      third: pairU(dr.third),
+      champion: dr.champion ? U(dr.champion) : null
+    };
+    return { ...s, drivers, race, feed, overlay, drift,
       messages: remapKeys(s.messages), stints: remapKeys(s.stints), crew: remapKeys(s.crew),
-      licence: remapKeys(s.licence) };
+      licence: remapKeys(s.licence), driftView: remapKeys(s.driftView) };
   }
 
   // ---------------------------------------------------------------- link
@@ -277,6 +293,9 @@ export class CloudLink {
     code = String(code || '').trim().toUpperCase();
     if (!/^[A-Z0-9]{4,12}$/.test(code)) throw new Error('An event code is 4 to 12 letters or digits.');
     await this.token();
+    // Judges' calls and key belong to one event: start over for the new one.
+    this.judgeCursor = null;
+    this.judgeKeySent = '';
     const { data, error } = await this.from('events').select('id,owner,code,name').eq('code', code);
     if (error) throw error;
     const row = (data || [])[0];
@@ -464,10 +483,41 @@ export class CloudLink {
     if (this.lastError && !this.lastError.startsWith('A write')) this.lastError = '';
     this.lastPullAt = Date.now();
     this.applyRegistrations(regs.data || []);
+    await this.pullJudges();
     for (const m of radio.data || []) {
       const at = new Date(m.created_at).getTime();
       this.race.apply({ type: 'driver.radio', id: at, at, team: m.team, from: m.from_nick, num: m.from_num, text: m.text });
       this.radioCursor = m.created_at;
+    }
+  }
+
+  /*
+   * Drift judges on their phones, through the website: the key goes out to the owner-only
+   * table, and new calls come back and are applied here like the console's own clicks.
+   */
+  async pullJudges() {
+    if (this.noJudges && Date.now() - (this.noJudgesAt || 0) < 10 * 60 * 1000) return;
+    this.noJudges = false;
+    const ev = this.event.id;
+    const missing = (e) => /judge_inputs|event_judge_keys|does not exist|schema cache|42P01|PGRST20/i.test(String(e && e.message || e));
+    const key = this.race.state.drift && this.race.state.drift.judgeKey;
+    if (key && key !== this.judgeKeySent) {
+      const { error } = await this.from('event_judge_keys').upsert({ event_id: ev, key, updated_at: new Date().toISOString() });
+      if (error) { if (missing(error)) { this.noJudges = true; this.noJudgesAt = Date.now(); } return; }
+      this.judgeKeySent = key;
+    }
+    if (this.judgeCursor == null) {
+      const { data, error } = await this.from('judge_inputs').select('id').eq('event_id', ev).order('id', { ascending: false }).limit(1);
+      if (error) { if (missing(error)) { this.noJudges = true; this.noJudgesAt = Date.now(); } return; }
+      this.judgeCursor = data && data[0] ? data[0].id : 0;
+      return;
+    }
+    const { data, error } = await this.from('judge_inputs').select('id,judge,kind,payload')
+      .eq('event_id', ev).gt('id', this.judgeCursor).order('id', { ascending: true }).limit(50);
+    if (error) { if (missing(error)) { this.noJudges = true; this.noJudgesAt = Date.now(); } return; }
+    for (const r of data || []) {
+      this.judgeCursor = r.id;
+      this.race.apply({ type: 'drift.judge', judge: r.judge - 1, kind: r.kind, ...(r.payload || {}) });
     }
   }
 

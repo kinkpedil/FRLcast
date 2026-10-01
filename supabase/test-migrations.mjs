@@ -165,6 +165,11 @@ await q(db, `update public.events set settings = jsonb_set(settings, '{licence}'
   [ev, (await q(db, `select id from public.drivers where num = '55'`))[0].id]);
 st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
 check('licence points reach the phone', st.me.licence && st.me.licence.points === 7 && st.me.licence.threshold === 12, JSON.stringify(st.me.licence));
+await q(db, `update public.events set settings = jsonb_set(settings, '{driftView}',
+  jsonb_build_object($2::text, jsonb_build_object('upNext', jsonb_build_object('opponent', 'AKI', 'round', 'TOP 16')))) where id = $1`,
+  [ev, (await q(db, `select id from public.drivers where num = '55'`))[0].id]);
+st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
+check('drift view reaches the phone', st.me.drift && st.me.drift.upNext && st.me.drift.upNext.opponent === 'AKI', JSON.stringify(st.me.drift));
 // a drive-through, 3 laps ago, black-flag rule = 5 laps -> 2 laps left to serve
 await q(db, `update public.events set settings = jsonb_set(settings, '{rules}', '{"blackFlagUnserved":5}') where id = $1`, [ev]);
 await q(db, `insert into public.penalties (event_id, driver_id, type, status, served, lap)
@@ -225,6 +230,23 @@ check('anon can call the public functions', fx.length >= 7 && fx.every((x) => x.
 const dup = await q(db, `select proname, count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public' and proname in ('driver_login','driver_register') group by proname having count(*) > 1`);
 check('no overloaded driver_login / driver_register', dup.length === 0, JSON.stringify(dup));
+
+// drift judges: a call needs the event's key, and lands in judge_inputs for race control
+let jr = await j(db, `select public.judge_submit('TEST1', 'NOPE', 1, 'vote', '{"vote":"a"}'::jsonb) as r`);
+check('judge call without a key is refused', jr.ok === false, JSON.stringify(jr));
+await q(db, `insert into public.event_judge_keys (event_id, key) values ($1, 'K3Y9ZZ')`, [ev]);
+jr = await j(db, `select public.judge_submit('test1', 'k3y9zz', 2, 'vote', '{"vote":"b"}'::jsonb) as r`);
+check('judge vote with the key is filed', jr.ok === true, JSON.stringify(jr));
+jr = await j(db, `select public.judge_submit('TEST1', 'K3Y9ZZ', 2, 'vote', '{"vote":"x"}'::jsonb) as r`);
+check('a vote that is not a, b or omt is refused', jr.ok === false, JSON.stringify(jr));
+jr = await j(db, `select public.judge_submit('TEST1', 'K3Y9ZZ', 1, 'score', '{"line":30,"angle":25,"style":28}'::jsonb) as r`);
+const jrows = await q(db, `select judge, kind, payload from public.judge_inputs where event_id = $1 order by id`, [ev]);
+check('judge calls stored in order', jrows.length === 2 && jrows[0].payload.vote === 'b' && jrows[1].payload.line === 30, JSON.stringify(jrows));
+const jg = await q(db, `select table_name, grantee from information_schema.role_table_grants
+  where table_name in ('judge_inputs', 'event_judge_keys') and grantee = 'anon'`);
+check('anon cannot read judge keys or calls', jg.length === 0, JSON.stringify(jg));
+const jf = await q(db, `select has_function_privilege('anon', 'public.judge_submit(text,text,int,text,jsonb)', 'execute') as ok`);
+check('anon can call judge_submit', jf[0].ok === true);
 
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');
 process.exit(fails ? 1 : 0);

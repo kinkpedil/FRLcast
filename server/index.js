@@ -327,7 +327,9 @@ function pitBoard(s, d) {
     session: s.event.sessionType || 'race',
     // Licence points, when the league uses them (null otherwise): the phone shows the count
     // and warns before a ban, from the same view the console and the hosted mirror read.
-    licence: (s.licence && s.licence[d.id]) || null
+    licence: (s.licence && s.licence[d.id]) || null,
+    // The drift event as this driver sees it (null outside a drift session).
+    drift: (s.driftView && s.driftView[d.id]) || null
   };
 }
 
@@ -661,6 +663,37 @@ app.post('/api/update/apply', async (req, res) => {
  * open to the LAN like the rest; signing in and linking only from this machine, because
  * they carry the operator's account.
  */
+/*
+ * A drift judge's call from their phone (public/judge.html on the LAN address). The key in
+ * the link is the only check, the same trust level as the rest of this server: it stops a
+ * spectator on the wifi from voting, not a determined attacker on the network.
+ */
+const judgeHits = new Map();   // judge -> [timestamps], a small brake on a stuck button
+app.post('/api/judge', (req, res) => {
+  const b = req.body || {};
+  const D = race.state.drift || {};
+  if (!D.judgeKey || String(b.k || '').toUpperCase() !== D.judgeKey) {
+    return res.status(403).json({ ok: false, error: 'This judge link is no longer valid. Ask race control for a new one.' });
+  }
+  const judges = (D.format && D.format.judges) || 1;
+  const j = Math.round(Number(b.j));
+  if (!(j >= 1 && j <= judges)) {
+    return res.status(400).json({ ok: false, error: `Race control is using ${judges} judges; this link is for judge ${b.j}.` });
+  }
+  if (!['vote', 'score', 'ping'].includes(b.kind)) return res.status(400).json({ ok: false, error: 'Unknown call' });
+  if (b.kind === 'vote' && !['a', 'b', 'omt'].includes(b.vote)) return res.status(400).json({ ok: false, error: 'Unknown vote' });
+  const now = Date.now();
+  const hits = (judgeHits.get(j) || []).filter((t) => now - t < 10000);
+  if (hits.length > 30) return res.status(429).json({ ok: false, error: 'Too many calls. Wait a moment.' });
+  hits.push(now);
+  judgeHits.set(j, hits);
+  applyAction({
+    type: 'drift.judge', judge: j - 1, kind: b.kind, vote: b.vote,
+    line: b.line, angle: b.angle, style: b.style, total: b.total
+  });
+  res.json({ ok: true });
+});
+
 app.get('/api/cloud/status', (_req, res) => res.json(cloud.status()));
 
 app.post('/api/cloud/login', async (req, res) => {

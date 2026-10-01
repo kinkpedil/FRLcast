@@ -2137,7 +2137,8 @@ const WIDGET_LABELS = {
   trackmap: 'Track map', battle: 'Tandem battle', bracket: 'Bracket',
   grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings',
   pit: 'Pit lane', lights: 'Start lights', catching: 'Catching', rivalry: 'Rivalry', podium: 'Podium', reactions: 'Crowd reactions',
-  racecontrol: 'Race control'
+  racecontrol: 'Race control',
+  driftsolo: 'Drift run', driftq: 'Drift qualifying'
 };
 
 function renderScenes() {
@@ -2365,7 +2366,15 @@ function renderDrift() {
   sel('#dfJudges', F.judges ?? 3);
   sel('#dfRuns', F.qualifyingRuns ?? 2);
   sel('#dfOmt', F.maxOmt ?? 2);
+  sel('#dfScoring', F.scoring || 'categories');
+  const cats = F.categories || { line: 35, angle: 30, style: 35 };
+  $$('[data-cat]').forEach((el) => { if (document.activeElement !== el) el.value = cats[el.dataset.cat] ?? ''; });
+  $('#dfCats').hidden = (F.scoring || 'categories') !== 'categories';
+  if (document.activeElement !== $('#dfThird')) $('#dfThird').checked = !!F.thirdPlace;
 
+  renderDriftSolo(D);
+  renderDriftJudges(D);
+  renderDriftResult();
   renderDriftQualifying(D);
   renderDriftBattle(D);
   renderDriftBracket(D);
@@ -2379,19 +2388,28 @@ function renderDriftQualifying(D) {
     const inputs = [];
     for (let i = 0; i < runs; i++) {
       const v = e.runs[i] == null ? '' : e.runs[i];
-      inputs.push(`<input class="dfscore" type="number" step="0.1" data-id="${d.id}" data-run="${i}" value="${v}" placeholder="run ${i + 1}">`);
+      const det = (e.details || [])[i];
+      const split = det && det.length && det[0] && det[0].line != null
+        ? ['line', 'angle', 'style'].map((k) => Math.round(det.reduce((n, x) => n + (x[k] || 0), 0) / det.length * 10) / 10).join('/')
+        : '';
+      inputs.push(`<span class="dfqrun"><input class="dfscore" type="number" step="0.1" data-id="${d.id}" data-run="${i}" value="${v}" placeholder="run ${i + 1}">${split ? `<small title="${esc(t('Line / Angle / Style, judges averaged'))}">${split}</small>` : ''}</span>`);
     }
+    const live = D.solo && D.solo.driverId === d.id && D.solo.status === 'running';
     return `<tr>
       <td style="width:6px"><span class="swatch" style="background:${d.color}"></span></td>
       <td>${esc(d.name)}</td>
       <td style="white-space:nowrap">${inputs.join(' ')}</td>
-      <td class="mono" style="text-align:right;width:70px">${e.best == null ? '--' : e.best}</td>
+      <td class="mono" style="text-align:right;width:60px">${e.best == null ? '--' : e.best}</td>
+      <td style="width:84px"><button class="btn sm ${live ? 'primary' : ''}" data-solo="${d.id}">${live ? t('On track') : t('On track')}</button></td>
     </tr>`;
   });
   $('#dfQual').innerHTML = rows.length
     ? `<table class="drivers"><tbody>${rows.join('')}</tbody></table>`
     : '<p class="hint">Add drivers on the Drivers page first.</p>';
 
+  $$('#dfQual [data-solo]').forEach((b) => {
+    b.onclick = () => bus.action('drift.solo.start', { driverId: b.dataset.solo });
+  });
   $$('#dfQual .dfscore').forEach((inp) => {
     inp.onchange = () => {
       const id = inp.dataset.id;
@@ -2411,7 +2429,7 @@ function renderDriftBattle(D) {
     box.innerHTML = '<p class="hint">Pick a pair in the bracket below to put it on air.</p>';
     return;
   }
-  const round = D.bracket[b.round];
+  const round = b.round === 'third' ? { name: t('Third place') } : D.bracket[b.round];
   head.textContent = (round ? round.name : '') + (b.omt ? `  ·  OMT ${b.omt}` : '');
 
   const side = (who) => {
@@ -2428,7 +2446,7 @@ function renderDriftBattle(D) {
   for (let i = 0; i < b.votes.length; i++) {
     const v = b.votes[i];
     judges.push(`<div class="dfjudge">
-      <span>Judge ${i + 1}</span>
+      <span>${judgeOn(D, i) ? '<i class="jdot on"></i>' : '<i class="jdot"></i>'} Judge ${i + 1}</span>
       <button class="btn ${v === 'a' ? 'primary' : ''}" data-judge="${i}" data-vote="a">${esc((dfName(b.a) || 'A').slice(0, 10))}</button>
       <button class="btn ${v === 'omt' ? 'primary' : ''}" data-judge="${i}" data-vote="omt">OMT</button>
       <button class="btn ${v === 'b' ? 'primary' : ''}" data-judge="${i}" data-vote="b">${esc((dfName(b.b) || 'B').slice(0, 10))}</button>
@@ -2472,7 +2490,14 @@ function renderDriftBracket(D) {
         </div>`;
       }).join('')}
     </div>`).join('') + '</div>' +
+    (D.third ? `<div class="dfround dfthird"><h4>${esc(t('Third place'))}</h4>
+      <div class="dfpair ${D.battle && D.battle.round === 'third' ? 'live' : ''} ${D.third.winner ? 'done' : ''}" data-third="1">
+        <div class="${D.third.winner === D.third.a ? 'w' : ''}"><span class="swatch" style="background:${dfColor(D.third.a)}"></span>${esc(dfName(D.third.a) || '--')}</div>
+        <div class="${D.third.winner === D.third.b ? 'w' : ''}"><span class="swatch" style="background:${dfColor(D.third.b)}"></span>${esc(dfName(D.third.b) || '--')}</div>
+      </div></div>` : '') +
     (D.champion ? `<p class="hint" style="margin-top:12px"><b>${esc(dfName(D.champion) || '')}</b> wins the event.</p>` : '');
+  const th = $('#dfBracket [data-third]');
+  if (th) th.onclick = () => bus.action('drift.battle.start', { round: 'third' });
 
   $$('#dfBracket .dfpair').forEach((el) => {
     el.onclick = () => {
@@ -3614,7 +3639,8 @@ const LAYOUT_LABELS = {
   trackmap: 'Track map', battle: 'Tandem battle', bracket: 'Bracket',
   grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings', ticker: 'Ticker', fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta / time attack', radio: 'Team radio', poll: 'Audience poll', sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code',
   pit: 'Pit lane', lights: 'Start lights', catching: 'Catching', rivalry: 'Rivalry', podium: 'Podium', reactions: 'Crowd reactions',
-  racecontrol: 'Race control'
+  racecontrol: 'Race control',
+  driftsolo: 'Drift run', driftq: 'Drift qualifying'
 };
 
 // Force every overlay to redraw the current layout. Changes already reach OBS live; this
@@ -4973,6 +4999,10 @@ $('#roundBtn').onclick = (e) => {
       <input type="text" id="nrName" placeholder="${esc(t('Round name'))}" value="ROUND ${(season.rounds || []).length + 1}">
       <input type="text" id="nrTrack" placeholder="${esc(t('Track'))}" value="${esc(state.event.track || '')}">
       <button class="btn sm primary" id="nrGo">${esc(t('New round'))}</button>
+      <select id="nrKind" style="grid-column:1 / -1;height:30px;font-size:12px">
+        <option value="race">${esc(t('Race round: practice, qualifying, race'))}</option>
+        <option value="drift" ${(season.rounds || []).find((x) => x.id === season.current)?.kind === 'drift' ? 'selected' : ''}>${esc(t('Drift round: practice, drift competition'))}</option>
+      </select>
     </div>`;
   document.body.appendChild(menu);
   const rect = $('#roundBtn').getBoundingClientRect();
@@ -4995,7 +5025,130 @@ $('#roundBtn').onclick = (e) => {
     const warn = unsavedRun() ? t('The current session has not been finished, so it will not be saved.') + ' ' : '';
     if (!confirm(`${name || t('New round')}: ${warn}${t('Start a new round? The current one is kept with all its sessions and points, and the timing screen starts at the first session.')}`)) return;
     closeStepMenu();
-    bus.action('round.new', { name, track });
+    bus.action('round.new', { name, track, kind: $('#nrKind').value });
     toast(name || t('New round'));
   };
 };
+
+// ---------------------------------------------------------------- drift: run on track, judges, result
+
+/** A judge counts as connected when their phone was heard from in the last 20 seconds. */
+function judgeOn(D, i) {
+  const at = (D.judgeSeen || {})[i];
+  return !!at && Date.now() - at < 20000;
+}
+
+function renderDriftSolo(D) {
+  const box = $('#dfSolo');
+  const head = $('#dfSoloHead');
+  const solo = D.solo;
+  if (!solo) {
+    head.textContent = '';
+    box.innerHTML = `<p class="hint">${t('Press On track beside a driver in Qualifying to start judging their run.')}</p>`;
+    return;
+  }
+  const F = D.format || {};
+  const single = F.scoring === 'single';
+  const cats = F.categories || { line: 35, angle: 30, style: 35 };
+  head.textContent = `${t('Run')} ${solo.run + 1}`;
+  const d = (state.drivers || []).find((x) => x.id === solo.driverId);
+  // Keep what an operator is typing: rebuild only when the run or the scores change.
+  const sig = JSON.stringify([solo.driverId, solo.run, solo.status, solo.scores, single, cats, D.judgeSeen && Object.keys(D.judgeSeen).map((k) => judgeOn(D, Number(k)))]);
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  const total = (x) => (x ? (x.total != null ? x.total : (x.line || 0) + (x.angle || 0) + (x.style || 0)) : '');
+  const rows = solo.scores.map((x, i) => `<div class="dfjrow ${single ? 'single' : ''} ${x ? 'done' : ''}" data-j="${i}">
+      <span>${judgeOn(D, i) ? '<i class="jdot on"></i>' : '<i class="jdot"></i>'}${t('Judge')} ${i + 1}</span>
+      ${single
+        ? `<input type="number" step="0.1" min="0" max="100" data-k="total" value="${x && x.total != null ? x.total : ''}">`
+        : ['line', 'angle', 'style'].map((k) => `<input type="number" step="0.1" min="0" max="${cats[k]}" data-k="${k}" value="${x && x[k] != null ? x[k] : ''}" placeholder="0-${cats[k]}">`).join('')}
+      <span class="tot">${total(x)}</span>
+      <button class="btn sm" data-send="${i}" ${solo.status !== 'running' ? 'disabled' : ''}>${x ? t('Update') : t('Score')}</button>
+    </div>`).join('');
+  box.innerHTML = `
+    <div class="dfsolo-who"><span class="swatch" style="background:${esc(d ? d.color : '#666')}"></span>
+      <b>${esc(d ? d.name : '--')}</b><small>#${esc(d ? d.num : '')}</small>
+      <span style="flex:1"></span>
+      ${solo.status === 'scored' ? `<span class="dfscore-big">${solo.total}</span>` : `<span class="pill live">${t('judging')}</span>`}
+      <button class="btn sm ghost" id="dfSoloClose">${t('Close')}</button>
+    </div>
+    ${single ? '' : `<div class="dfjhead"><span></span><span>Line</span><span>Angle</span><span>Style</span><span></span><span></span></div>`}
+    <div class="dfjgrid">${rows}</div>`;
+  $('#dfSoloClose').onclick = () => bus.action('drift.solo.close');
+  $$('#dfSolo [data-send]').forEach((b) => {
+    b.onclick = () => {
+      const row = b.closest('[data-j]');
+      const v = {};
+      row.querySelectorAll('[data-k]').forEach((inp) => { v[inp.dataset.k] = inp.value === '' ? 0 : Number(inp.value); });
+      bus.action('drift.judge', { judge: Number(row.dataset.j), kind: 'score', ...v });
+    };
+  });
+}
+
+let driftCloud = null;   // the online-link status, for the judges' online links
+async function refreshDriftCloud() {
+  if (cloud) return;
+  try { driftCloud = await (await fetch('/api/cloud/status')).json(); } catch (e) { driftCloud = null; }
+}
+
+function renderDriftJudges(D) {
+  const box = $('#dfJudgeLinks');
+  if (!box) return;
+  const n = Math.max(1, (D.format && D.format.judges) || 1);
+  if (!D.judgeKey) {
+    box.innerHTML = `<p class="hint">${t('No links yet.')}</p><button class="btn sm" id="dfKeyMake">${t('Make judge links')}</button>`;
+    $('#dfKeyMake').onclick = () => bus.action('drift.judgeKey');
+    return;
+  }
+  // Hosted: the site's own address with the event code. Local: the LAN address phones can
+  // reach, and, when the desktop is linked online, the website address that works anywhere.
+  const net = state.net || {};
+  const bases = [];
+  if (cloud) bases.push({ label: '', url: `${location.origin}/judge?event=${encodeURIComponent(cloud.code)}&` });
+  else {
+    if (net.lan) bases.push({ label: 'LAN', url: `${net.lan}/judge.html?` });
+    if (driftCloud && driftCloud.linked && driftCloud.code) bases.push({ label: t('Online'), url: `https://www.frlcast.my.id/judge?event=${encodeURIComponent(driftCloud.code)}&` });
+    if (!bases.length) bases.push({ label: '', url: `${location.origin}/judge.html?` });
+  }
+  let html = '<div class="dflinks">';
+  for (const base of bases) {
+    if (base.label) html += `<div class="hint" style="margin-top:4px">${esc(base.label)}</div>`;
+    for (let i = 0; i < n; i++) {
+      const url = `${base.url}j=${i + 1}&k=${D.judgeKey}`;
+      html += `<div class="dflink"><span>${judgeOn(D, i) ? '<i class="jdot on"></i>' : '<i class="jdot"></i>'} ${t('Judge')} ${i + 1}</span>
+        <code title="${esc(url)}">${esc(url.replace(/^https?:\/\//, ''))}</code>
+        <button class="btn sm" data-copy="${esc(url)}">${t('Copy')}</button></div>`;
+    }
+  }
+  html += '</div>';
+  if (box.dataset.sig !== html) {
+    box.dataset.sig = html;
+    box.innerHTML = html;
+    $$('#dfJudgeLinks [data-copy]').forEach((b) => {
+      b.onclick = () => { navigator.clipboard.writeText(b.dataset.copy); toast(t('URL copied')); };
+    });
+  }
+}
+
+function renderDriftResult() {
+  const box = $('#dfResult');
+  const rows = state.driftResult || [];
+  if (!rows.length) { box.innerHTML = `<p class="hint">${t('The classification fills in as qualifying and battles are decided.')}</p>`; return; }
+  box.innerHTML = '<div class="dfres">' + rows.slice(0, 16).map((r) => `<div>
+      <span class="p">${r.position}</span>
+      <span><span class="swatch" style="background:${esc(dfColor(r.driverId))}"></span> ${esc(dfName(r.driverId) || '--')}</span>
+      <small>${esc(r.out)}</small></div>`).join('') + '</div>' +
+    `<p class="hint" style="margin-top:8px">${t('Finish the session to save it and score the round in the championship.')}</p>`;
+}
+
+$('#dfScoring').onchange = (e) => bus.action('drift.config', { patch: { scoring: e.target.value } });
+$('#dfThird').onchange = (e) => bus.action('drift.config', { patch: { thirdPlace: e.target.checked } });
+$$('[data-cat]').forEach((el) => {
+  el.onchange = () => bus.action('drift.config', { patch: { categories: { [el.dataset.cat]: Number(el.value) } } });
+});
+$('#dfKey').onclick = () => {
+  if (state && state.drift && state.drift.judgeKey && !confirm(t('Make new judge links? The links handed out before stop working.'))) return;
+  bus.action('drift.judgeKey');
+};
+refreshDriftCloud();
+setInterval(() => { if (currentPage === 'drift') { refreshDriftCloud(); renderDrift(); } }, 5000);

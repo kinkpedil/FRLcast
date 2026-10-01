@@ -171,7 +171,10 @@ function defaultState() {
         ticker: false,
         // On unless a scene turns it off, so an event that already has its scenes saved
         // gets the steward banner too: a decision is always worth putting on air.
-        racecontrol: true
+        racecontrol: true,
+        // The qualifying run card shows only while a run is judged, so it can be on anywhere.
+        driftsolo: true,
+        driftq: false
       },
       /*
        * Which two cars the head-to-head compares.
@@ -327,11 +330,19 @@ function defaultState() {
         bracketSize: 16,       // 4, 8, 16 or 32; unfilled seats become byes
         judges: 3,
         qualifyingRuns: 2,     // best run counts
-        maxOmt: 2              // reruns before a decision has to be forced
+        maxOmt: 2,             // reruns before a decision has to be forced
+        // How a qualifying run is judged: each judge scores Line, Angle and Style up to
+        // these maxima (Formula Drift's split), and the run is the judges' average total.
+        // 'single' keeps the old one-number entry.
+        scoring: 'categories',
+        categories: { line: 35, angle: 30, style: 35 },
+        thirdPlace: false      // a battle for third between the two beaten semi-finalists
       },
-      qualifying: [],          // { driverId, runs: [number], best }
+      qualifying: [],          // { driverId, runs: [number], details: [[{line,angle,style}]], best }
       bracket: [],             // rounds: { name, pairs: [{ a, b, winner, omt }] }
       battle: null,            // the one being run right now
+      solo: null,              // the qualifying run on track: { driverId, run, scores, status, total }
+      third: null,             // the battle for third: { a, b, winner, omt }
       champion: null
     },
     /*
@@ -557,9 +568,10 @@ function defaultScenes() {
     { id: 'battles', name: 'Battles & poll', show: show('status', 'h2h', 'gap', 'poll'),
       layout: L({ h2h: { x: 610, y: 176, scale: 1 }, gap: { x: 730, y: 900, scale: 1 },
                   poll: { x: 1500, y: 176, scale: 1 } }) },
-    { id: 'drift', name: 'Drift battles', show: show('status', 'battle', 'bracket', 'poll'),
+    { id: 'drift', name: 'Drift battles', show: show('status', 'battle', 'bracket', 'poll', 'driftq', 'driftsolo'),
       layout: L({ battle: { x: 560, y: 150, scale: 1 }, bracket: { x: 1312, y: 150, scale: 1 },
-                  poll: { x: 48, y: 820, scale: 1 } }) },
+                  poll: { x: 48, y: 820, scale: 1 }, driftq: { x: 48, y: 150, scale: 1 },
+                  driftsolo: { x: 610, y: 800, scale: 1 } }) },
     { id: 'results', name: 'Results', show: show('status', 'results', 'standings', 'sponsor', 'qr'),
       layout: L({ results: { x: 48, y: 150, scale: 1 }, standings: { x: 1190, y: 150, scale: 1 },
                   qr: { x: 60, y: 830, scale: 1 }, sponsor: { x: 600, y: 1010, scale: 1 } }) },
@@ -573,6 +585,8 @@ function defaultScenes() {
 // Actions too frequent or too cosmetic to be worth an undo snapshot: they would bury the
 // race-control actions (flags, penalties, resets) that undo actually exists for.
 const NO_HISTORY = new Set([
+  // a judge's input arrives many times a battle; the vote it becomes is what undo is for
+  'drift.judge',
   'history.undo', 'driver.progress', 'driver.progressBatch', 'timing.cross', 'lap.record',
   'overlay.layout', 'overlay.layoutApply', 'overlay.layoutRevert', 'overlay.layoutReset',
   'overlay.update', 'overlay.h2h', 'overlay.style', 'overlay.theme', 'overlay.scene',
@@ -637,6 +651,10 @@ export class RaceState {
          * standings calculation reads `champ.points.dropWorst` on the next recompute.
          */
         this.state.drift = { ...base.drift, ...(disk.drift || {}) };
+        this.state.drift.format = {
+          ...base.drift.format, ...(disk.drift?.format || {}),
+          categories: { ...base.drift.format.categories, ...(disk.drift?.format?.categories || {}) }
+        };
         this.state.championship = { ...base.championship, ...(disk.championship || {}) };
         this.state.championship.points = {
           ...base.championship.points, ...(disk.championship?.points || {})
@@ -753,6 +771,9 @@ export class RaceState {
     for (const d of s.drivers) resetDriverTiming(d, null);
     s.records = { bestLap: { ms: null, driverId: null, lap: null }, bestSectors: [] };
     s.feed = [];
+    if (target === 'drift' && !a.sessionId) {
+      Object.assign(s.drift, { qualifying: [], bracket: [], battle: null, solo: null, third: null, champion: null });
+    }
     this.pushFeed('flag', `${s.event.sessionName} · READY`);
   }
 
@@ -801,6 +822,14 @@ export class RaceState {
       bestSectors: []
     };
     s.feed = [];
+    if (rec.type === 'drift' && rec.drift) {
+      Object.assign(s.drift, {
+        qualifying: JSON.parse(JSON.stringify(rec.drift.qualifying || [])),
+        bracket: JSON.parse(JSON.stringify(rec.drift.bracket || [])),
+        third: rec.drift.third ? { ...rec.drift.third } : null,
+        champion: rec.drift.champion || null, battle: null, solo: null
+      });
+    }
     this.pushFeed('flag', `${String(rec.name || rec.type).toUpperCase()} · BACK IN SESSION`);
   }
 
@@ -849,7 +878,11 @@ export class RaceState {
     const round = (s.season.rounds || []).find((x) => x.id === rec.roundId) || this.ensureRound(now);
     const inRound = (s.sessions || []).filter((x) => x.finished && x.roundId === round.id);
     const quali = inRound.find((x) => x.type === 'qualifying');
-    const poleId = quali && quali.results[0] && quali.results[0].bestLap != null ? quali.results[0].driverId : null;
+    // Pole: the qualifying session's P1, or for a drift competition its top qualifier.
+    const driftTop = rec.type === 'drift' && rec.drift
+      ? [...rec.drift.qualifying].filter((e) => e.best != null).sort((x, y) => y.best - x.best)[0] : null;
+    const poleId = driftTop ? driftTop.driverId
+      : quali && quali.results[0] && quali.results[0].bestLap != null ? quali.results[0].driverId : null;
     const flId = rec.fastest ? rec.fastest.driverId : null;
     const rows = rec.results.map((r) => ({
       driverId: r.driverId, name: r.name, num: r.num, color: r.color,
@@ -958,8 +991,28 @@ export class RaceState {
       };
     });
     const id = `s${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+    // A drift competition is classified by the bracket, not by laps, and keeps its runs.
+    const drift = (s.event.sessionType || 'race') === 'drift';
+    const driftRows = drift ? this.driftClassification().map((c) => {
+      const d = byId.get(c.driverId) || {};
+      const e = (s.drift.qualifying || []).find((x) => x.driverId === c.driverId) || {};
+      return {
+        driverId: c.driverId, position: c.position, num: d.num, name: d.name, team: d.team || '',
+        color: d.color, out: c.out, qualiBest: e.best ?? null, runs: e.runs || [],
+        lapsDone: 0, bestLap: null, lastLap: null, prevLap: null, lapTimes: [], dnf: false, retired: false
+      };
+    }) : null;
     return {
       id,
+      ...(drift ? {
+        drift: {
+          format: JSON.parse(JSON.stringify(s.drift.format)),
+          qualifying: JSON.parse(JSON.stringify(s.drift.qualifying || [])),
+          bracket: JSON.parse(JSON.stringify(s.drift.bracket || [])),
+          third: s.drift.third ? { ...s.drift.third } : null,
+          champion: s.drift.champion || null
+        }
+      } : {}),
       // Which session this is: the same across a re-run or a return, so finishing it again
       // replaces this record. epoch is when the session began, for the hosted phones.
       sid: r.sessionId || id,
@@ -974,8 +1027,8 @@ export class RaceState {
       durationMs: r.startedAt ? Math.max(0, end - r.startedAt - (r.pausedTotal || 0)) : null,
       totalLaps: r.totalLaps || 0,
       timeLimitSec: r.timeLimitSec || 0,
-      fastest,
-      results,
+      fastest: drift ? null : fastest,
+      results: driftRows || results,
       penalties: pens.map((p) => {
         const d = byId.get(p.driverId) || {};
         return {
@@ -1426,6 +1479,11 @@ export class RaceState {
      */
     this.state.standings = this.standings();
     this.state.licence = this.licenceView();
+    this.state.driftView = this.driftView();
+    // The running classification of a drift competition, for the console and the overlay.
+    this.state.driftResult = (event.sessionType || 'race') === 'drift'
+      && ((this.state.drift.qualifying || []).length || (this.state.drift.bracket || []).length)
+      ? this.driftClassification() : [];
   }
 
   /**
@@ -1644,6 +1702,127 @@ export class RaceState {
     return `ROUND OF ${pairs * 2}`;
   }
 
+  /**
+   * Record the qualifying run on track once every judge has scored it: the run is the
+   * average of the judges' totals (one decimal), each judge's split kept beside it.
+   */
+  finishSolo(now) {
+    const s = this.state;
+    const solo = s.drift.solo;
+    if (!solo) return;
+    const totals = solo.scores.map((x) => (x.total != null ? x.total : (x.line || 0) + (x.angle || 0) + (x.style || 0)));
+    const total = Math.round((totals.reduce((n, v) => n + v, 0) / totals.length) * 10) / 10;
+    let entry = s.drift.qualifying.find((e) => e.driverId === solo.driverId);
+    if (!entry) { entry = { driverId: solo.driverId, runs: [], details: [], best: null }; s.drift.qualifying.push(entry); }
+    entry.details = entry.details || [];
+    entry.runs[solo.run] = total;
+    entry.details[solo.run] = solo.scores.map((x) => ({ ...x }));
+    for (let i = 0; i < entry.runs.length; i++) if (entry.runs[i] === undefined) entry.runs[i] = null;
+    const scored = entry.runs.filter((n) => typeof n === 'number' && !Number.isNaN(n));
+    entry.best = scored.length ? Math.max(...scored) : null;
+    solo.status = 'scored';
+    solo.total = total;
+    solo.scoredAt = now;
+    const d = this.driver(solo.driverId);
+    this.pushFeed('battle', `${d ? d.name : '?'} · ${total} POINTS`, solo.driverId);
+  }
+
+  /**
+   * The final classification of a drift competition.
+   *
+   * The final decides first and second; third and fourth come from the battle for third,
+   * or the beaten semi-finalists by qualifying. Everyone knocked out in the same round
+   * shares that round's places, ordered by qualifying, the way every tandem series does it.
+   * Qualifiers who did not make the bracket follow in qualifying order.
+   */
+  driftClassification() {
+    const d = this.state.drift;
+    const q = this.qualifyingOrder();
+    const rank = new Map(q.map((e, i) => [e.driverId, i]));
+    const byQ = (a, b) => (rank.get(a) ?? 1e9) - (rank.get(b) ?? 1e9);
+    const out = [];
+    const seen = new Set();
+    const put = (id, label) => { if (id && !seen.has(id)) { seen.add(id); out.push({ driverId: id, out: label }); } };
+    const rounds = d.bracket || [];
+    const final = rounds.length && rounds[rounds.length - 1].pairs.length === 1 ? rounds[rounds.length - 1].pairs[0] : null;
+    if (final && final.winner) {
+      put(final.winner, 'WINNER');
+      put(final.winner === final.a ? final.b : final.a, 'FINAL');
+    }
+    if (d.third && d.third.winner) {
+      put(d.third.winner, 'THIRD PLACE');
+      put(d.third.winner === d.third.a ? d.third.b : d.third.a, 'FOURTH');
+    }
+    for (let r = rounds.length - 1; r >= 0; r--) {
+      const losers = rounds[r].pairs
+        .filter((p) => p.winner && p.a && p.b)
+        .map((p) => (p.winner === p.a ? p.b : p.a))
+        .filter((id) => !seen.has(id))
+        .sort(byQ);
+      for (const id of losers) put(id, rounds[r].name);
+    }
+    // Still in the bracket but not yet knocked out (an unfinished event), then the rest.
+    const inBracket = rounds.length ? rounds[0].pairs.flatMap((p) => [p.a, p.b]).filter(Boolean).sort(byQ) : [];
+    for (const id of inBracket) put(id, 'BRACKET');
+    for (const e of q) put(e.driverId, e.best != null ? 'QUALIFYING' : 'NO SCORE');
+    return out.map((x, i) => ({ ...x, position: i + 1 }));
+  }
+
+  /**
+   * What each driver's phone needs to know about the drift event, keyed by driver id, so the
+   * laptop endpoint and the hosted driver_state read the same thing (settings.driftView).
+   */
+  driftView() {
+    const s = this.state;
+    if ((s.event.sessionType || 'race') !== 'drift') return {};
+    const d = s.drift;
+    const out = {};
+    const name = (id) => { const x = this.driver(id); return x ? x.name : ''; };
+    const q = this.qualifyingOrder();
+    q.forEach((e, i) => {
+      out[e.driverId] = { qualiRank: e.best != null ? i + 1 : null, qualiBest: e.best, runs: e.runs.filter((n) => typeof n === 'number').length };
+    });
+    const at = (id) => (out[id] = out[id] || {});
+    if (d.solo) {
+      const o = at(d.solo.driverId);
+      o.onTrack = d.solo.status === 'running' ? 'solo' : null;
+      if (d.solo.status === 'scored') o.lastScore = d.solo.total;
+    }
+    const b = d.battle;
+    if (b) {
+      for (const who of ['a', 'b']) {
+        const id = b[who];
+        const o = at(id);
+        o.battle = {
+          opponent: name(who === 'a' ? b.b : b.a),
+          run: b.run,
+          role: b.status === 'running' ? (b.lead === who ? 'lead' : 'chase') : null,
+          omt: b.omt || 0,
+          result: b.status === 'decided' ? (b.winner === id ? 'won' : 'lost') : null
+        };
+        if (b.status === 'running') o.onTrack = 'battle';
+      }
+    }
+    // Up next: the first battle not yet run in the round being run, and not the live one.
+    const live = b && b.status === 'running' ? `${b.round}:${b.pair}` : null;
+    const rounds = d.bracket || [];
+    const cur = rounds.find((r) => r.pairs.some((p) => !p.winner && p.a && p.b));
+    if (cur) {
+      const ri = rounds.indexOf(cur);
+      const next = cur.pairs.findIndex((p, pi) => !p.winner && p.a && p.b && `${ri}:${pi}` !== live);
+      if (next > -1) {
+        const p = cur.pairs[next];
+        at(p.a).upNext = { opponent: name(p.b), round: cur.name };
+        at(p.b).upNext = { opponent: name(p.a), round: cur.name };
+      }
+    } else if (d.third && !d.third.winner && !(b && b.round === 'third')) {
+      at(d.third.a).upNext = { opponent: name(d.third.b), round: 'THIRD PLACE' };
+      at(d.third.b).upNext = { opponent: name(d.third.a), round: 'THIRD PLACE' };
+    }
+    if (d.champion) at(d.champion).champion = true;
+    return out;
+  }
+
   /** Order the qualifying board: best run first, unscored drivers last. */
   qualifyingOrder() {
     const q = this.state.drift.qualifying;
@@ -1693,6 +1872,11 @@ export class RaceState {
     while (d.bracket.length) {
       const last = d.bracket[d.bracket.length - 1];
       if (last.pairs.some((p) => !p.winner)) return;
+      // Both semi-finals decided: the two beaten drivers meet for third, if the format has it.
+      if (last.pairs.length === 2 && d.format.thirdPlace && !d.third) {
+        const lost = last.pairs.map((p) => (p.winner === p.a ? p.b : p.a)).filter(Boolean);
+        if (lost.length === 2) d.third = { a: lost[0], b: lost[1], winner: null, omt: 0 };
+      }
       if (last.pairs.length === 1) {
         const champ = last.pairs[0].winner;
         if (champ && d.champion !== champ) {
@@ -1733,7 +1917,7 @@ export class RaceState {
     if (count('a') >= need) winner = b.a;
     else if (count('b') >= need) winner = b.b;
 
-    const pair = d.bracket[b.round] && d.bracket[b.round].pairs[b.pair];
+    const pair = b.round === 'third' ? d.third : d.bracket[b.round] && d.bracket[b.round].pairs[b.pair];
     if (!pair) return false;
 
     if (!winner) {
@@ -1745,6 +1929,9 @@ export class RaceState {
           : count('b') > count('a') ? b.b
           : (qa >= 0 && (qb < 0 || qa < qb)) ? b.a : b.b;
       } else {
+        // Kept for the broadcast: the votes are cleared for the rerun, and the overlay
+        // reveals what the judges said before they were.
+        b.reveal = { votes: [...b.votes], at: Date.now(), outcome: 'omt' };
         pair.omt += 1;
         b.omt = pair.omt;
         b.votes = new Array(d.format.judges).fill(null);
@@ -1758,6 +1945,7 @@ export class RaceState {
     }
 
     pair.winner = winner;
+    b.reveal = { votes: [...b.votes], at: Date.now(), outcome: winner === b.a ? 'a' : 'b' };
     b.status = 'decided';
     b.winner = winner;
     const w = this.driver(winner);
@@ -2012,7 +2200,7 @@ export class RaceState {
         s.event.programDone = { ...(s.event.programDone || {}), [rec.type]: rec.id };
         this.pushFeed('flag', `${String(rec.name || rec.type).toUpperCase()} FINISHED`);
         // The race decides the round: its points go into the championship straight away.
-        if (rec.type === 'race' || rec.type === 'endurance') this.scoreRoundFromRace(rec, now);
+        if (rec.type === 'race' || rec.type === 'endurance' || rec.type === 'drift') this.scoreRoundFromRace(rec, now);
         break;
       }
 
@@ -2035,9 +2223,11 @@ export class RaceState {
           id: `rd${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`,
           name: String(a.name || `ROUND ${n}`).slice(0, 40),
           track: String(a.track != null ? a.track : s.event.track || '').slice(0, 60),
+          kind: a.kind === 'drift' ? 'drift' : 'race',
           at: now,
           closedAt: null
         };
+        s.event.program = PROGRAMS[round.kind];
         s.season.rounds.push(round);
         s.season.current = round.id;
         s.event.round = round.name;
@@ -2055,6 +2245,7 @@ export class RaceState {
         s.season.current = round.id;
         s.event.round = round.name;
         if (round.track) s.event.track = round.track;
+        s.event.program = PROGRAMS[round.kind || 'race'];
         // Which sessions of this round were finished: the newest record of each type.
         const done = {};
         for (const x of [...(s.sessions || [])].reverse()) {
@@ -3181,8 +3372,19 @@ export class RaceState {
 
       case 'drift.config':
         Object.assign(s.drift.format, pick(a.patch || {}, [
-          'bracketSize', 'judges', 'qualifyingRuns', 'maxOmt'
+          'bracketSize', 'judges', 'qualifyingRuns', 'maxOmt', 'scoring', 'thirdPlace'
         ]));
+        if (a.patch && a.patch.categories) {
+          const c = s.drift.format.categories || (s.drift.format.categories = {});
+          for (const k of ['line', 'angle', 'style']) {
+            if (a.patch.categories[k] != null) c[k] = Math.max(1, Math.min(100, Math.round(Number(a.patch.categories[k]) || 0)));
+          }
+        }
+        if (s.drift.solo) {
+          const v = s.drift.solo.scores;
+          v.length = s.drift.format.judges;
+          for (let i = 0; i < v.length; i++) if (v[i] === undefined) v[i] = null;
+        }
         if (s.drift.battle) {
           // keep the vote slots matching the judge count so a mid-event change is safe
           const v = s.drift.battle.votes;
@@ -3199,8 +3401,11 @@ export class RaceState {
           entry = { driverId: a.driverId, runs: [], best: null };
           s.drift.qualifying.push(entry);
         }
-        if (a.runs) entry.runs = a.runs.map((n) => (n == null ? null : Number(n)));
-        else if (a.score != null) entry.runs.push(Number(a.score));
+        if (a.runs) {
+          entry.runs = a.runs.map((n) => (n == null ? null : Number(n)));
+          // A number typed by hand replaces any judged detail behind it.
+          entry.details = (entry.details || []).map((x, i) => (a.runs[i] == null ? null : x));
+        } else if (a.score != null) entry.runs.push(Number(a.score));
         entry.runs = entry.runs.slice(0, Math.max(1, s.drift.format.qualifyingRuns));
         const scored = entry.runs.filter((n) => typeof n === 'number' && !Number.isNaN(n));
         entry.best = scored.length ? Math.max(...scored) : null;
@@ -3212,8 +3417,9 @@ export class RaceState {
         break;
 
       case 'drift.battle.start': {
-        const round = s.drift.bracket[a.round];
-        const pair = round && round.pairs[a.pair];
+        const third = a.round === 'third';
+        const round = third ? { name: 'THIRD PLACE' } : s.drift.bracket[a.round];
+        const pair = third ? s.drift.third : round && round.pairs[a.pair];
         if (!pair || !pair.a || !pair.b) break;
         s.drift.battle = {
           round: a.round, pair: a.pair, a: pair.a, b: pair.b,
@@ -3241,7 +3447,7 @@ export class RaceState {
         const i = Number(a.judge);
         if (!(i >= 0 && i < b.votes.length)) break;
         // clicking the same call again clears it, so a misclick is one click to undo
-        b.votes[i] = b.votes[i] === a.vote ? null : a.vote;
+        b.votes[i] = a.toggle !== false && b.votes[i] === a.vote ? null : a.vote;
         if (a.autoDecide !== false) this.decideBattle();
         break;
       }
@@ -3258,7 +3464,65 @@ export class RaceState {
         s.drift.bracket = [];
         s.drift.battle = null;
         s.drift.champion = null;
-        if (a.clearQualifying) s.drift.qualifying = [];
+        s.drift.third = null;
+        if (a.clearQualifying) { s.drift.qualifying = []; s.drift.solo = null; }
+        break;
+
+      /*
+       * A qualifying run on track. The run number is the driver's next empty one; the
+       * judges' scores fill in as they arrive (from the console or their phones) and the
+       * run is recorded the moment the last judge has scored it.
+       */
+      case 'drift.solo.start': {
+        const d = this.driver(a.driverId);
+        if (!d) break;
+        const entry = s.drift.qualifying.find((e) => e.driverId === d.id);
+        const done = entry ? entry.runs.filter((n) => typeof n === 'number').length : 0;
+        const max = Math.max(1, s.drift.format.qualifyingRuns || 1);
+        const run = a.run != null ? Math.max(0, Math.min(max - 1, Number(a.run))) : Math.min(done, max - 1);
+        s.drift.solo = {
+          driverId: d.id, run, at: now, status: 'running', total: null,
+          scores: new Array(Math.max(1, s.drift.format.judges || 1)).fill(null)
+        };
+        this.pushFeed('battle', `${d.name} · QUALIFYING RUN ${run + 1}`, d.id);
+        break;
+      }
+
+      case 'drift.score': {
+        const solo = s.drift.solo;
+        if (!solo || solo.status !== 'running') break;
+        const i = Number(a.judge) || 0;
+        if (!(i >= 0 && i < solo.scores.length)) break;
+        const cap = s.drift.format.categories || { line: 35, angle: 30, style: 35 };
+        const clamp = (v, max) => Math.max(0, Math.min(max, Math.round((Number(v) || 0) * 10) / 10));
+        solo.scores[i] = (s.drift.format.scoring === 'single' || a.total != null)
+          ? { total: clamp(a.total, 100) }
+          : { line: clamp(a.line, cap.line), angle: clamp(a.angle, cap.angle), style: clamp(a.style, cap.style) };
+        if (solo.scores.every((x) => x)) this.finishSolo(now);
+        break;
+      }
+
+      case 'drift.solo.close':
+        s.drift.solo = null;
+        break;
+
+      /*
+       * One entry for everything a judge sends, from the console or a phone: a battle vote
+       * or a qualifying score, and a note that the judge is connected.
+       */
+      case 'drift.judge': {
+        const i = Number(a.judge) || 0;
+        s.drift.judgeSeen = { ...(s.drift.judgeSeen || {}), [i]: now };
+        if (a.kind === 'vote') return this.apply({ type: 'drift.vote', judge: i, vote: a.vote, toggle: false });
+        if (a.kind === 'score') return this.apply({ type: 'drift.score', judge: i, ...pick(a, ['line', 'angle', 'style', 'total']) });
+        break;
+      }
+
+      case 'drift.judgeKey':
+        // The secret in the judges' links. A new one cuts off every link handed out before;
+        // a given one is the hosted event's own, restored when its console reopens.
+        s.drift.judgeKey = a.key ? String(a.key).toUpperCase().slice(0, 12)
+          : Math.random().toString(36).slice(2, 8).toUpperCase();
         break;
 
       case 'state.replace':
@@ -3283,6 +3547,12 @@ function reindexLines(lines) {
     .map((l, i) => ({ ...l, index: i + 1, name: l.name || `Sector ${i + 1}` }));
   return [...finish.map((l) => ({ ...l, index: 0, name: l.name || 'Finish line' })), ...sectors];
 }
+
+/** The sessions a round runs through, by kind of event. */
+const PROGRAMS = {
+  race: ['practice', 'qualifying', 'race'],
+  drift: ['practice', 'drift']
+};
 
 /** An id for one session of the night (kept by its penalties and its archived record). */
 function sessionUid(now) {

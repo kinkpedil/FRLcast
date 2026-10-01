@@ -2937,3 +2937,51 @@ html[data-skin="supergt"] .tw-row .t.best { color: var(--sgt-yellow); }
 
 html[data-skin="f1"] .rc-card { border-radius: 3px; }
 html[data-skin="f1"] .rc-card .rc-tag, html[data-skin="f1"] .rc-card .rc-what { font-style: italic; }
+
+/* ---------- drift: battle calls revealed, the qualifying run, the qualifying board ---------- */
+
+.bt-votes i.in { background: rgba(255, 255, 255, .55); }
+.bt-votes.reveal { flex-wrap: wrap; gap: 8px; }
+.bt-call {
+  padding: 5px 12px; border-radius: 5px; font: 800 13px var(--sans); letter-spacing: .04em;
+  color: #04120d; background: var(--accent); text-transform: uppercase;
+  opacity: 0; transform: translateY(8px) scale(.9);
+  animation: btCall .45s var(--ease-out) forwards;
+}
+.bt-call.b { background: #ff9f0a; color: #150c00; }
+.bt-call.omt { background: rgba(255, 255, 255, .85); color: #000; }
+.bt-call.big { flex-basis: 100%; text-align: center; font-size: 17px; letter-spacing: .12em; background: #fff; }
+@keyframes btCall { to { opacity: 1; transform: none; } }
+
+#driftsolo { left: 610px; top: 800px; width: 700px; }
+#driftsolo:not(.on) > .wrap { transform: translateY(24px) scale(.97); }
+.ds-card { padding: 0; overflow: hidden; border-left: 6px solid var(--c, #888); }
+.ds-head { display: flex; justify-content: space-between; padding: 9px 16px 0; font: 800 12px var(--sans); letter-spacing: .14em; color: rgba(255,255,255,.6); }
+.ds-head .ds-run { color: var(--accent); }
+.ds-who { display: flex; align-items: baseline; gap: 10px; padding: 2px 16px 8px; }
+.ds-who b { font: 900 30px var(--sans); color: #fff; text-transform: uppercase; letter-spacing: .01em; }
+.ds-who span { font: 700 15px var(--mono); color: rgba(255,255,255,.55); }
+.ds-who i { display: none; }
+.ds-body { padding: 0 16px 14px; }
+.ds-judging { display: flex; align-items: center; gap: 8px; font: 800 13px var(--sans); letter-spacing: .14em; color: rgba(255,255,255,.7); }
+.ds-judging span { margin-right: 6px; }
+.ds-judging i { width: 40px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.15); transition: background .2s; }
+.ds-judging i.in { background: var(--accent); }
+.ds-score { display: flex; align-items: baseline; gap: 12px; animation: btCall .5s var(--ease-out) both; }
+.ds-score b { font: 900 54px var(--mono); color: var(--accent); line-height: 1; }
+.ds-score span { font: 800 13px var(--sans); letter-spacing: .12em; color: rgba(255,255,255,.7); }
+.ds-bars { display: grid; gap: 6px; margin-top: 10px; }
+.ds-bar { display: grid; grid-template-columns: 70px 1fr 50px; align-items: center; gap: 10px; font: 800 12px var(--sans); letter-spacing: .1em; color: rgba(255,255,255,.7); }
+.ds-bar div { height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden; }
+.ds-bar i { display: block; height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(0); animation: dsBar .7s var(--ease-out) forwards; }
+.ds-bar em { font: 700 15px var(--mono); font-style: normal; color: #fff; text-align: right; }
+@keyframes dsBar { to { transform: scaleX(1); } }
+
+#driftq { left: var(--safe); top: 150px; width: 420px; }
+.dq { padding: 4px 0 8px; }
+.dq-row { display: grid; grid-template-columns: 28px 5px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 14px; }
+.dq-row .p { font: 800 14px var(--mono); color: rgba(255,255,255,.6); text-align: right; }
+.dq-row i { width: 5px; height: 20px; border-radius: 2px; }
+.dq-row b { font: 800 15px var(--sans); color: #fff; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dq-row em { font: 800 16px var(--mono); font-style: normal; color: var(--accent); }
+.dq-row.live { background: rgba(255,255,255,.07); }

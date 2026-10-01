@@ -41,7 +41,7 @@ if (params.get('motion') === 'full') document.documentElement.classList.add('mot
 const editing = params.get('edit') === '1';
 if (editing) document.documentElement.classList.add('edit');
 
-const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr', 'pit', 'lights', 'catching', 'rivalry', 'podium', 'reactions', 'racecontrol'];
+const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr', 'pit', 'lights', 'catching', 'rivalry', 'podium', 'reactions', 'racecontrol', 'driftsolo', 'driftq'];
 const LABELS = {
   status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower',
   lowerthird: 'Lower third', gap: 'Gap bar', results: 'Results',
@@ -51,7 +51,8 @@ const LABELS = {
   sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code',
   pit: 'Pit lane', lights: 'Start lights', catching: 'Catching',
   rivalry: 'Rivalry', podium: 'Podium celebration', reactions: 'Crowd reactions',
-  racecontrol: 'Race control'
+  racecontrol: 'Race control',
+  driftsolo: 'Drift run', driftq: 'Drift qualifying'
 };
 const STAGE_W = 1920;
 const STAGE_H = 1080;
@@ -214,6 +215,21 @@ function build() {
           <div class="fl-tag">FASTEST LAP</div>
           <div class="fl-name" id="flName">--</div>
           <div class="fl-time" id="flTime">--</div>
+        </div>
+      </div>`,
+    driftsolo: `
+      <div class="widget" id="driftsolo">
+        <div class="card ds-card">
+          <div class="ds-head"><span class="ds-tag">QUALIFYING</span><span class="ds-run" id="dsRun">RUN 1</span></div>
+          <div class="ds-who"><i id="dsDot"></i><b id="dsName">--</b><span id="dsNum"></span></div>
+          <div class="ds-body" id="dsBody"></div>
+        </div>
+      </div>`,
+    driftq: `
+      <div class="widget" id="driftq">
+        <div class="card">
+          <div class="card-head"><span class="tick"></span><span class="title">QUALIFYING</span><span class="sub" id="dqSub">--</span></div>
+          <div class="dq" id="dqRows"></div>
         </div>
       </div>`,
     racecontrol: `
@@ -1019,14 +1035,27 @@ function renderBattle() {
       null);
   }
 
+  /*
+   * The judges' calls. While the battle runs, a slot only fills to say a judge has called
+   * it, never which way: showing the votes as they arrive gives the result away before the
+   * last judge has decided. Once it is decided (or sent to One More Time), the calls open
+   * one by one, which is the moment the crowd waits for.
+   */
   const votes = document.getElementById('btVotes');
-  const sig = JSON.stringify(b.votes) + b.status;
+  const rv = b.reveal && (b.status === 'decided' || Date.now() - b.reveal.at < 12000) ? b.reveal : null;
+  const sig = rv ? `r${rv.at}` : `v${b.votes.map((v) => (v ? 1 : 0)).join('')}${b.status}`;
   if (votes.dataset.sig !== sig) {
     votes.dataset.sig = sig;
-    votes.innerHTML = b.votes.map((v) => {
-      const cls = v === 'a' ? 'a' : v === 'b' ? 'b' : v === 'omt' ? 'omt' : '';
-      return `<i class="${cls}"></i>`;
-    }).join('');
+    if (rv) {
+      const label = (v) => (v === 'a' ? (driver(b.a) || {}).name : v === 'b' ? (driver(b.b) || {}).name : 'OMT') || '';
+      votes.innerHTML = rv.votes.map((v, i) =>
+        `<span class="bt-call ${v === 'a' ? 'a' : v === 'b' ? 'b' : 'omt'}" style="animation-delay:${i * 0.7}s">${esc(label(v))}</span>`).join('') +
+        (rv.outcome === 'omt' ? `<span class="bt-call omt big" style="animation-delay:${rv.votes.length * 0.7}s">ONE MORE TIME</span>` : '');
+      votes.classList.add('reveal');
+    } else {
+      votes.classList.remove('reveal');
+      votes.innerHTML = b.votes.map((v) => `<i class="${v ? 'in' : ''}"></i>`).join('');
+    }
   }
 }
 
@@ -1036,7 +1065,7 @@ function renderBracket() {
   if (!box) return;
   const D = state.drift || {};
   const rounds = D.bracket || [];
-  const sig = JSON.stringify(rounds.map((r) => r.pairs)) + (D.champion || '');
+  const sig = JSON.stringify(rounds.map((r) => r.pairs)) + (D.champion || '') + JSON.stringify(D.third || null);
   if (box.dataset.sig === sig) return;
   box.dataset.sig = sig;
 
@@ -1064,7 +1093,82 @@ function renderBracket() {
           <div class="${p.winner === p.a ? 'w' : ''}"><i style="background:${colour(p.a)}"></i>${esc(name(p.a) || '-')}</div>
           <div class="${p.winner === p.b ? 'w' : ''}"><i style="background:${colour(p.b)}"></i>${esc(name(p.b) || (p.a ? 'BYE' : '-'))}</div>
         </div>`).join('')}
+      ${r === rounds[rounds.length - 1] && D.third ? `<h5 style="margin-top:12px">THIRD PLACE</h5>
+        <div class="bk-pair">
+          <div class="${D.third.winner === D.third.a ? 'w' : ''}"><i style="background:${colour(D.third.a)}"></i>${esc(name(D.third.a) || '-')}</div>
+          <div class="${D.third.winner === D.third.b ? 'w' : ''}"><i style="background:${colour(D.third.b)}"></i>${esc(name(D.third.b) || '-')}</div>
+        </div>` : ''}
     </div>`).join('');
+}
+
+/*
+ * The qualifying run card: who is on track, the judges' slots filling as they score, then
+ * the score and the Line / Angle / Style split (judges averaged) as bars. It holds the
+ * result for a while after the last judge scores, timed from when this overlay saw it.
+ */
+const DS_HOLD_MS = 15000;
+let dsSeen = null;    // { key, at }
+let dsTimer = null;
+
+function renderDriftSolo() {
+  const box = document.getElementById('driftsolo');
+  if (!box) return;
+  const D = state.drift || {};
+  const solo = D.solo;
+  const on = state.overlay.show.driftsolo !== false && (state.event.sessionType === 'drift' || forced || editing);
+  let visible = false;
+  if (on && solo) {
+    if (solo.status === 'running') visible = true;
+    else {
+      const key = `${solo.driverId}|${solo.run}|${solo.total}`;
+      if (!dsSeen || dsSeen.key !== key) dsSeen = { key, at: Date.now() };
+      const left = DS_HOLD_MS - (Date.now() - dsSeen.at);
+      visible = left > 0;
+      clearTimeout(dsTimer);
+      if (visible) dsTimer = setTimeout(renderDriftSolo, left + 50);
+    }
+  }
+  show('driftsolo', visible || (on && !solo && (forced || editing)));
+  if (!solo) return;
+  const d = (state.drivers || []).find((x) => x.id === solo.driverId);
+  box.style.setProperty('--c', d ? d.color : '#888');
+  setText(document.getElementById('dsRun'), `RUN ${solo.run + 1}`, null);
+  setText(document.getElementById('dsName'), d ? rowName(d) : '--', null);
+  setText(document.getElementById('dsNum'), d ? `#${d.num}` : '', null);
+  const body = document.getElementById('dsBody');
+  const sig = JSON.stringify([solo.status, solo.scores.map((x) => !!x), solo.total]);
+  if (body.dataset.sig === sig) return;
+  body.dataset.sig = sig;
+  if (solo.status === 'running') {
+    body.innerHTML = `<div class="ds-judging"><span>JUDGING</span>${solo.scores.map((x) => `<i class="${x ? 'in' : ''}"></i>`).join('')}</div>`;
+    return;
+  }
+  const F = D.format || {};
+  const cats = F.categories || { line: 35, angle: 30, style: 35 };
+  const split = solo.scores[0] && solo.scores[0].line != null;
+  const avg = (k) => Math.round(solo.scores.reduce((n, x) => n + (x[k] || 0), 0) / solo.scores.length * 10) / 10;
+  const q = (D.qualifying || []).filter((e) => e.best != null).sort((a, b) => b.best - a.best);
+  const rank = q.findIndex((e) => e.driverId === solo.driverId) + 1;
+  body.innerHTML = `<div class="ds-score"><b>${solo.total}</b><span>${rank ? `P${rank} IN QUALIFYING` : 'POINTS'}</span></div>` +
+    (split ? `<div class="ds-bars">${['line', 'angle', 'style'].map((k, i) => `
+      <div class="ds-bar"><span>${k.toUpperCase()}</span><div><i style="width:${Math.min(100, avg(k) / cats[k] * 100)}%;animation-delay:${0.2 + i * 0.25}s"></i></div><em>${avg(k)}</em></div>`).join('')}</div>` : '');
+}
+
+/** The drift qualifying board: best score first, the car on track marked. */
+function renderDriftQ() {
+  const box = document.getElementById('dqRows');
+  if (!box) return;
+  const D = state.drift || {};
+  const q = (D.qualifying || []).filter((e) => e.best != null).sort((a, b) => b.best - a.best).slice(0, 16);
+  const live = D.solo && D.solo.status === 'running' ? D.solo.driverId : null;
+  const sig = JSON.stringify(q.map((e) => [e.driverId, e.best])) + live;
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  setText(document.getElementById('dqSub'), `${q.length} SCORED`, null);
+  box.innerHTML = q.map((e, i) => {
+    const d = (state.drivers || []).find((x) => x.id === e.driverId) || {};
+    return `<div class="dq-row ${e.driverId === live ? 'live' : ''}"><span class="p">${i + 1}</span><i style="background:${d.color || '#666'}"></i><b>${esc(d.name || '-')}</b><em>${e.best}</em></div>`;
+  }).join('');
 }
 
 /**
@@ -2039,6 +2143,9 @@ function renderInner() {
   show('fastlap', vis.fastlap);
   if (shown.fastlap) renderFastLap();
   renderRaceControl();
+  renderDriftSolo();
+  show('driftq', vis.driftq && (state.drift?.qualifying || []).some((e) => e.best != null));
+  if (shown.driftq) renderDriftQ();
   show('sectors', vis.sectors);
   if (shown.sectors) renderSectors(rows);
   show('delta', vis.delta);
