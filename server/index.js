@@ -289,6 +289,8 @@ function pitBoard(s, d) {
   if (unserved) {
     for (const p of s.race.penalties || []) {
       if (p.driverId !== d.id || p.type !== 'drivethrough' || p.status !== 'applied' || p.served) continue;
+      // Only a drive-through from this session (see inSession in public/js/timing.js).
+      if (s.race.sessionEpoch && (Number(p.at) || 0) < s.race.sessionEpoch) continue;
       const left = Math.max(0, unserved - ((d.lapsDone || 0) - (p.lap || 0)));
       serveInLaps = serveInLaps == null ? left : Math.min(serveInLaps, left);
     }
