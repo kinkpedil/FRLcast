@@ -80,6 +80,12 @@ function settingsOf(state) {
     stints: state.stints || {},
     // The report's position graph on a hosted event.
     lapChart: state.race.lapChart || {},
+    // Every car's lap times, for the report's consistency chart on a hosted event.
+    lapTimes: Object.fromEntries((state.drivers || [])
+      .filter((d) => Array.isArray(d.lapTimes) && d.lapTimes.length)
+      .map((d) => [d.id, d.lapTimes.filter((ms) => ms > 0).slice(-300)])),
+    // Licence points per driver, read by driver_state for the phones (empty when off).
+    licence: state.licence || {},
     predictOrder: state.race.predictOrder !== false
   };
 }

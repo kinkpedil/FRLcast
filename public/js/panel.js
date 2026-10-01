@@ -2,6 +2,7 @@ import { Bus, fmtTime, fmtClock, classification, raceElapsed, leaderLap, fastest
 import { CloudPanelBus } from './cloudpanel.js';
 import { cloudOptions } from './cloudbus.js';
 import { THEMES } from './themes.js';
+import { LICENCE_DEFAULT, licenceFrom, licenceEntries, penaltyPoints } from './points.js';
 import { Capture } from './capture.js';
 import { VisionEngine, ROI_TYPES, ROI_HELP } from './vision.js';
 import { Detector } from './detector.js';
@@ -696,7 +697,8 @@ function renderRace() {
   const rows = classification(state);
   const tableSig = rows.map((d) => [
     d.id, d.position, d.lapsDone, d.lastLap, d.bestLap, d.gap,
-    d.pit, d.dnf, d.retired, d.penaltySec, d.name, d.num, d.color
+    d.pit, d.dnf, d.retired, d.penaltySec, d.name, d.num, d.color,
+    !!(state.licence && state.licence[d.id] && state.licence[d.id].banned)
   ].join(',')).join(';') + '|' + state.overlay.focusDriverId;
   if ($('#liveTable').dataset.sig === tableSig) return;
   $('#liveTable').dataset.sig = tableSig;
@@ -713,6 +715,7 @@ function renderRace() {
           ${d.pit ? '<span class="hot" style="color:var(--yellow)">PIT</span>' : ''}
           ${d.dnf ? `<span class="hot" style="color:var(--red)">${d.retired ? 'RET' : 'DNF'}</span>` : ''}
           ${d.penaltySec ? `<span class="hot" style="color:var(--red)">+${d.penaltySec}s</span>` : ''}
+          ${state.licence && state.licence[d.id] && state.licence[d.id].banned ? `<span class="hot" style="color:var(--red)" title="${t('Race ban this round')}">BAN</span>` : ''}
         </td>
         <td class="mono">${d.lapsDone}</td>
         <td class="mono dim">${d.lastLap != null ? fmtTime(d.lastLap) : '--'}</td>
@@ -1422,6 +1425,51 @@ $('#brandRotate').onchange = (e) => bus.action('brand.update', { patch: { rotate
  * arithmetic — a championship table that disagrees between the panel and the broadcast is
  * worse than none. This page only displays it and edits the inputs.
  */
+/**
+ * The licence card: the league's table of points per penalty, and where every driver
+ * stands, including what the session on the timing screen would add if it were banked now.
+ */
+const ptsLabel = (n) => `${n} ${n === 1 ? 'pt' : 'pts'}`;
+
+function renderLicence(c, setVal) {
+  const lic = c.licence || LICENCE_DEFAULT;
+  const on = $('#licOn');
+  if (on && document.activeElement !== on) on.checked = !!lic.on;
+  $('#licCfg').hidden = !lic.on;
+  if (!lic.on) return;
+  setVal('#licThreshold', lic.threshold);
+  $$('[data-lic]').forEach((el) => setVal(`[data-lic="${el.dataset.lic}"]`, (lic.perKind || {})[el.dataset.lic] ?? 0));
+
+  const pending = licenceEntries(state.race.penalties, state.drivers, lic, c.rounds);
+  const rows = licenceFrom(c.rounds, lic, pending);
+  const live = new Set(state.drivers.map((d) => d.id));
+  // Everyone on the grid shows, clean licence or not; an absent driver shows while they owe.
+  for (const d of state.drivers) {
+    if (!rows.some((r) => r.driverId === d.id)) {
+      rows.push({ driverId: d.id, name: d.name, num: d.num, points: 0, pending: 0, banned: false, threshold: lic.threshold });
+    }
+  }
+  const box = $('#licTable');
+  const list = rows.filter((r) => live.has(r.driverId) || r.points || r.banned);
+  box.innerHTML = list.length ? '<div class="lictbl">' + list.map((r) => {
+    const th = r.threshold || lic.threshold;
+    const now = Math.min(100, (r.points / th) * 100);
+    const plus = Math.min(100 - now, (r.pending / th) * 100);
+    const risk = !r.banned && r.points + r.pending >= th;
+    const status = r.banned
+      ? t('Race ban this round')
+      : `<b>${r.points}${r.pending ? ` + ${r.pending}` : ''}</b> / ${th}`;
+    return `<div class="licrow ${r.banned ? 'ban' : risk ? 'risk' : ''}">
+      <span class="num">#${esc(r.num)}</span>
+      <span class="nm">${esc(r.name)}</span>
+      <span class="licbar"><i style="width:${now}%"></i><b style="left:${now}%;width:${plus}%"></b></span>
+      <span class="licst">${status}</span>
+    </div>`;
+  }).join('') + '</div>' +
+    `<p class="hint" style="margin-top:8px">${t('The figure after the plus is this session, not banked yet.')}</p>`
+    : `<p class="hint">${t('No drivers yet.')}</p>`;
+}
+
 function renderChampionship() {
   if (!state || currentPage !== 'champ') return;
   const c = state.championship || { points: {}, rounds: [] };
@@ -1450,6 +1498,8 @@ function renderChampionship() {
   setVal('#champFl', p.fastestLap ?? 0);
   setVal('#champPole', p.pole ?? 0);
   setVal('#champDrop', p.dropWorst ?? 0);
+
+  renderLicence(c, setVal);
 
   const roundsEl = $('#champRounds');
   if (roundsEl) roundsEl.textContent = `${c.rounds.length} round${c.rounds.length === 1 ? '' : 's'}`;
@@ -1798,6 +1848,13 @@ function renderRaceControl() {
   setNum('#ruSecs', rules.trackLimitsSeconds ?? 5);
 
   const name = (id) => (state.drivers.find((d) => d.id === id) || {}).name || '--';
+  const lic = (state.championship && state.championship.licence) || LICENCE_DEFAULT;
+  const licOn = !!lic.on;
+  $('#penPts').hidden = !licOn;
+  $('.pengrid').classList.toggle('lic', licOn);
+  if (licOn) $('#penPts').placeholder = ptsLabel(penaltyPoints({ type: $('#penKind').value }, lic));
+  // Skipped by the page translator (it would reset the live placeholder), so worded here.
+  $('#penPts').title = t("Licence points for this penalty. Leave empty to use the league's table.");
   const box = $('#penList');
   if (!box) return;
   const rows = pens.slice(0, 12);
@@ -1805,7 +1862,7 @@ function renderRaceControl() {
     <div class="penrow ${p.status}">
       <span class="pdrv">${esc(name(p.driverId))}</span>
       <span class="pkind">${PEN_KIND[p.type] || p.type}${p.type === 'time' && p.seconds ? ` +${p.seconds}s` : ''}</span>
-      <span class="preason">${esc(p.reason)}${p.auto ? ' <i>auto</i>' : ''}</span>
+      <span class="preason">${esc(p.reason)}${p.auto ? ' <i>auto</i>' : ''}${licOn && p.status !== 'dropped' && penaltyPoints(p, lic) ? `<span class="pts">+${ptsLabel(penaltyPoints(p, lic))}</span>` : ''}</span>
       <span class="row" style="gap:4px">
         ${p.status === 'investigating'
           ? `<button class="btn" data-apply="${p.id}">Apply</button><button class="btn ghost" data-drop="${p.id}">No action</button>`
@@ -1832,13 +1889,17 @@ $('#penAdd').onclick = () => {
   if (!driverId) return toast('Pick a driver');
   const reason = $('#penReason').value.trim();
   if (!reason) return toast('A penalty needs a reason: it goes out on the broadcast');
+  const pts = $('#penPts').value.trim();
   bus.action('penalty.add', {
     driverId,
     kind: $('#penKind').value,
     seconds: Number($('#penSecs').value) || 0,
-    reason
+    reason,
+    // Empty means the league's table decides; a number is the steward's own call.
+    points: pts === '' ? null : Number(pts)
   });
   $('#penReason').value = '';
+  $('#penPts').value = '';
 };
 $('#btnBrandToggle').onclick = () => {
   const b = state?.overlay.brand || {};
@@ -4593,3 +4654,15 @@ requestAnimationFrame(previewLoop);
     toast(t('Look saved') + ': ' + name);
   };
 })();
+
+// ---------------------------------------------------------------- licence points
+
+$('#licOn').onchange = (e) => bus.action('licence.config', { patch: { on: e.target.checked } });
+$('#licThreshold').onchange = (e) => bus.action('licence.config', { patch: { threshold: Number(e.target.value) } });
+$$('[data-lic]').forEach((el) => {
+  el.onchange = () => bus.action('licence.config', { patch: { perKind: { [el.dataset.lic]: Number(el.value) } } });
+});
+$('#penKind').addEventListener('change', () => {
+  const lic = (state && state.championship && state.championship.licence) || LICENCE_DEFAULT;
+  if (lic.on) $('#penPts').placeholder = ptsLabel(penaltyPoints({ type: $('#penKind').value }, lic));
+});

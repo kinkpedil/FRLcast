@@ -66,7 +66,7 @@ public class MainActivity extends Activity {
   private TextView status, statusName, statusChip, hint, formLede, nickLabel, radioLabel;
   private Button go, swap, floatBtn, permBtn, signOut, radioSend, reportSend;
   private LinearLayout sizeRow, settings, form, radioBox, reportBox, appealBox, statusCard;
-  private CheckBox subBox, boardBox;
+  private CheckBox subBox, boardBox, voiceBox;
   private SeekBar alpha;
 
   /** The team the server last reported for this driver; team radio only shows with one. */
@@ -305,6 +305,11 @@ public class MainActivity extends Activity {
       restartOverlayIfOn();
     });
     settings.addView(boardBox);
+
+    // Read on every call, so switching it needs no restart of the window.
+    voiceBox = check("Voice spotter: say flags, penalties and radio out loud", Api.prefs(this).getBoolean(Api.K_VOICE, true));
+    voiceBox.setOnCheckedChangeListener((v, on) -> Api.prefs(this).edit().putBoolean(Api.K_VOICE, on).apply());
+    settings.addView(voiceBox);
 
     signOut = ghostBtn("Sign out", DANGER);
     signOut.setOnClickListener(v -> doSignOut());

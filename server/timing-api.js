@@ -251,7 +251,9 @@ export class TimingApi {
     // Nobody has a time yet right after a new session: they stay listed, unranked.
     const timed = matched.filter((m) => m.bestMs != null).sort((a, b) => a.bestMs - b.bestMs);
     const lapsOf = (m) => Math.max(0, m.laps + (adj[m.driverId] || 0));
-    const rows = timed.map((m, i) => ({ driverId: m.driverId, rank: i + 1, laps: lapsOf(m), bestMs: m.bestMs, lastMs: m.lastMs, sectors: m.sectors, bestSectors: m.bestSectors }));
+    // Every lap time of the session, oldest first, for the report's consistency chart.
+    const lapTimesOf = (m) => (m.entries || []).map((e) => e.ms).filter((ms) => ms > 0);
+    const rows = timed.map((m, i) => ({ driverId: m.driverId, rank: i + 1, laps: lapsOf(m), bestMs: m.bestMs, lastMs: m.lastMs, sectors: m.sectors, bestSectors: m.bestSectors, lapTimes: lapTimesOf(m) }));
     for (const m of matched.filter((x) => x.bestMs == null)) {
       rows.push({ driverId: m.driverId, rank: null, laps: lapsOf(m), bestMs: null, lastMs: null, sectors: null, bestSectors: null });
     }
@@ -284,6 +286,7 @@ export class TimingApi {
       if (a < 0) es = es.slice(Math.min(-a, es.length));
       if (t0 != null) Object.assign(m, this.stats(es));
       m.times = es.map((e) => e.at);
+      m.raceLapTimes = es.map((e) => e.ms).filter((ms) => ms > 0);
       if (a > 0) m.times = Array(a).fill(t0).concat(m.times);
       m.raceLaps = m.times.length;
       m.lastAt = m.times[m.raceLaps - 1];
@@ -307,6 +310,7 @@ export class TimingApi {
         driverId: m.driverId, rank: i + 1, laps: m.raceLaps, bestMs: m.bestMs, lastMs: m.lastMs,
         sectors: m.sectors, bestSectors: m.bestSectors, totalMs: m.lastAt - t0,
         gapMs: g.ms, gapLaps: g.laps, intMs: iv.ms, intLaps: iv.laps,
+        lapTimes: m.raceLapTimes || [],
       };
     });
     // No race lap yet: no rank, so the console keeps them in grid order behind the runners.

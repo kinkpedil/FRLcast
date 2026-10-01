@@ -53,6 +53,7 @@ check('league migration re-runs (idempotent)', true);
 // version back so the rest of the checks run against the current function.
 await db.exec(fs.readFileSync(path.join(MIG, '20260927000000_flags.sql'), 'utf8'));
 await db.exec(fs.readFileSync(path.join(MIG, '20260927100000_batch2.sql'), 'utf8'));
+await db.exec(fs.readFileSync(path.join(MIG, '20261001000000_licence.sql'), 'utf8'));
 
 // ---------------------------------------------------------------- 2. without playerid
 const noPlayer = files.filter((f) => !f.includes('playerid'));
@@ -157,6 +158,13 @@ await q(db, `update public.events set settings = jsonb_set(jsonb_set(settings,
 st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
 check('op message reaches the phone', st.me.message === 'BOX THIS LAP', st.me.message);
 check('start lights reach the phone', st.me.lights === 3, String(st.me.lights));
+check('licence is null while the league has it off', st.me.licence === null, JSON.stringify(st.me.licence));
+// licence points ride in the same blob, keyed by driver id
+await q(db, `update public.events set settings = jsonb_set(settings, '{licence}',
+  jsonb_build_object($2::text, jsonb_build_object('points', 7, 'pending', 2, 'threshold', 12, 'banned', false))) where id = $1`,
+  [ev, (await q(db, `select id from public.drivers where num = '55'`))[0].id]);
+st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
+check('licence points reach the phone', st.me.licence && st.me.licence.points === 7 && st.me.licence.threshold === 12, JSON.stringify(st.me.licence));
 // a drive-through, 3 laps ago, black-flag rule = 5 laps -> 2 laps left to serve
 await q(db, `update public.events set settings = jsonb_set(settings, '{rules}', '{"blackFlagUnserved":5}') where id = $1`, [ev]);
 await q(db, `insert into public.penalties (event_id, driver_id, type, status, served, lap)

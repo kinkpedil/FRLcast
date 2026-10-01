@@ -167,6 +167,8 @@
                   <option value="dq">Disqualify</option>
                 </select>
                 <input type="number" id="penSecs" value="5" min="0" max="60" aria-label="Seconds">
+                <input type="number" id="penPts" min="0" max="20" placeholder="pts" aria-label="Licence points" data-i18n-skip
+                       title="Licence points for this penalty. Leave empty to use the league's table." hidden>
                 <button class="btn primary" id="penAdd">Issue</button>
               </div>
               <input type="text" id="penReason" placeholder="Reason, shown on the broadcast" style="margin-bottom:12px">
@@ -510,6 +512,25 @@
                 Changing these affects rounds banked from now on. To apply them to a round
                 already banked, press <b>Rescore</b> on that round: deliberately, one at a time.
               </p>
+            </div>
+          </div>
+
+          <div class="card" id="licCard">
+            <h3>Licence points <span class="right"><label class="toggle" style="display:inline-flex;min-height:0;padding:4px 8px"><span style="font-size:12px;color:var(--ink-mute);margin-right:8px">On</span><input type="checkbox" id="licOn"><i class="sw"></i></label></span></h3>
+            <div class="body">
+              <p class="hint">Every decided penalty also costs points on the driver's licence. Reaching the limit when a round is banked earns a race ban for the next round, and the licence starts again from zero. Open investigations and dropped penalties never count.</p>
+              <div id="licCfg" hidden>
+                <div class="licgrid" style="margin-top:12px">
+                  <label class="field"><span>Ban at</span><input type="number" id="licThreshold" min="1" max="99"></label>
+                  <label class="field"><span>Warning</span><input type="number" data-lic="warning" min="0" max="20"></label>
+                  <label class="field"><span>Time</span><input type="number" data-lic="time" min="0" max="20"></label>
+                  <label class="field"><span>Drive through</span><input type="number" data-lic="drivethrough" min="0" max="20"></label>
+                  <label class="field"><span>Black flag</span><input type="number" data-lic="blackflag" min="0" max="20"></label>
+                  <label class="field"><span>DQ</span><input type="number" data-lic="dq" min="0" max="20"></label>
+                </div>
+                <p class="hint" style="margin-top:8px">Points per penalty type. A steward can set a different figure on one penalty when issuing it.</p>
+                <div id="licTable" style="margin-top:14px"></div>
+              </div>
             </div>
           </div>
 

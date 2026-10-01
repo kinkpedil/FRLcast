@@ -1,5 +1,5 @@
 import { labelGaps, fmtGap } from './timing.js';
-import { scoreRound as scoreRows, standingsFrom } from './points.js';
+import { scoreRound as scoreRows, standingsFrom, LICENCE_DEFAULT, licenceEntries, licenceFrom } from './points.js';
 import { paceOf } from './race-model.js';
 
 
@@ -358,7 +358,9 @@ function defaultState() {
         // night away, does not decide the title.
         dropWorst: 0
       },
-      rounds: []       // { id, name, at, results: [{ driverId, name, num, color, position, points, dnf, fastestLap, pole }] }
+      rounds: [],      // { id, name, at, results: [{ driverId, name, num, color, position, points, dnf, fastestLap, pole }], licence: [...] }
+      // Licence points (points.js): off until a league turns it on.
+      licence: { ...LICENCE_DEFAULT, perKind: { ...LICENCE_DEFAULT.perKind } }
     },
     /*
      * Markers for cutting the recording afterwards.
@@ -614,6 +616,10 @@ export class RaceState {
         this.state.championship = { ...base.championship, ...(disk.championship || {}) };
         this.state.championship.points = {
           ...base.championship.points, ...(disk.championship?.points || {})
+        };
+        this.state.championship.licence = {
+          ...base.championship.licence, ...(disk.championship?.licence || {}),
+          perKind: { ...base.championship.licence.perKind, ...(disk.championship?.licence?.perKind || {}) }
         };
         this.state.recording = { ...base.recording, ...(disk.recording || {}) };
         this.state.commentary = { ...base.commentary, ...(disk.commentary || {}) };
@@ -963,6 +969,7 @@ export class RaceState {
         if (e.laps != null) d.lapsDone = e.laps;
         if (e.bestMs != null && e.bestMs > 0) d.bestLap = e.bestMs;
         if (e.lastMs != null && e.lastMs > 0) d.lastLap = e.lastMs;
+        if (Array.isArray(e.lapTimes) && e.lapTimes.length) d.lapTimes = e.lapTimes;
         // Sector splits from the feed: the last lap's splits for the tower, the per-sector
         // personal bests for green, and the session best per sector for purple. Applying the
         // same values every tick is harmless: the bests are minima and the display just
@@ -1127,6 +1134,25 @@ export class RaceState {
      * than not showing one.
      */
     this.state.standings = this.standings();
+    this.state.licence = this.licenceView();
+  }
+
+  /**
+   * Each driver's licence, keyed by driver id, for the phones and the hosted mirror.
+   *
+   * Empty while the league has the feature off, so nothing about it reaches a phone.
+   * The console builds the full table itself from the same function.
+   */
+  licenceView() {
+    const champ = this.state.championship;
+    const lic = champ.licence || LICENCE_DEFAULT;
+    if (!lic.on) return {};
+    const pending = licenceEntries(this.state.race.penalties, this.state.drivers, lic, champ.rounds);
+    const out = {};
+    for (const e of licenceFrom(champ.rounds, lic, pending)) {
+      out[e.driverId] = { points: e.points, pending: e.pending, threshold: e.threshold, banned: e.banned, bannedWith: e.bannedWith };
+    }
+    return out;
   }
 
   /**
@@ -1924,7 +1950,9 @@ export class RaceState {
             bestSectors: Array.isArray(r.bestSectors) ? r.bestSectors.map(Number) : null,
             totalMs: num(r.totalMs),
             gapMs: num(r.gapMs), gapLaps: Number(r.gapLaps) || 0,
-            intMs: num(r.intMs), intLaps: Number(r.intLaps) || 0
+            intMs: num(r.intMs), intLaps: Number(r.intLaps) || 0,
+            // Every lap time of the session, for the report (capped, it rides in the state).
+            lapTimes: Array.isArray(r.lapTimes) ? r.lapTimes.map(Number).filter((ms) => ms > 0).slice(-300) : null
           };
         }
         s.race.extAt = now;
@@ -2415,6 +2443,19 @@ export class RaceState {
 
       // ---------- championship ----------
 
+      case 'licence.config': {
+        const cur = s.championship.licence || { ...LICENCE_DEFAULT };
+        const patch = a.patch || {};
+        s.championship.licence = {
+          ...cur,
+          ...(patch.on != null ? { on: !!patch.on } : {}),
+          ...(patch.threshold != null ? { threshold: Math.max(1, Math.min(99, Math.round(Number(patch.threshold) || 12))) } : {}),
+          perKind: { ...cur.perKind, ...Object.fromEntries(Object.entries(patch.perKind || {})
+            .map(([k, v]) => [k, Math.max(0, Math.min(20, Math.round(Number(v) || 0)))])) }
+        };
+        break;
+      }
+
       case 'championship.config':
         if (a.patch && a.patch.name != null) s.championship.name = String(a.patch.name).slice(0, 60);
         if (a.patch && a.patch.points) {
@@ -2444,13 +2485,28 @@ export class RaceState {
         const fl = from ? null : this.state.records.bestLap.driverId;
         const marked = rows.map((r) => ({ ...r, fastestLap: fl ? r.driverId === fl : !!r.fastestLap }));
 
+        const lic = s.championship.licence || LICENCE_DEFAULT;
+        const bannedBefore = new Set(licenceFrom(s.championship.rounds, lic).filter((e) => e.banned).map((e) => e.driverId));
         s.championship.rounds.push({
           id: `r${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`,
           name: a.name || (from ? from.name : s.event.round) || `Round ${s.championship.rounds.length + 1}`,
           at: from ? from.at : now,
-          results: this.scoreRound(marked)
+          results: this.scoreRound(marked),
+          licence: from ? (from.licence || []) : licenceEntries(s.race.penalties, s.drivers, lic, s.championship.rounds)
         });
+        // The penalties just charged are marked, so the live session stops showing them as
+        // pending and banking again cannot charge them a second time.
+        const charged = new Set(s.championship.rounds[s.championship.rounds.length - 1].licence
+          .flatMap((e) => (e.items || []).map((it) => it.id)).filter(Boolean));
+        for (const p of s.race.penalties || []) if (charged.has(p.id)) p.banked = true;
         this.pushFeed('flag', `${(a.name || s.event.round || 'ROUND').toUpperCase()} ADDED TO THE CHAMPIONSHIP`);
+        if (lic.on) {
+          for (const e of licenceFrom(s.championship.rounds, lic)) {
+            if (e.banned && !bannedBefore.has(e.driverId)) {
+              this.pushFeed('penalty', `${e.name} · RACE BAN NEXT ROUND (${e.bannedWith} LICENCE POINTS)`, e.driverId);
+            }
+          }
+        }
         break;
       }
 
@@ -2497,7 +2553,10 @@ export class RaceState {
           at: a.at || now,
           lap: d.lapsDone,
           status,
-          auto
+          auto,
+          // Licence points: the steward's own figure, or null to use the league's table.
+          points: a.points != null && a.points !== '' && Number.isFinite(Number(a.points))
+            ? Math.max(0, Math.round(Number(a.points))) : null
         };
         s.race.penalties.unshift(p);
         s.race.penalties = s.race.penalties.slice(0, 200);
@@ -2659,7 +2718,9 @@ export class RaceState {
             totalMs: d.totalMs,
             dnf: !!d.dnf,
             retired: !!d.retired
-          }))
+          })),
+          // The penalties decided in it, so banking this session later still charges them.
+          licence: licenceEntries(s.race.penalties, s.drivers, s.championship.licence, s.championship.rounds)
         });
         s.sessions = s.sessions.slice(0, 20);
         this.pushFeed('flag', `${(a.name || s.event.sessionName || 'SESSION').toUpperCase()} CLASSIFIED`);

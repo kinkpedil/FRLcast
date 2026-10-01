@@ -104,6 +104,8 @@
     var all = document.body.querySelectorAll('[placeholder],[alt],[title],[aria-label]');
     for (var i = 0; i < all.length; i++) {
       var el = all[i];
+      // An element marked skip sets its own attributes (a placeholder that shows a live value).
+      if (el.hasAttribute('data-i18n-skip')) continue;
       var store = attrOriginals.get(el);
       if (!store) { store = {}; attrOriginals.set(el, store); }
       for (var a = 0; a < ATTRS.length; a++) {

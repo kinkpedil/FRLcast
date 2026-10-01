@@ -81,7 +81,8 @@ export function buildReport(state) {
     movers: [],
     retirements: [],
     round: { scored: [], counted: false },
-    standings: { before: [], after: [], moved: [] }
+    standings: { before: [], after: [], moved: [] },
+    consistency: null
   };
   if (report.empty) return report;
 
@@ -175,6 +176,8 @@ export function buildReport(state) {
     ? { laps: chartLaps, cars: Math.max(drivers.length, ...series.flatMap((s) => s.points.filter((p) => p != null))), series }
     : null;
 
+  report.consistency = consistencyOf(drivers, event.sessionType || 'race');
+
   // Who gained the most, only when a grid was actually set.
   report.movers = report.classification
     .filter((r) => r.gained != null && r.gained > 0 && !r.dnf)
@@ -255,6 +258,63 @@ export function buildReport(state) {
  * Markdown rather than a screenshot, because a screenshot of a table is unreadable on a
  * phone and cannot be searched for a driver's name six weeks later.
  */
+/**
+ * How evenly each driver lapped.
+ *
+ * Pace is the fastest lap; consistency is how close the other laps came to each other. It is
+ * measured on clean laps only: a race's opening lap starts from a standstill, and a lap more
+ * than 7% off the driver's own median had an incident or a pit stop in it. Counting those
+ * would rank the driver who crashed once as the least consistent on the grid, which is a
+ * different finding. Spread is the standard deviation of the clean laps.
+ *
+ * Exported so the console can show the same numbers without building a whole report.
+ */
+export function consistencyOf(drivers, sessionType = 'race') {
+  const race = sessionType === 'race' || sessionType === 'endurance';
+  const median = (xs) => {
+    const s = [...xs].sort((a, b) => a - b);
+    const m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  };
+  const series = [];
+  for (const d of drivers) {
+    const all = (d.lapTimes || []).map(Number);
+    if (all.filter((ms) => ms > 0).length < 2) continue;
+    const valid = all.map((ms, i) => ({ lap: i + 1, ms })).filter((x) => x.ms > 0);
+    const med = median(valid.map((x) => x.ms));
+    const clean = valid.filter((x) => !(race && x.lap === 1) && x.ms <= med * 1.07);
+    const avg = clean.length ? clean.reduce((n, x) => n + x.ms, 0) / clean.length : null;
+    const spread = clean.length >= 2
+      ? Math.sqrt(clean.reduce((n, x) => n + (x.ms - avg) ** 2, 0) / (clean.length - 1))
+      : null;
+    series.push({
+      name: d.name, num: d.num, color: d.color || '#8e8e93', dnf: !!d.dnf,
+      laps: valid,                                   // [{ lap, ms }] every timed lap
+      clean: clean.length,
+      best: Math.min(...valid.map((x) => x.ms)),
+      avg: avg == null ? null : Math.round(avg),
+      spread: spread == null ? null : Math.round(spread),
+      cleanLaps: new Set(clean.map((x) => x.lap))
+    });
+  }
+  if (!series.length) return null;
+  const ranked = series.filter((s) => s.spread != null && s.clean >= 3).sort((a, b) => a.spread - b.spread);
+  ranked.forEach((s, i) => { s.rank = i + 1; });
+  // Sets do not survive JSON (the hosted report page posts it nowhere, but keep it plain).
+  for (const s of series) s.cleanLaps = [...s.cleanLaps];
+  return {
+    series,
+    ranked,
+    best: ranked[0] || null,
+    laps: series.reduce((n, s) => Math.max(n, ...s.laps.map((x) => x.lap)), 0)
+  };
+}
+
+/** Milliseconds as seconds with three decimals, for a spread: "±0.214 s". */
+export function spreadText(ms) {
+  return ms == null ? '--' : `±${(ms / 1000).toFixed(3)} s`;
+}
+
 export function reportAsText(report) {
   if (report.empty) return 'No classification to report.';
   const out = [];
@@ -278,6 +338,10 @@ export function reportAsText(report) {
   if (report.movers.length) {
     const m = report.movers[0];
     out.push(`📈 Biggest mover: **${m.name}**, P${m.startedAt} to P${m.position} (+${m.gained})`);
+  }
+  if (report.consistency && report.consistency.best) {
+    const c = report.consistency.best;
+    out.push(`🎯 Most consistent: **${c.name}**, ${spreadText(c.spread)} over ${c.clean} clean laps`);
   }
   out.push('');
 

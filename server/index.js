@@ -322,7 +322,10 @@ function pitBoard(s, d) {
     // reads one payload. Defaults open on an older state that never set it.
     pitOpen: s.race.pitOpen !== false,
     totalLaps: s.race.totalLaps || 0,
-    session: s.event.sessionType || 'race'
+    session: s.event.sessionType || 'race',
+    // Licence points, when the league uses them (null otherwise): the phone shows the count
+    // and warns before a ban, from the same view the console and the hosted mirror read.
+    licence: (s.licence && s.licence[d.id]) || null
   };
 }
 

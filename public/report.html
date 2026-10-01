@@ -70,6 +70,8 @@
   .lapchart .ax { fill: var(--ink-3); font: 500 11px var(--mono); }
   .lapchart .grid { stroke: var(--line); stroke-width: 1; }
   .lapchart .lbl { font: 600 11px Inter, system-ui, sans-serif; fill: var(--ink-2); }
+  .note { color: var(--ink-3); font-size: .875rem; margin: -4px 0 12px; max-width: 70ch; }
+  #consTable { margin-top: 14px; }
   .btn { font: 500 .875rem Inter, system-ui, sans-serif; cursor: pointer;
          border: 1px solid var(--line); border-radius: 7px; padding: 9px 15px;
          background: var(--panel); color: var(--ink); }
@@ -111,6 +113,15 @@
       <div class="lapchart" id="lapChart"></div>
     </div>
 
+    <div id="consWrap" hidden>
+      <h2>Lap times and consistency</h2>
+      <p class="note">Every timed lap, one line per car. The table ranks clean laps only: no
+        standing-start opening lap, and no lap more than 7% off the driver's own median (an
+        incident or a pit stop). Spread is how far a typical lap strays from the driver's average.</p>
+      <div class="lapchart" id="consChart"></div>
+      <div class="wrap-x"><table id="consTable"></table></div>
+    </div>
+
     <div id="stewardWrap" hidden>
       <h2>Stewards</h2>
       <ul class="steward" id="steward"></ul>
@@ -143,7 +154,7 @@
  */
 import { Bus } from './js/shared.js';
 import { CloudBus, cloudOptions } from './js/cloudbus.js';
-import { buildReport, reportAsText, lapTime, classificationHtml, certificateHtml } from './js/race-report.js';
+import { buildReport, reportAsText, lapTime, classificationHtml, certificateHtml, spreadText } from './js/race-report.js';
 import { fmtGap } from './js/timing.js';
 
 const $ = (s) => document.querySelector(s);
@@ -199,6 +210,51 @@ function lapChartSvg(c) {
     const lastLap = s.points.reduce((n, p, i) => (p != null ? i : n), 0);
     const lastPos = s.points[lastLap];
     out.push(`<text class="lbl" x="${x(lastLap) + 8}" y="${y(lastPos) + 4}">${esc(s.name)}${s.dnf ? ' (DNF)' : ''}</text>`);
+  }
+  out.push('</svg>');
+  return out.join('');
+}
+
+/*
+ * Lap times, one line per car. The y axis runs from just under the fastest lap to a little
+ * over the slowest clean lap, so the real differences (tenths) fill the height; a lap that
+ * falls outside, a crash or a stop, is pinned to the bottom edge as a hollow mark rather
+ * than stretching the scale until every line is flat.
+ */
+function consChartSvg(c) {
+  const W = 860, H = 300, left = 58, right = 118, top = 14, bottom = 32;
+  const clean = c.series.flatMap((s) => s.laps.filter((x) => s.cleanLaps.includes(x.lap)).map((x) => x.ms));
+  const all = c.series.flatMap((s) => s.laps.map((x) => x.ms));
+  let lo = Math.min(...all), hi = Math.max(...(clean.length ? clean : all));
+  const pad = Math.max(200, (hi - lo) * 0.08);
+  lo -= pad; hi += pad;
+  const x = (lap) => left + (c.laps > 1 ? ((lap - 1) / (c.laps - 1)) * (W - left - right) : (W - left - right) / 2);
+  const y = (ms) => top + (Math.min(ms, hi) - lo) / (hi - lo) * (H - top - bottom);
+  const fmt = (ms) => { const s = ms / 1000; const m = Math.floor(s / 60); return m ? `${m}:${(s - m * 60).toFixed(1).padStart(4, '0')}` : s.toFixed(1); };
+  const out = [`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Lap times">`];
+  for (let i = 0; i <= 4; i++) {
+    const ms = lo + (hi - lo) * (i / 4);
+    out.push(`<line class="grid" x1="${left}" x2="${W - right}" y1="${y(ms)}" y2="${y(ms)}"/>`);
+    out.push(`<text class="ax" x="${left - 8}" y="${y(ms) + 4}" text-anchor="end">${fmt(ms)}</text>`);
+  }
+  const step = Math.max(1, Math.ceil(c.laps / 12));
+  for (let l = 1; l <= c.laps; l += step) out.push(`<text class="ax" x="${x(l)}" y="${H - 8}" text-anchor="middle">L${l}</text>`);
+  for (const s of c.series) {
+    const col = esc(s.color);
+    // The line joins clean laps only; a lap that was not counted breaks it and shows as a hollow mark.
+    let d = '', pen = false;
+    for (const p of s.laps) {
+      if (!s.cleanLaps.includes(p.lap)) { pen = false; continue; }
+      d += `${pen ? 'L' : 'M'}${x(p.lap).toFixed(1)},${y(p.ms).toFixed(1)} `;
+      pen = true;
+    }
+    out.push(`<path d="${d}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round" opacity="${s.dnf ? 0.4 : 0.9}"><title>${esc(s.name)} #${esc(s.num)}</title></path>`);
+    for (const p of s.laps) {
+      const out1 = !s.cleanLaps.includes(p.lap);
+      out.push(`<circle cx="${x(p.lap).toFixed(1)}" cy="${y(p.ms).toFixed(1)}" r="${out1 ? 3.6 : 2.6}" fill="${out1 ? 'none' : col}" stroke="${col}" stroke-width="${out1 ? 1.6 : 0}"><title>${esc(s.name)}: lap ${p.lap}, ${lapTime(p.ms)}${s.cleanLaps.includes(p.lap) ? '' : ' (not counted)'}</title></circle>`);
+    }
+    const last = [...s.laps].reverse().find((p) => s.cleanLaps.includes(p.lap)) || s.laps[s.laps.length - 1];
+    out.push(`<text class="lbl" x="${x(last.lap) + 8}" y="${y(last.ms) + 4}">${esc(s.name)}</text>`);
   }
   out.push('</svg>');
   return out.join('');
@@ -267,6 +323,26 @@ function render(r) {
   $('#stewardWrap').hidden = !r.penalties.length;
   $('#chartWrap').hidden = !r.lapChart;
   if (r.lapChart) $('#lapChart').innerHTML = lapChartSvg(r.lapChart);
+
+  // ---------------------------------------------------------------- consistency
+  const cons = r.consistency;
+  $('#consWrap').hidden = !cons;
+  if (cons) {
+    $('#consChart').innerHTML = consChartSvg(cons);
+    const rows = [...cons.ranked, ...cons.series.filter((s) => s.rank == null)];
+    $('#consTable').innerHTML = `
+      <tr><th class="num">#</th><th>Driver</th><th class="num r">Clean laps</th>
+          <th class="num r">Best</th><th class="num r">Average</th><th class="num r">Spread</th></tr>`
+      + rows.map((s) => `<tr class="${s.rank == null ? 'out' : ''}">
+        <td class="num">${s.rank ?? '-'}</td>
+        <td><span class="swatch" style="background:${esc(s.color)}"></span>${esc(s.name)}
+          ${s.rank === 1 ? '<span class="gain">most consistent</span>' : ''}</td>
+        <td class="num r">${s.clean} / ${s.laps.length}</td>
+        <td class="num r">${lapTime(s.best)}</td>
+        <td class="num r">${s.avg == null ? '-' : lapTime(s.avg)}</td>
+        <td class="num r">${spreadText(s.spread)}</td>
+      </tr>`).join('');
+  }
 
   $('#steward').innerHTML = r.penalties.map((p) => `
     <li><span class="pen">${esc(p.headline)}</span> · <b>${esc(p.driver)}</b>

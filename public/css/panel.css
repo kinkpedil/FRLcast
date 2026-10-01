@@ -805,3 +805,24 @@ input.dfscore { width: 84px; height: 30px; }
 .segmented .seg-btn { background: var(--bg-2); padding: 0 10px; height: 36px; white-space: nowrap; font-weight: 500; }
 .segmented .seg-btn + .seg-btn { border-left: 0; }
 .main, .page { overflow-x: clip; }
+
+/* ---------- licence points ---------- */
+
+.pengrid.lic { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 64px 64px auto; }
+.licgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.lictbl { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.licrow { display: grid; grid-template-columns: 36px minmax(0, 1fr) 120px auto; align-items: center; gap: 10px;
+          min-height: 42px; padding: 0 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.licrow:last-child { border-bottom: 0; }
+.licrow .num { font-family: var(--mono); font-size: 12px; color: var(--ink-mute); }
+.licrow .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.licbar { position: relative; height: 6px; border-radius: 3px; background: var(--bg-3); overflow: hidden; }
+.licbar i { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 3px; }
+.licbar b { position: absolute; inset: 0 auto 0 0; background: rgba(255, 214, 10, .45); border-radius: 3px; }
+.licrow.risk .licbar i { background: var(--yellow); }
+.licst { font-size: 12px; color: var(--ink-mute); white-space: nowrap; text-align: right; }
+.licst b { color: var(--ink); font-family: var(--mono); }
+.licrow.ban { background: rgba(255, 59, 48, .07); }
+.licrow.ban .licst { color: #ff6b61; font-weight: 600; }
+.licrow.risk .licst { color: var(--yellow); }
+.pts { font-family: var(--mono); font-size: 11px; color: var(--yellow); margin-left: 4px; }

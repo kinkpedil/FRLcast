@@ -664,6 +664,22 @@
     'Enter qualifying scores, then press Build bracket.':
       'Isi skor kualifikasi, lalu tekan Susun bracket.',
     'Flag held manually': 'Bendera dipegang manual',
+    'Licence points': 'Poin lisensi',
+    'On': 'Aktif',
+    "Every decided penalty also costs points on the driver's licence. Reaching the limit when a round is banked earns a race ban for the next round, and the licence starts again from zero. Open investigations and dropped penalties never count.":
+      'Tiap penalti yang sudah diputuskan juga mengurangi poin di lisensi pembalap. Mencapai batas saat sebuah ronde dibukukan berarti larangan balapan untuk ronde berikutnya, lalu lisensinya mulai lagi dari nol. Investigasi yang masih terbuka dan penalti yang dibatalkan tidak pernah dihitung.',
+    'Ban at': 'Larangan di',
+    'Warning': 'Peringatan',
+    'Time': 'Waktu',
+    'Drive through': 'Drive through',
+    'Black flag': 'Bendera hitam',
+    'DQ': 'DQ',
+    'Points per penalty type. A steward can set a different figure on one penalty when issuing it.':
+      'Poin per jenis penalti. Steward bisa memberi angka lain untuk satu penalti saat menjatuhkannya.',
+    'Race ban this round': 'Larangan balapan ronde ini',
+    'The figure after the plus is this session, not banked yet.': 'Angka setelah tanda plus berasal dari sesi ini dan belum dibukukan.',
+    'No drivers yet.': 'Belum ada pembalap.',
+    "Licence points for this penalty. Leave empty to use the league's table.": 'Poin lisensi untuk penalti ini. Kosongkan untuk memakai tabel liga.',
     'No regions calibrated yet': 'Belum ada region yang dikalibrasi',
     'Press key…': 'Tekan tombol…',
     'Set': 'Atur',

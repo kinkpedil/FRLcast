@@ -67,6 +67,12 @@ public class OverlayService extends Service {
   private final Handler ui = new Handler(Looper.getMainLooper());
 
   private String lastFlag = null;
+  // The spotter, and what it last said about this driver, so each call is made once when it
+  // changes rather than on every poll it stays true.
+  private Spotter spot;
+  private boolean lastBlack = false, lastBlue = false;
+  private int lastLights = 0, lastLeft = -1, lastServe = -1;
+  private String lastMsg = "";
   // The last team-radio message shown. null means "not seeded yet": the first poll after the
   // window opens records whatever is current without announcing it, so a driver joining
   // mid-race is not hit with a pit call that was sent before they were even looking. Kept as
@@ -123,6 +129,7 @@ public class OverlayService extends Service {
     announced = new HashSet<>(Api.prefs(this).getStringSet(K_SEEN, new HashSet<>()));
 
     startForeground(NOTE_ID, notification());
+    spot = new Spotter(this);
     addWindow();
     startPolling();
     running = true;
@@ -311,8 +318,36 @@ public class OverlayService extends Service {
     announcePenalties(o.optJSONArray("penalties"));
     announceRadio(o.optJSONObject("radio"));
 
+    // The spotter's calls about this driver. Nothing is said on the first poll (lastFlag is
+    // still null): that one only records where things stand, so opening the window mid-race
+    // does not read out everything that is already true.
+    boolean seeded = lastFlag != null;
+    boolean saidStart = false;
+    if (me != null && approved) {
+      boolean black = me.optBoolean("blackFlag");
+      boolean blue = me.optBoolean("blueFlag");
+      String opMsg = me.optString("message", "");
+      int lights = me.optInt("lights", 0);
+      int left = me.has("lapsLeft") && !me.isNull("lapsLeft") ? me.optInt("lapsLeft", -1) : -1;
+      int serve = me.has("serveInLaps") && !me.isNull("serveInLaps") ? me.optInt("serveInLaps", -1) : -1;
+      if (seeded && spot != null) {
+        if (black && !lastBlack) spot.urgent("Black flag, box now");
+        if (lights >= 6 && lastLights < 6) { spot.urgent("Lights out, go go go"); saidStart = true; }
+        if (blue && !lastBlue) spot.info("Blue flag, let them by");
+        if (!opMsg.isEmpty() && !opMsg.equals(lastMsg)) spot.info("Race control. " + opMsg);
+        if (left == 1 && lastLeft != 1) spot.info("Last lap");
+        if (serve == 0 && lastServe != 0) spot.urgent("Serve the drive through now");
+      }
+      lastBlack = black; lastBlue = blue; lastLights = lights;
+      lastMsg = opMsg; lastLeft = left; lastServe = serve;
+    }
+
     if (!flag.equals(lastFlag)) {
-      if (lastFlag != null) buzz();
+      if (lastFlag != null) {
+        buzz();
+        // Lights out and green land together; the start has already been called.
+        if (spot != null && !(saidStart && "green".equals(flag))) spot.urgent(Spotter.flagCall(flag, lastFlag));
+      }
       lastFlag = flag;
     }
   }
@@ -359,6 +394,18 @@ public class OverlayService extends Service {
     if (me.has("pitOpen")) {
       if (b.length() > 0) b.append("  ");
       b.append(me.optBoolean("pitOpen", true) ? "PIT OPEN" : "PIT CLOSED");
+    }
+    // Licence points, when the league uses them: the count (this session after the plus),
+    // or the ban the driver is serving.
+    JSONObject lic = me.optJSONObject("licence");
+    if (lic != null) {
+      if (b.length() > 0) b.append("  ");
+      if (lic.optBoolean("banned")) b.append("RACE BAN");
+      else {
+        b.append("LIC ").append(lic.optInt("points"));
+        if (lic.optInt("pending") > 0) b.append("+").append(lic.optInt("pending"));
+        b.append("/").append(lic.optInt("threshold", 12));
+      }
     }
     return b.toString();
   }
@@ -440,6 +487,10 @@ public class OverlayService extends Service {
       ui.postDelayed(clearPenalty, PENALTY_MS);
     }
     notifyPenalty(p);
+    if (spot != null) {
+      spot.urgent(Spotter.penaltyCall(p.optString("type", ""), p.optInt("seconds", 0),
+          p.optString("status", ""), reason));
+    }
   }
 
   private void notifyPenalty(JSONObject p) {
@@ -511,6 +562,7 @@ public class OverlayService extends Service {
     }
     notifyRadio(from, text);
     buzzPenalty();
+    if (spot != null) spot.info("Radio" + (from.isEmpty() ? "" : ", " + from) + ". " + text);
   }
 
   private void notifyRadio(String from, String text) {
@@ -596,6 +648,7 @@ public class OverlayService extends Service {
 
   @Override public void onDestroy() {
     running = false;
+    if (spot != null) { spot.shutdown(); spot = null; }
     ui.removeCallbacks(clearPenalty);
     if (netHandler != null) { netHandler.removeCallbacksAndMessages(null); netHandler = null; }
     if (net != null) { net.quitSafely(); net = null; }

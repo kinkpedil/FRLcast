@@ -177,6 +177,10 @@ function render(s) {
   if (s.me && s.me.blueFlag) mine.push(['blue', 'BLUE FLAG: let the leader through']);
   if (s.me && s.me.penaltyPending) mine.push(['inv', 'UNDER INVESTIGATION']);
   if (s.me && s.me.penaltyServed) mine.push(['pen', `+${s.me.penaltyServed}s PENALTY`]);
+  // Licence points, when the league uses them: a ban first, otherwise the count once there is one.
+  const lic = s.me && s.me.licence;
+  if (lic && lic.banned) mine.push(['black', 'RACE BAN THIS ROUND (licence points)']);
+  else if (lic && (lic.points || lic.pending)) mine.push(['inv', `LICENCE ${lic.points}${lic.pending ? ' + ' + lic.pending : ''} / ${lic.threshold} PTS`]);
   const box = $('#mine');
   const sig = mine.map((m) => m.join()).join('|');
   if (box.dataset.sig !== sig) {

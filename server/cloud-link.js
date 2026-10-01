@@ -267,7 +267,8 @@ export class CloudLink {
     // a stint would be filed under the local id and never reach the phone on a hosted event.
     const remapKeys = (obj) => { const out = {}; for (const k of Object.keys(obj || {})) out[U(k)] = obj[k]; return out; };
     return { ...s, drivers, race, feed, overlay,
-      messages: remapKeys(s.messages), stints: remapKeys(s.stints), crew: remapKeys(s.crew) };
+      messages: remapKeys(s.messages), stints: remapKeys(s.stints), crew: remapKeys(s.crew),
+      licence: remapKeys(s.licence) };
   }
 
   // ---------------------------------------------------------------- link

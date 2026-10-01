@@ -277,6 +277,7 @@ export class CloudBus {
         lapsDone: d.laps_done,
         lastLap: d.last_lap,
         bestLap: d.best_lap,
+        lapTimes: ((settings.lapTimes || {})[d.id]) || [],
         // Filled in below by the shared rules. The columns hold milliseconds; what an
         // overlay prints is "LEADER", "+1 LAP" or "+1.240", and deciding which is not a
         // thing to do twice.
