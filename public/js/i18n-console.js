@@ -1036,6 +1036,7 @@
 
     // ---------------------------------------------------------------- version + updates
     'Version and updates': 'Versi dan update',
+    'Support FRLcast': 'Dukung FRLcast',
     'You are running': 'Kamu memakai',
     'Check for updates': 'Cek update',
     "What's new in each version": 'Apa yang baru di tiap versi',

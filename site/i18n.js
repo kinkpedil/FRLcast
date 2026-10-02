@@ -26,6 +26,8 @@
     'Sign in': 'Masuk',
     'Sign out': 'Keluar',
     'Guides': 'Panduan',
+    'Support FRLcast': 'Dukung FRLcast',
+    'Support': 'Dukung',
     'FAQ': 'FAQ',
     'Contact': 'Kontak',
     'About': 'Tentang',

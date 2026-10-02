@@ -117,7 +117,7 @@
           sub: 'Every version of the desktop app, newest first. The console tells you itself when there is a new one.',
           loading: 'Loading versions...', failed: 'Could not load the version list right now.',
           onGithub: 'See all versions on GitHub', foot: 'Release notes come straight from GitHub.',
-          newest: 'Newest version', download: 'Download for Windows', allOnGithub: 'All versions on GitHub',
+          newest: 'Newest version', download: 'Download for Windows', allOnGithub: 'All versions on GitHub', support: 'Support FRLcast',
           latest: 'Latest', beta: 'Beta', allChanges: 'All changes in this version', release: 'Release page',
           betaNote: 'Beta: for trying new features before race day. Not for a real event.',
           released: 'Released' },
@@ -125,7 +125,7 @@
           sub: 'Semua versi aplikasi desktop, dari yang terbaru. Console akan memberi tahu sendiri kalau ada versi baru.',
           loading: 'Memuat versi...', failed: 'Daftar versi tidak bisa dimuat sekarang.',
           onGithub: 'Lihat semua versi di GitHub', foot: 'Catatan rilis diambil langsung dari GitHub.',
-          newest: 'Versi terbaru', download: 'Download untuk Windows', allOnGithub: 'Semua versi di GitHub',
+          newest: 'Versi terbaru', download: 'Download untuk Windows', allOnGithub: 'Semua versi di GitHub', support: 'Dukung FRLcast',
           latest: 'Terbaru', beta: 'Beta', allChanges: 'Semua perubahan di versi ini', release: 'Halaman rilis',
           betaNote: 'Beta: untuk mencoba fitur baru sebelum hari race. Bukan untuk event sungguhan.',
           released: 'Rilis' }
@@ -158,6 +158,7 @@
       <div class="acts">
         <a class="btn primary" href="https://github.com/${REPO}/releases/latest">${esc(T.download)}</a>
         <a class="btn" href="https://github.com/${REPO}/releases">${esc(T.allOnGithub)}</a>
+        <a class="btn" href="/support">${esc(T.support)}</a>
       </div>`;
     $('#list').innerHTML = releases.map((r) => {
       const n = readNotes(r.body || '', lang);

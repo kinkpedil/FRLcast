@@ -39,3 +39,8 @@ footer.site .sp{margin-left:auto}
 .guides{list-style:none;padding:0;margin:8px 0 26px;display:grid;gap:10px}
 .guides li{border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:var(--mute)}
 .guides li a{font-size:17px}
+.donate{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:8px 0 10px}
+.dcard{display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;color:var(--mute)}
+.dcard strong{color:#fff;font-size:20px}
+.dcard em{font-style:normal;margin-top:8px;align-self:flex-start;background:var(--accent);color:#04120d;font-weight:800;padding:9px 16px;border-radius:10px;font-size:15px}
+.dcard:hover{text-decoration:none;border-color:var(--accent)}
