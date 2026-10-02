@@ -73,6 +73,9 @@ bus.on('signal', (channel, data) => {
   if (channel === 'clients') {
     connectedClients = Array.isArray(data) ? data : [];
     renderClients();
+    // an overlay connecting ticks the OBS step of the getting-started checklist
+    // (the signal can land before the module has finished loading: then it waits for the next render)
+    try { renderOnboard(); } catch (e) { /* not ready yet */ }
     return;
   }
   if (channel !== 'node-preview' || !data || !data.url) return;
@@ -4309,6 +4312,7 @@ bus.on('state', (s) => {
   renderScenes();
   renderSceneStrip();
   renderManual();
+  renderOnboard();
   renderStints();
   renderMarkers();
   renderRaceControl();
@@ -5925,3 +5929,76 @@ setInterval(() => { if (currentPage === 'drift') { refreshDriftCloud(); renderDr
   $('#dsWBody').addEventListener('focusout', () => { setTimeout(() => { $('#dsWBody').dataset.key = ''; paint(); }, 300); });
   window.renderWidgetLayout = paint;
 })();
+
+
+/* ============================================================ getting started
+ * A checklist at the top of Race control for an organiser running their first event. Each
+ * step ticks itself from the event's own state where it can (a name, two drivers, a session
+ * run, an overlay connected to this server); the rest have a "Done" button. Hidden for good
+ * once dismissed, and brought back from the Help page. Kept in this browser only.
+ */
+const OB_KEY = 'frl.onboard';
+const obLoad = () => { try { return JSON.parse(localStorage.getItem(OB_KEY) || '{}'); } catch (e) { return {}; } };
+const obSave = (v) => { try { localStorage.setItem(OB_KEY, JSON.stringify(v)); } catch (e) { /* private window */ } };
+const OB_STEPS = [
+  { id: 'name', title: 'Name your event', text: 'Event name, round and track, in Event details on this page.', go: 'race', focus: '#evName',
+    done: (s) => !!(s.event.name && s.event.name.trim() && s.event.name !== 'FR LEGENDS CUP') },
+  { id: 'drivers', title: 'Add your drivers', text: 'At least two, each with a number and a colour. Drivers can also sign in from the driver app.', go: 'drivers',
+    done: (s) => (s.drivers || []).length >= 2 },
+  { id: 'timing', title: 'Choose how laps are timed', text: 'The official timing API or minimap capture on Vision / AI, or laps by hand with the +Lap buttons.', go: 'vision', manual: true,
+    done: (s) => ((s.calibration && s.calibration.lines) || []).length > 0 || !!(s.race && s.race.extAt) },
+  { id: 'obs', title: 'Put the overlay in OBS', text: 'Add one Browser Source with the address on Setup OBS, at 1920 by 1080.', go: 'obs', manual: true,
+    done: () => connectedClients.some((c) => c.role === 'overlay') },
+  { id: 'look', title: 'Pick a look', text: 'A skin and a template, or your own design in the Design studio on the Layout page.', go: 'layout', manual: true,
+    done: (s) => (s.overlay.skin || 'classic') !== 'classic' || (s.overlay.theme || 'midnight') !== 'midnight' || !!(s.overlay.custom && s.overlay.custom.on) },
+  { id: 'test', title: 'Test the overlay', text: 'Play the animation rehearsal on the Overlays page and watch it arrive in OBS.', go: 'overlay', manual: true,
+    done: () => false },
+  { id: 'session', title: 'Run your first session', text: 'Start practice here on Race control, then finish it to keep the times.', go: 'race',
+    done: (s) => !!s.race.startedAt || Object.keys(s.event.programDone || {}).length > 0 || (s.sessions || []).length > 0 }
+];
+function obGo(page, focus) {
+  const btn = document.querySelector(`.navbtn[data-page="${page}"]`);
+  if (btn) btn.click();
+  if (focus) setTimeout(() => { const el = $(focus); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }, 80);
+}
+function renderOnboard() {
+  const card = $('#onboard');
+  if (!card || !state) return;
+  const o = obLoad();
+  const ticks = o.ticks || {};
+  const rows = OB_STEPS.map((st) => { const auto = !!st.done(state); return { st, auto, ok: auto || !!ticks[st.id] }; });
+  const n = rows.filter((r) => r.ok).length;
+  card.hidden = !!o.hidden;
+  if (o.hidden) return;
+  $('#obProg').textContent = n === rows.length ? t('All set') : `${n} / ${rows.length}`;
+  $('#obBar').style.width = `${Math.round((n / rows.length) * 100)}%`;
+  const html = rows.map(({ st, ok, auto }) => `
+    <div class="obstep${ok ? ' ok' : ''}">
+      <span class="obcheck" aria-hidden="true">${ok ? '&#10003;' : ''}</span>
+      <div class="obtext"><b>${esc(t(st.title))}</b><small>${esc(t(st.text))}</small></div>
+      <span class="row" style="gap:4px">
+        ${st.go && !ok ? `<button class="btn sm" data-obgo="${st.id}">${esc(t('Open'))}</button>` : ''}
+        ${st.manual && !auto ? `<button class="btn sm ghost" data-obtick="${st.id}">${esc(t(ticks[st.id] ? 'Undo' : 'Done'))}</button>` : ''}
+      </span>
+    </div>`).join('');
+  const box = $('#obSteps');
+  if (box.dataset.sig === html) return;
+  box.dataset.sig = html;
+  box.innerHTML = html;
+  box.querySelectorAll('[data-obgo]').forEach((b) => {
+    b.onclick = () => { const st = OB_STEPS.find((x) => x.id === b.dataset.obgo); if (st) obGo(st.go, st.focus); };
+  });
+  box.querySelectorAll('[data-obtick]').forEach((b) => {
+    b.onclick = () => {
+      const v = obLoad();
+      v.ticks = v.ticks || {};
+      v.ticks[b.dataset.obtick] = !v.ticks[b.dataset.obtick];
+      obSave(v);
+      renderOnboard();
+    };
+  });
+}
+$('#obHide').onclick = () => { const v = obLoad(); v.hidden = true; obSave(v); renderOnboard(); toast(t('The checklist is on the Help page if you want it back')); };
+$('#btnObShow').onclick = () => { const v = obLoad(); v.hidden = false; obSave(v); renderOnboard(); obGo('race'); };
+// Playing the rehearsal is the test step.
+if ($('#btnDemoAnim')) $('#btnDemoAnim').addEventListener('click', () => { const v = obLoad(); v.ticks = v.ticks || {}; v.ticks.test = true; obSave(v); });

@@ -486,6 +486,19 @@ mark { background: rgba(0,224,164,.28); color: var(--ink); border-radius: 3px; p
 .sessrow > .row { justify-content: flex-end; flex-wrap: nowrap; }
 .sessrow small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sessrow:last-child { border-bottom: 0; }
+/* Getting started checklist on Race control. */
+.onboard { margin-bottom: 16px; border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.onboard .obprog { font-size: 12px; color: var(--ink-mute); font-weight: 600; }
+.obbar { height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; margin-bottom: 12px; }
+.obbar i { display: block; height: 100%; background: var(--accent); transition: width .3s ease; }
+.obsteps { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
+.obstep { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; }
+.obstep .obcheck { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 12px; font-weight: 800; color: var(--bg); }
+.obstep.ok .obcheck { background: var(--accent); border-color: var(--accent); }
+.obstep.ok .obtext b { color: var(--ink-mute); text-decoration: line-through; }
+.obtext b { display: block; font-size: 13px; }
+.obtext small { display: block; font-size: 12px; color: var(--ink-mute); line-height: 1.4; margin-top: 2px; }
+
 /* The incident details under the penalty reason: other car, corner, Investigate. */
 .penmeta { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; margin-bottom: 12px; }
 .preason .pvs { font-weight: 600; color: var(--ink); margin-right: 4px; }
