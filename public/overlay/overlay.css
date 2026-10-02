@@ -2985,3 +2985,10 @@ html[data-skin="f1"] .rc-card .rc-tag, html[data-skin="f1"] .rc-card .rc-what { 
 .dq-row b { font: 800 15px var(--sans); color: #fff; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dq-row em { font: 800 16px var(--mono); font-style: normal; color: var(--accent); }
 .dq-row.live { background: rgba(255,255,255,.07); }
+
+/* ---------------- stickers (custom design) ---------------- */
+
+/* Free pictures from the design studio, placed in stage pixels. Never interactive, so
+   they can sit over a widget without stealing the layout editor's clicks. */
+.sticker-layer { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; pointer-events: none; overflow: hidden; }
+.sticker { position: absolute; display: block; height: auto; transform-origin: 50% 50%; }

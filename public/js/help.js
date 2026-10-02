@@ -442,6 +442,37 @@ const SECTIONS = [
       { type: 'p', text: T(
         'WEC groups the field by a driver’s Class (set on the Drivers page) with a coloured banner per class; F1 shows a 3-letter code taken from a driver’s short name.',
         'WEC mengelompokkan grid berdasarkan Class pembalap (diatur di halaman Drivers) dengan banner berwarna per kelas; F1 menampilkan kode 3-huruf dari nama pendek pembalap.') },
+      { type: 'h', text: T('Design studio', 'Studio desain') },
+      { type: 'p', text: T(
+        'The Design studio card on the Layout page goes past skins and templates: any look you can imagine, minimal or absurd. Switch on "Use my custom design" (any edit switches it on too); switching it off brings back the skin and template, and keeps what you made for later.',
+        'Kartu Studio desain di halaman Tata letak melampaui skin dan template: tampilan apa pun yang terbayang, minimalis atau absurd. Nyalakan "Pakai desain kustomku" (setiap perubahan juga menyalakannya); kalau dimatikan, skin dan template kembali, dan buatanmu tetap tersimpan untuk nanti.') },
+      {
+        type: 'table',
+        head: T(['Tab', 'What it does'], ['Tab', 'Fungsinya']),
+        rows: [
+          [T('Presets', 'Preset'),
+           T('Nine ready-made designs (Comic book, Vaporwave, 8-bit arcade, Brutalist, Sketchbook, Glitch, Terminal, Race livery, Kawaii) as a starting point. Export and import a look file to share a design between leagues, files included.',
+             'Sembilan desain siap pakai (Comic book, Vaporwave, 8-bit arcade, Brutalist, Sketchbook, Glitch, Terminal, Race livery, Kawaii) sebagai titik awal. Ekspor dan impor file tampilan untuk berbagi desain antar liga, lengkap dengan filenya.')],
+          [T('Colours', 'Warna'),
+           T('Every colour the widgets use: panels, text, lines, fastest lap, gains and losses, shadow. Start from the current template so you only change what you want.',
+             'Semua warna yang dipakai widget: panel, teks, garis, lap tercepat, naik dan turun, bayangan. Mulai dari template sekarang supaya kamu hanya mengubah yang perlu.')],
+          [T('Fonts', 'Font'),
+           T('Separate fonts for text, numbers and titles: Windows fonts, Google Fonts, or a font file you upload. Letter case and italic for the whole overlay.',
+             'Font terpisah untuk teks, angka, dan judul: font Windows, Google Fonts, atau file font yang kamu unggah. Huruf besar kecil dan miring untuk seluruh overlay.')],
+          [T('Panels', 'Panel'),
+           T('A picture or pattern behind every panel, border width, and the light effects.',
+             'Gambar atau pola di belakang setiap panel, tebal garis tepi, dan efek cahaya.')],
+          [T('Files', 'File'),
+           T('Upload pictures and fonts (up to 5MB each) on the desktop app; a hosted event can add pictures by https link.',
+             'Unggah gambar dan font (maksimal 5MB per file) di aplikasi desktop; event online bisa menambahkan gambar lewat link https.')],
+          [T('Stickers', 'Stiker'),
+           T('Any picture placed anywhere on screen, in front of or behind the widgets, with size, turn and opacity. Shown on all.html.',
+             'Gambar apa pun di mana saja di layar, di depan atau di belakang widget, dengan ukuran, putaran, dan kepekatan. Tampil di all.html.')],
+          [T('CSS', 'CSS'),
+           T('Free CSS on top of everything, for anything the other tabs do not reach. "What to target" lists the parts of each widget.',
+             'CSS bebas di atas semuanya, untuk apa saja yang tidak dijangkau tab lain. "Yang bisa diatur" berisi daftar bagian tiap widget.')]
+        ]
+      },
       { type: 'h', text: T('Scenes and the moment bar', 'Scene dan bar momen') },
       { type: 'p', text: T(
         'A scene is one set of visible widgets and one arrangement of them. The row of scene chips at the top of Race control puts any scene on air in one click and cross-fades the overlay. OBS needs only the one address: the change happens inside it, so there is no second Browser Source.',

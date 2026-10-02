@@ -72,3 +72,6 @@ site/version.txt
 site/app-version.txt
 
 .claude/
+
+# Design studio uploads (pictures and fonts): per machine, like the logo.
+public/brand/assets/

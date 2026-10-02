@@ -2,6 +2,10 @@ import { Bus, fmtTime, fmtClock, classification, raceElapsed, leaderLap, fastest
 import { CloudPanelBus } from './cloudpanel.js';
 import { cloudOptions } from './cloudbus.js';
 import { THEMES } from './themes.js';
+import {
+  DESIGN_DEFAULT, PRESETS as DESIGN_PRESETS, COLOR_KEYS, SYSTEM_FONTS, GOOGLE_FONTS, CSS_MAX,
+  cleanDesign, cleanStickers, safeUrl, assetId, googleFontsUrl
+} from './design.js';
 import { LICENCE_DEFAULT, licenceFrom, licenceEntries, penaltyPoints } from './points.js';
 import { inSession } from './timing.js';
 import { Capture } from './capture.js';
@@ -1329,6 +1333,7 @@ function renderThemes() {
   if (!state || currentPage !== 'layout') return;
   renderSkin();
   renderLooks();
+  if (window.renderDesign) window.renderDesign();
   const cur = state.overlay.theme || 'midnight';
 
   const grid = $('#themeGrid');
@@ -4673,6 +4678,8 @@ requestAnimationFrame(previewLoop);
         bus.action('overlay.update', { patch: { skin: l.skin || 'classic', accent: l.accent } });
         if (l.theme) bus.action('overlay.theme', { theme: l.theme });
         if (l.style) bus.action('overlay.style', { patch: l.style });
+        // Looks saved before the design studio have no design: they turn it off.
+        bus.action('overlay.update', { patch: { custom: l.custom || { ...DESIGN_DEFAULT }, ...(l.stickers ? { stickers: l.stickers } : {}) } });
         toast(t('Look applied') + ': ' + l.name);
       };
     });
@@ -4684,7 +4691,8 @@ requestAnimationFrame(previewLoop);
     if (!state) return;
     const o = state.overlay;
     const arr = load().filter((l) => l.name !== name);
-    arr.push({ name, skin: o.skin || 'classic', theme: o.theme || 'midnight', accent: o.accent, style: { ...(o.style || {}) } });
+    arr.push({ name, skin: o.skin || 'classic', theme: o.theme || 'midnight', accent: o.accent, style: { ...(o.style || {}) },
+      custom: o.custom || null, stickers: o.stickers || [] });
     save(arr);
     if ($('#lookName')) $('#lookName').value = '';
     renderLooks();
@@ -5152,3 +5160,532 @@ $('#dfKey').onclick = () => {
 };
 refreshDriftCloud();
 setInterval(() => { if (currentPage === 'drift') { refreshDriftCloud(); renderDrift(); } }, 5000);
+
+/* ============================================================ design studio
+ * The custom design (design.js) on the Layout page: presets, every colour, fonts, a panel
+ * picture, uploaded files, stickers and free CSS, plus a look file to share between leagues.
+ *
+ * Everything goes out as overlay.update with the whole design object, because the engine
+ * cleans it as one piece and a hosted event merges settings one level deep only.
+ */
+(() => {
+  if (!$('#designCard')) return;
+  const cur = () => cleanDesign((state && state.overlay && state.overlay.custom) || DESIGN_DEFAULT);
+  const assets = () => (state && state.overlay && state.overlay.assets) || [];
+  const stickers = () => (state && state.overlay && state.overlay.stickers) || [];
+  const images = () => assets().filter((a) => a.kind === 'image');
+  const focused = (el) => el && document.activeElement === el;
+
+  // Edits wait a moment before going out: a colour picker fires on every pixel of a drag,
+  // and each send is a state push to every overlay. Later edits build on earlier unsent ones.
+  let pending = null;
+  let timer = 0;
+  function setDesign(patch, now) {
+    pending = { ...(pending || cur()), ...patch };
+    // Changing anything means wanting to see it, so an edit switches the design on.
+    if (!('on' in patch)) pending.on = true;
+    clearTimeout(timer);
+    const send = () => {
+      const p = pending;
+      pending = null;
+      if (p) bus.action('overlay.update', { patch: { custom: p } });
+    };
+    if (now) send(); else timer = setTimeout(send, 150);
+  }
+  const live = () => pending || cur();
+  const setStickers = (list) => bus.action('overlay.update', { patch: { stickers: list } });
+  const setAssets = (list) => bus.action('overlay.update', { patch: { assets: list } });
+
+  // ---------------------------------------------------------------- tabs
+  $$('#dsTabs [data-ds]').forEach((b) => {
+    b.onclick = () => {
+      $$('#dsTabs [data-ds]').forEach((x) => x.classList.toggle('on', x === b));
+      $$('#designCard [data-pane]').forEach((p) => p.classList.toggle('on', p.dataset.pane === b.dataset.ds));
+      if (b.dataset.ds === 'presets') loadPresetFonts();
+    };
+  });
+  $('#dsOn').onchange = (e) => setDesign({ on: e.target.checked }, true);
+
+  // ---------------------------------------------------------------- presets
+  let presetFontsLoaded = false;
+  function loadPresetFonts() {
+    if (presetFontsLoaded) return;
+    presetFontsLoaded = true;
+    const fams = new Set();
+    DESIGN_PRESETS.forEach((p) => ['fontSans', 'fontTitle'].forEach((k) => {
+      const f = p.design[k];
+      if (f && !SYSTEM_FONTS.includes(f)) fams.add(f);
+    }));
+    const href = googleFontsUrl([...fams]);
+    if (!href) return;
+    const l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.href = href;
+    document.head.appendChild(l);
+  }
+  function buildPresets() {
+    const box = $('#dsPresets');
+    if (box.dataset.built === '1') return;
+    box.dataset.built = '1';
+    box.innerHTML = DESIGN_PRESETS.map((p) => {
+      const c = p.design.colors || {};
+      const font = p.design.fontTitle || p.design.fontSans || 'inherit';
+      return `<button class="dspreset" data-preset="${p.id}" title="${esc(p.note)}">
+        <span class="sw" style="background:${esc(c.panel || '#111')};color:${esc(c.ink || '#fff')};font-family:'${esc(font)}',sans-serif;border-left:6px solid ${esc(p.accent)}">P1 ${esc(p.name)}<br><small style="color:${esc(p.accent)}">1:23.456</small></span>
+        <span class="tx"><b>${esc(p.name)}</b><small>${esc(t(p.note))}</small></span>
+      </button>`;
+    }).join('');
+    $$('#dsPresets [data-preset]').forEach((b) => {
+      b.onclick = () => {
+        const p = DESIGN_PRESETS.find((x) => x.id === b.dataset.preset);
+        if (!p) return;
+        const d = cur();
+        const mine = d.css.trim() || Object.keys(d.colors).length;
+        if (mine && d.preset !== p.id && !confirm(t('Replace your current custom design with this preset?'))) return;
+        bus.action('overlay.theme', { theme: p.theme, accent: p.accent, radius: p.radius });
+        // Keeps the panel picture: that is the league's own file, not part of the preset.
+        bus.action('overlay.update', { patch: {
+          skin: 'classic',
+          custom: { ...DESIGN_DEFAULT, ...p.design, panelImg: d.panelImg, panelFit: d.panelFit, on: true, preset: p.id }
+        } });
+        pending = null;
+        toast(t('Preset applied') + ': ' + p.name);
+      };
+    });
+  }
+
+  // ---------------------------------------------------------------- colours
+  // #rgb, #rrggbb, #rrggbbaa and rgb()/rgba() to [#rrggbb, alpha 0..100].
+  function splitColor(c) {
+    if (!c) return null;
+    let m = /^#([0-9a-f]{3,8})$/i.exec(c);
+    if (m) {
+      let h = m[1];
+      if (h.length <= 4) h = h.split('').map((x) => x + x).join('');
+      return ['#' + h.slice(0, 6), h.length === 8 ? Math.round(parseInt(h.slice(6, 8), 16) / 2.55) : 100];
+    }
+    m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+%?))?\s*\)$/i.exec(c);
+    if (m) {
+      const hx = (n) => Math.max(0, Math.min(255, Math.round(Number(n)))).toString(16).padStart(2, '0');
+      let a = m[4] == null ? 1 : m[4].endsWith('%') ? parseFloat(m[4]) / 100 : Number(m[4]);
+      if (!Number.isFinite(a)) a = 1;
+      return ['#' + hx(m[1]) + hx(m[2]) + hx(m[3]), Math.round(a * 100)];
+    }
+    return null;
+  }
+  const joinColor = (hex, alpha) => alpha >= 100 ? hex : hex + Math.round(alpha * 2.55).toString(16).padStart(2, '0');
+
+  function buildColors() {
+    const box = $('#dsColors');
+    if (box.dataset.built === '1') return;
+    box.dataset.built = '1';
+    box.innerHTML = COLOR_KEYS.map(([k, , label]) => `
+      <div class="dscolor" data-ck="${k}">
+        <span>${esc(t(label))}</span>
+        <input type="color" aria-label="${esc(t(label))}">
+        <input type="range" min="0" max="100" step="1" title="${esc(t('Opacity'))}" ${k === 'panel' ? 'disabled' : ''}>
+        <button type="button" title="${esc(t('Back to the template colour'))}">&times;</button>
+      </div>`).join('');
+    $$('#dsColors [data-ck]').forEach((row) => {
+      const k = row.dataset.ck;
+      const [pick, alpha, clear] = row.querySelectorAll('input, button');
+      const write = () => {
+        const colors = { ...live().colors, [k]: joinColor(pick.value, k === 'panel' ? 100 : Number(alpha.value)) };
+        row.classList.remove('unset');
+        setDesign({ colors });
+      };
+      pick.oninput = write;
+      alpha.oninput = write;
+      clear.onclick = () => {
+        const colors = { ...live().colors };
+        delete colors[k];
+        row.classList.add('unset');
+        setDesign({ colors }, true);
+      };
+    });
+  }
+  function paintColors(d) {
+    $$('#dsColors [data-ck]').forEach((row) => {
+      const k = row.dataset.ck;
+      const [pick, alpha] = row.querySelectorAll('input');
+      if (focused(pick) || focused(alpha)) return;
+      const v = splitColor(d.colors[k]);
+      row.classList.toggle('unset', !v);
+      pick.value = v ? v[0] : '#000000';
+      alpha.value = String(v ? v[1] : 100);
+    });
+  }
+
+  // The template's own colours, read from overlay.css, so editing starts from what is on
+  // screen instead of from black. Only rgba()/hex values are taken; the panel opacity
+  // variable inside them reads as fully opaque, since the slider still applies on top.
+  $('#dsFromTpl').onclick = async () => {
+    const text = await fetch('/overlay/overlay.css').then((r) => r.text()).catch(() => '');
+    if (!text) return toast(t('Could not read the template colours'));
+    const theme = (state && state.overlay.theme) || 'midnight';
+    const block = (sel) => {
+      const i = text.indexOf(sel + ' {');
+      if (i < 0) return '';
+      return text.slice(i, text.indexOf('}', i));
+    };
+    const vars = {};
+    for (const b of [block(':root'), block(`html[data-theme="${theme}"]`)]) {
+      for (const m of b.matchAll(/(--[a-z-]+):\s*([^;]+);/g)) vars[m[1]] = m[2].trim();
+    }
+    const colors = {};
+    for (const [k, v] of COLOR_KEYS) {
+      let raw = vars[k === 'glow' ? '--shadow' : v];
+      if (!raw) continue;
+      if (k === 'glow') { const m = /(rgba?\([^)]*\)|#[0-9a-f]{3,8})\s*$/i.exec(raw); raw = m ? m[1] : ''; }
+      raw = raw.replace(/var\(--panel-alpha[^)]*\)/g, '1');
+      const sp = splitColor(raw);
+      if (sp) colors[k] = joinColor(sp[0], sp[1]);
+    }
+    setDesign({ colors }, true);
+    toast(t('Colours copied from the template'));
+  };
+  $('#dsColorsClear').onclick = () => setDesign({ colors: {} }, true);
+
+  // ---------------------------------------------------------------- fonts
+  function fontOptions(sel, value) {
+    const up = assets().filter((a) => a.kind === 'font');
+    const key = JSON.stringify(up.map((a) => a.id));
+    if (sel.dataset.key !== key) {
+      sel.dataset.key = key;
+      sel.innerHTML = `<option value="">${esc(t('Template default'))}</option>`
+        + (up.length ? `<optgroup label="${esc(t('Your fonts'))}">${up.map((a) => `<option value="asset:${esc(a.id)}">${esc(a.name)}</option>`).join('')}</optgroup>` : '')
+        + `<optgroup label="${esc(t('Installed on Windows'))}">${SYSTEM_FONTS.map((f) => `<option>${esc(f)}</option>`).join('')}</optgroup>`
+        + `<optgroup label="Google Fonts">${GOOGLE_FONTS.map((f) => `<option>${esc(f)}</option>`).join('')}</optgroup>`;
+    }
+    if (!focused(sel)) {
+      // A font no list knows (from an imported look) still shows rather than reading as default.
+      if (value && ![...sel.options].some((o) => o.value === value)) {
+        sel.insertAdjacentHTML('beforeend', `<option>${esc(value)}</option>`);
+      }
+      sel.value = value || '';
+    }
+  }
+  $('#dsFontSans').onchange = (e) => setDesign({ fontSans: e.target.value }, true);
+  $('#dsFontMono').onchange = (e) => setDesign({ fontMono: e.target.value }, true);
+  $('#dsFontTitle').onchange = (e) => setDesign({ fontTitle: e.target.value }, true);
+  $('#dsTransform').onchange = (e) => setDesign({ transform: e.target.value }, true);
+  $('#dsItalic').onchange = (e) => setDesign({ italic: e.target.checked }, true);
+
+  // ---------------------------------------------------------------- panels
+  $('#dsPanelImg').onchange = (e) => setDesign({ panelImg: e.target.value }, true);
+  $('#dsPanelFit').onchange = (e) => setDesign({ panelFit: e.target.value }, true);
+  const borderLabel = (v) => (Number(v) < 0 ? t('template') : `${v}px`);
+  $('#dsBorder').oninput = (e) => {
+    $('#dsBorderVal').textContent = borderLabel(e.target.value);
+    setDesign({ border: Number(e.target.value) });
+  };
+  $('#dsSheen').onchange = (e) => setDesign({ sheen: e.target.checked }, true);
+  $('#dsCrawl').onchange = (e) => setDesign({ crawl: e.target.checked }, true);
+
+  // ---------------------------------------------------------------- files
+  const readAsDataUrl = (blob) => new Promise((res) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = () => res(null);
+    r.readAsDataURL(blob);
+  });
+  async function upload(name, dataUrl) {
+    const r = await fetch('/api/design/asset', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, dataUrl })
+    }).then((x) => x.json()).catch(() => null);
+    return r || { ok: false, error: t('No connection to the broadcast server') };
+  }
+  $('#dsUploadPick').onclick = () => $('#dsUploadFile').click();
+  $('#dsUploadFile').onchange = async (e) => {
+    const files = [...(e.target.files || [])];
+    e.target.value = '';
+    let ok = 0;
+    for (const f of files) {
+      if (f.size > 5 * 1024 * 1024) { toast(`${f.name}: ${t('Files must be under 5MB')}`); continue; }
+      const data = await readAsDataUrl(f);
+      if (!data) { toast(`${f.name}: ${t('Could not read that file')}`); continue; }
+      const r = await upload(f.name, data);
+      if (r.ok) ok++; else toast(`${f.name}: ${r.error}`);
+    }
+    if (ok) toast(`${ok} ${t(ok === 1 ? 'file added' : 'files added')}`);
+  };
+  $('#dsUrlAdd').onclick = () => {
+    const url = ($('#dsUrl').value || '').trim();
+    if (!safeUrl(url) || !url.startsWith('https://')) return toast(t('Paste a link that starts with https://'));
+    const list = assets();
+    const name = decodeURIComponent(url.split('/').pop().split('?')[0] || 'link');
+    const kind = /\.(woff2?|ttf|otf)(\?|$)/i.test(url) ? 'font' : 'image';
+    setAssets([...list, { id: assetId(name, new Set(list.map((a) => a.id))), name, kind, url }]);
+    $('#dsUrl').value = '';
+  };
+  function paintAssets() {
+    const list = assets();
+    const box = $('#dsAssets');
+    const key = JSON.stringify(list);
+    if (box.dataset.key === key) return;
+    box.dataset.key = key;
+    box.innerHTML = list.length ? list.map((a) => `
+      <div class="dsasset">
+        <span class="th" ${a.kind === 'image' ? `style="background-image:url('${esc(a.url)}')"` : ''}>${a.kind === 'font' ? 'Aa' : ''}</span>
+        <span class="nm">${esc(a.name)}<br><code data-copy="${esc(a.kind === 'font' ? `font-family: "${a.id}"` : `var(--asset-${a.id})`)}" title="${esc(t('Click to copy'))}">${esc(a.kind === 'font' ? `font-family: "${a.id}"` : `var(--asset-${a.id})`)}</code></span>
+        <button class="btn sm ghost" data-del="${esc(a.id)}">${esc(t('Remove'))}</button>
+      </div>`).join('') : `<p class="hint">${esc(t('No files yet.'))}</p>`;
+    box.querySelectorAll('[data-copy]').forEach((c) => {
+      c.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(c.dataset.copy); toast(t('Copied')); };
+    });
+    box.querySelectorAll('[data-del]').forEach((b) => {
+      b.onclick = async () => {
+        const id = b.dataset.del;
+        const inUse = cur().panelImg === id || stickers().some((s) => s.src === id)
+          || [cur().fontSans, cur().fontMono, cur().fontTitle].includes('asset:' + id);
+        if (!confirm(inUse ? t('This file is in use in your design. Remove it anyway?') : t('Remove this file?'))) return;
+        const a = assets().find((x) => x.id === id);
+        if (a && a.url.startsWith('/brand/assets/') && !cloud) {
+          const r = await fetch('/api/design/asset/' + encodeURIComponent(id), { method: 'DELETE' }).then((x) => x.json()).catch(() => null);
+          if (!r || !r.ok) toast(t('Could not remove that file'));
+        } else {
+          setAssets(assets().filter((x) => x.id !== id));
+        }
+      };
+    });
+  }
+
+  // ---------------------------------------------------------------- stickers
+  $('#dsStickerAdd').onclick = () => {
+    const src = $('#dsStickerSrc').value;
+    if (!src) return toast(t('Upload a picture in Files first'));
+    const id = Math.random().toString(36).slice(2, 10);
+    setStickers([...stickers(), { id, src, x: 860, y: 440, w: 200, rot: 0, opacity: 1, on: true, front: true }]);
+  };
+  function paintStickers() {
+    const imgs = images();
+    const sel = $('#dsStickerSrc');
+    const skey = JSON.stringify(imgs.map((a) => a.id));
+    if (sel.dataset.key !== skey) {
+      sel.dataset.key = skey;
+      sel.innerHTML = imgs.length
+        ? imgs.map((a) => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('')
+        : `<option value="">${esc(t('No pictures yet: upload one in Files'))}</option>`;
+    }
+    const list = stickers();
+    const box = $('#dsStickers');
+    const key = JSON.stringify([list, imgs]);
+    if (box.dataset.key === key || box.contains(document.activeElement)) return;
+    box.dataset.key = key;
+    box.innerHTML = list.map((s, i) => {
+      const a = assets().find((x) => x.id === s.src);
+      const url = a ? a.url : s.src;
+      return `<div class="dssticker" data-i="${i}">
+        <div class="top"><img src="${esc(url)}" alt=""><span class="nm">${esc(a ? a.name : s.src)}</span>
+          <button class="btn sm ghost" data-act="del">${esc(t('Remove'))}</button></div>
+        <div class="nums">
+          <label>X<input type="number" data-k="x" value="${s.x}" step="10"></label>
+          <label>Y<input type="number" data-k="y" value="${s.y}" step="10"></label>
+          <label>${esc(t('Width'))}<input type="number" data-k="w" value="${s.w}" step="10" min="8"></label>
+          <label>${esc(t('Turn'))}<input type="number" data-k="rot" value="${s.rot}" step="5"></label>
+        </div>
+        <div class="opts">
+          <label>${esc(t('Opacity'))} <input type="range" data-k="opacity" min="0" max="1" step="0.05" value="${s.opacity}"></label>
+          <label><input type="checkbox" data-k="front" ${s.front ? 'checked' : ''}> ${esc(t('In front of widgets'))}</label>
+          <label><input type="checkbox" data-k="on" ${s.on ? 'checked' : ''}> ${esc(t('Show'))}</label>
+        </div>
+      </div>`;
+    }).join('');
+    box.querySelectorAll('.dssticker').forEach((row) => {
+      const i = Number(row.dataset.i);
+      const edit = (patch) => setStickers(stickers().map((s, j) => (j === i ? { ...s, ...patch } : s)));
+      row.querySelector('[data-act=del]').onclick = () => setStickers(stickers().filter((_, j) => j !== i));
+      row.querySelectorAll('[data-k]').forEach((inp) => {
+        const k = inp.dataset.k;
+        const ev = inp.type === 'range' || inp.type === 'number' ? 'input' : 'change';
+        let tm = 0;
+        inp.addEventListener(ev, () => {
+          clearTimeout(tm);
+          const v = inp.type === 'checkbox' ? inp.checked : Number(inp.value);
+          tm = setTimeout(() => edit({ [k]: v }), inp.type === 'checkbox' ? 0 : 200);
+        });
+        // A finished edit lets the list redraw again (it holds still while being typed in).
+        inp.addEventListener('blur', () => { box.dataset.key = ''; });
+      });
+    });
+  }
+
+  // ---------------------------------------------------------------- CSS
+  let cssTimer = 0;
+  const cssCount = (n) => { $('#dsCssCount').textContent = `${n.toLocaleString()} / ${CSS_MAX.toLocaleString()}`; };
+  $('#dsCss').addEventListener('input', (e) => {
+    cssCount(e.target.value.length);
+    clearTimeout(cssTimer);
+    cssTimer = setTimeout(() => setDesign({ css: e.target.value.slice(0, CSS_MAX) }, true), 450);
+  });
+  $('#dsCss').addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab' || e.shiftKey) return;
+    e.preventDefault();
+    const el = e.target;
+    const at = el.selectionStart;
+    el.value = el.value.slice(0, at) + '  ' + el.value.slice(el.selectionEnd);
+    el.selectionStart = el.selectionEnd = at + 2;
+    el.dispatchEvent(new Event('input'));
+  });
+
+  // ---------------------------------------------------------------- share a look
+  // Assets the design actually uses, so an export does not carry the whole library.
+  function usedAssetIds(d, st) {
+    const ids = new Set();
+    for (const a of assets()) {
+      if (d.panelImg === a.id || st.some((s) => s.src === a.id)
+        || [d.fontSans, d.fontMono, d.fontTitle].includes('asset:' + a.id)
+        || d.css.includes('--asset-' + a.id) || d.css.includes('"' + a.id + '"')) ids.add(a.id);
+    }
+    return ids;
+  }
+  $('#dsExport').onclick = async () => {
+    if (!state) return;
+    const o = state.overlay;
+    const d = cleanDesign(o.custom);
+    const st = cleanStickers(o.stickers);
+    const name = (prompt(t('Name this look'), d.preset || 'my-look') || '').trim();
+    if (!name) return;
+    const used = usedAssetIds(d, st);
+    const files = [];
+    for (const a of assets().filter((x) => used.has(x.id))) {
+      if (a.url.startsWith('/')) {
+        const blob = await fetch(a.url).then((r) => (r.ok ? r.blob() : null)).catch(() => null);
+        const data = blob && await readAsDataUrl(blob);
+        if (data) files.push({ id: a.id, name: a.name, kind: a.kind, data });
+      } else {
+        files.push({ id: a.id, name: a.name, kind: a.kind, url: a.url });
+      }
+    }
+    const look = {
+      format: 'frlcast-look', version: 1, name, exported: new Date().toISOString(),
+      skin: o.skin || 'classic', theme: o.theme || 'midnight', accent: o.accent,
+      towerTitle: o.towerTitle || '',
+      style: { panelOpacity: o.style.panelOpacity, radius: o.style.radius, density: o.style.density, shadow: o.style.shadow },
+      custom: d, stickers: st, assets: files
+    };
+    const blob = new Blob([JSON.stringify(look, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'look'}.frlook.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  };
+
+  $('#dsImportPick').onclick = () => $('#dsImportFile').click();
+  $('#dsImportFile').onchange = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    if (f.size > 60 * 1024 * 1024) return toast(t('That file is too big for a look'));
+    let look = null;
+    try { look = JSON.parse(await f.text()); } catch (err) { look = null; }
+    if (!look || look.format !== 'frlcast-look') return toast(t('That is not an FRLcast look file'));
+    if (!confirm(`${t('Replace the current design with')} "${String(look.name || f.name).slice(0, 40)}"?`)) return;
+
+    const map = {};
+    const added = [];
+    let skipped = 0;
+    for (const a of Array.isArray(look.assets) ? look.assets : []) {
+      if (!a || typeof a.id !== 'string') continue;
+      if (a.data) {
+        // A hosted event has no server to keep files on.
+        if (cloud) { skipped++; continue; }
+        const r = await upload(String(a.name || a.id), String(a.data));
+        if (r.ok) { map[a.id] = r.asset.id; added.push(r.asset); } else skipped++;
+      } else if (safeUrl(a.url) && String(a.url).startsWith('https://')) {
+        const taken = new Set([...assets(), ...added].map((x) => x.id));
+        const id = assetId(a.name || a.id, taken);
+        added.push({ id, name: String(a.name || id), kind: a.kind === 'font' ? 'font' : 'image', url: a.url });
+        map[a.id] = id;
+      } else skipped++;
+    }
+
+    // Ids can change on the way in (a file with that name already here), so every place
+    // the design names a file is rewritten to the new id.
+    const d = cleanDesign(look.custom);
+    const re = (v) => (map[v] ? map[v] : v);
+    d.panelImg = re(d.panelImg);
+    for (const k of ['fontSans', 'fontMono', 'fontTitle']) {
+      if (d[k].startsWith('asset:')) d[k] = 'asset:' + re(d[k].slice(6));
+    }
+    for (const [from, to] of Object.entries(map)) {
+      if (from === to) continue;
+      d.css = d.css.split('--asset-' + from).join('--asset-' + to).split('"' + from + '"').join('"' + to + '"');
+    }
+    const st = cleanStickers(look.stickers).map((s) => ({ ...s, src: re(s.src) }));
+
+    if (look.theme) {
+      bus.action('overlay.theme', { theme: look.theme, accent: look.accent, radius: look.style && look.style.radius });
+    }
+    if (look.style) bus.action('overlay.style', { patch: look.style });
+    // The uploaded files are already in the list (the server added them); links are not.
+    const merged = [...assets()];
+    for (const a of added) if (!merged.some((x) => x.id === a.id)) merged.push(a);
+    bus.action('overlay.update', { patch: {
+      skin: look.skin || 'classic',
+      towerTitle: look.towerTitle || '',
+      custom: { ...d, on: true },
+      stickers: st,
+      assets: merged
+    } });
+    pending = null;
+    toast(skipped
+      ? `${t('Look imported')}. ${skipped} ${t('files could not be added')}${cloud ? ' ' + t('(a hosted event cannot store files; import it in the desktop app)') : ''}`
+      : t('Look imported'));
+  };
+
+  $('#dsReset').onclick = () => {
+    if (!confirm(t('Clear the whole custom design (colours, fonts, panels, CSS)? Files and stickers stay.'))) return;
+    pending = null;
+    bus.action('overlay.update', { patch: { custom: { ...DESIGN_DEFAULT } } });
+  };
+
+  // ---------------------------------------------------------------- paint
+  // A hosted event has nowhere to keep uploaded files: links only.
+  if (cloud) $('#dsUploadRow').style.display = 'none';
+
+  window.renderDesign = function renderDesign() {
+    if (!state || !state.overlay) return;
+    const d = pending || cur();
+    buildPresets();
+    buildColors();
+    if (!focused($('#dsOn'))) $('#dsOn').checked = d.on;
+    $$('#dsPresets [data-preset]').forEach((b) => b.classList.toggle('on', d.on && d.preset === b.dataset.preset));
+    paintColors(d);
+    fontOptions($('#dsFontSans'), d.fontSans);
+    fontOptions($('#dsFontMono'), d.fontMono);
+    fontOptions($('#dsFontTitle'), d.fontTitle);
+    if (!focused($('#dsTransform'))) $('#dsTransform').value = d.transform;
+    $('#dsItalic').checked = d.italic;
+
+    const pi = $('#dsPanelImg');
+    const ikey = JSON.stringify(images().map((a) => a.id));
+    if (pi.dataset.key !== ikey) {
+      pi.dataset.key = ikey;
+      pi.innerHTML = `<option value="">${esc(t('None'))}</option>` + images().map((a) => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('');
+    }
+    if (!focused(pi)) {
+      if (d.panelImg && ![...pi.options].some((o) => o.value === d.panelImg)) {
+        pi.insertAdjacentHTML('beforeend', `<option value="${esc(d.panelImg)}">${esc(d.panelImg)}</option>`);
+      }
+      pi.value = d.panelImg;
+    }
+    if (!focused($('#dsPanelFit'))) $('#dsPanelFit').value = d.panelFit;
+    if (!focused($('#dsBorder'))) {
+      $('#dsBorder').value = String(d.border);
+      $('#dsBorderVal').textContent = borderLabel(d.border);
+    }
+    $('#dsSheen').checked = d.sheen;
+    $('#dsCrawl').checked = d.crawl;
+
+    paintAssets();
+    paintStickers();
+    const ta = $('#dsCss');
+    if (!focused(ta) && ta.value !== d.css) ta.value = d.css;
+    cssCount(ta.value.length);
+  };
+})();

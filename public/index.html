@@ -1218,6 +1218,112 @@
             </div>
           </div>
 
+          <div class="card" id="designCard">
+            <h3>Design studio</h3>
+            <div class="body">
+              <label class="toggle"><span>Use my custom design <b>Off shows the skin and template above again. Nothing you made is lost.</b></span><input type="checkbox" id="dsOn"><i class="sw"></i></label>
+              <div class="dstabs" id="dsTabs">
+                <button class="dstab on" data-ds="presets">Presets</button>
+                <button class="dstab" data-ds="colors">Colours</button>
+                <button class="dstab" data-ds="fonts">Fonts</button>
+                <button class="dstab" data-ds="panels">Panels</button>
+                <button class="dstab" data-ds="assets">Files</button>
+                <button class="dstab" data-ds="stickers">Stickers</button>
+                <button class="dstab" data-ds="css">CSS</button>
+              </div>
+
+              <div class="dspane on" data-pane="presets">
+                <p class="hint">Ready-made designs, far from the minimal default. Pick one, then change anything in the other tabs.</p>
+                <div id="dsPresets" class="dspresets" data-i18n-skip></div>
+                <hr class="dshr">
+                <div class="clocklabel">Share a look</div>
+                <p class="hint" style="margin:6px 0">Export saves the skin, template, colours, fonts, CSS, stickers and the files they use into one file another league can import.</p>
+                <div class="btnrow">
+                  <button class="btn sm" id="dsExport">Export look</button>
+                  <button class="btn sm" id="dsImportPick">Import look</button>
+                  <input type="file" id="dsImportFile" accept=".json,application/json" hidden>
+                  <button class="btn sm ghost" id="dsReset">Clear custom design</button>
+                </div>
+              </div>
+
+              <div class="dspane" data-pane="colors">
+                <p class="hint">Every colour the widgets are drawn from. An empty colour keeps the template's own.</p>
+                <div id="dsColors" class="dscolors" data-i18n-skip></div>
+                <div class="btnrow" style="margin-top:10px">
+                  <button class="btn sm" id="dsFromTpl">Start from the current template</button>
+                  <button class="btn sm ghost" id="dsColorsClear">Clear all colours</button>
+                </div>
+                <p class="hint" style="margin-top:8px">The accent colour is set in Overlay style above. The panel colour follows the panel opacity slider there too.</p>
+              </div>
+
+              <div class="dspane" data-pane="fonts">
+                <label class="field"><span>Text</span><select id="dsFontSans" data-i18n-skip></select></label>
+                <label class="field" style="margin-top:10px"><span>Numbers and times</span><select id="dsFontMono" data-i18n-skip></select></label>
+                <label class="field" style="margin-top:10px"><span>Titles</span><select id="dsFontTitle" data-i18n-skip></select></label>
+                <div class="grid2" style="margin-top:10px">
+                  <label class="field"><span>Letter case</span>
+                    <select id="dsTransform"><option value="">As typed</option><option value="uppercase">UPPERCASE</option><option value="lowercase">lowercase</option></select>
+                  </label>
+                  <label class="toggle" style="align-self:end"><span>Italic</span><input type="checkbox" id="dsItalic"><i class="sw"></i></label>
+                </div>
+                <p class="hint" style="margin-top:8px">Google Fonts need the internet on the streaming PC, like the default fonts. Upload a font file in Files to use it offline.</p>
+              </div>
+
+              <div class="dspane" data-pane="panels">
+                <label class="field"><span>Picture behind every panel</span><select id="dsPanelImg" data-i18n-skip></select></label>
+                <label class="field" style="margin-top:10px"><span>Fit</span>
+                  <select id="dsPanelFit"><option value="cover">Fill the panel</option><option value="tile">Repeat as a pattern</option><option value="contain">Whole picture</option></select>
+                </label>
+                <label class="field" style="margin-top:10px"><span>Border width <b id="dsBorderVal" data-i18n-skip>template</b></span>
+                  <input type="range" id="dsBorder" min="-1" max="16" step="1" style="width:100%">
+                </label>
+                <label class="toggle" style="margin-top:10px"><span>Light sweep across panels</span><input type="checkbox" id="dsSheen"><i class="sw"></i></label>
+                <label class="toggle" style="margin-top:8px"><span>Running line under headers</span><input type="checkbox" id="dsCrawl"><i class="sw"></i></label>
+                <p class="hint" style="margin-top:8px">The panel colour is laid over the picture: lower the panel opacity in Overlay style to show more of it.</p>
+              </div>
+
+              <div class="dspane" data-pane="assets">
+                <p class="hint">Pictures (PNG, JPEG, GIF, WebP, SVG) and fonts (WOFF2, WOFF, TTF, OTF), up to 5MB each. Use them as a panel picture, a sticker, a font, or in your CSS.</p>
+                <div class="btnrow" id="dsUploadRow">
+                  <button class="btn sm primary" id="dsUploadPick">Upload files</button>
+                  <input type="file" id="dsUploadFile" multiple accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,.woff2,.woff,.ttf,.otf" hidden>
+                </div>
+                <div class="row" id="dsUrlRow" style="margin-top:8px">
+                  <input type="url" id="dsUrl" placeholder="https://... picture link" style="flex:1">
+                  <button class="btn sm" id="dsUrlAdd">Add link</button>
+                </div>
+                <div id="dsAssets" class="dsassets" data-i18n-skip></div>
+              </div>
+
+              <div class="dspane" data-pane="stickers">
+                <p class="hint">Pictures placed anywhere on the 1920 by 1080 screen, in front of or behind the widgets. They show on the all-in-one overlay (all.html); add <code>?stickers=1</code> to another overlay link to show them there.</p>
+                <div class="row">
+                  <select id="dsStickerSrc" style="flex:1" data-i18n-skip></select>
+                  <button class="btn sm primary" id="dsStickerAdd">Add sticker</button>
+                </div>
+                <div id="dsStickers" class="dsstickers" data-i18n-skip></div>
+              </div>
+
+              <div class="dspane" data-pane="css">
+                <p class="hint">Free CSS on top of everything, for whatever the other tabs do not reach. It applies as you type. A rule the skin also sets may need <code>!important</code>.</p>
+                <textarea id="dsCss" rows="14" spellcheck="false" class="dscss" placeholder=".lb-row .name { color: hotpink; }" data-i18n-skip></textarea>
+                <p class="hint" id="dsCssCount" data-i18n-skip></p>
+                <details class="dsref">
+                  <summary>What to target</summary>
+                  <div class="dsrefbody" data-i18n-skip>
+                    <p><b>Panels</b> <code>.card</code> <code>.card-head</code> <code>.card-head .title</code> <code>.ticker-bar</code> <code>.status-bar</code></p>
+                    <p><b>Leaderboard rows</b> <code>.lb-row</code> <code>.lb-row.p1</code> <code>.lb-row .pos</code> <code>.lb-row .bar</code> <code>.lb-row .name</code> <code>.lb-row .gap</code> <code>.lb-row .num</code></p>
+                    <p><b>Tower rows</b> <code>.tw-row</code> and the same parts as the leaderboard</p>
+                    <p><b>Widgets</b> <code>#leaderboard</code> <code>#tower</code> <code>#status</code> <code>#lowerthird</code> <code>#gap</code> <code>#results</code> <code>#ticker</code> <code>#battle</code> <code>#bracket</code> <code>#standings</code></p>
+                    <p><b>Colours</b> <code>var(--accent)</code> <code>var(--panel)</code> <code>var(--ink)</code> <code>var(--line)</code> <code>var(--gain)</code> <code>var(--lose)</code> <code>var(--purple)</code>; a driver's own colour is <code>var(--c)</code> inside a row</p>
+                    <p><b>Your files</b> a picture is <code>var(--asset-NAME)</code>, a font is <code>font-family: "NAME"</code>, with NAME as shown in Files</p>
+                    <p><b>When</b> <code>html[data-custom="1"]</code> is the design switched on; <code>html[data-skin="f1"]</code> and <code>html[data-theme="neon"]</code> match a skin or template</p>
+                  </div>
+                </details>
+              </div>
+            </div>
+          </div>
+
           <div class="card">
             <h3>Whole layout</h3>
             <div class="body">

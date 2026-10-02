@@ -29,6 +29,9 @@ Write-Host "==> copying app"
 foreach ($item in @("public", "server", "scripts", "package.json", "package-lock.json", "start.cmd", "README.md", "SETUP.md")) {
   if (Test-Path $item) { Copy-Item $item -Destination $stage -Recurse -Force }
 }
+# Design studio uploads are this machine's own files (gitignored), never part of a download.
+$stagedAssets = Join-Path $stage "public\brand\assets"
+if (Test-Path $stagedAssets) { Remove-Item -LiteralPath $stagedAssets -Recurse -Force }
 
 # The online link (server/cloud-link.js) reads the Supabase project from the website's own
 # config: the project URL and the public anon key, the same values every visitor's browser gets.

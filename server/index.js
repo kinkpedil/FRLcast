@@ -12,6 +12,7 @@ import { WebSocketServer } from 'ws';
 // able to load it too: for a hosted event the console is the timing computer, and it
 // must run the same code this server does rather than a second implementation of it.
 import { RaceState } from '../public/js/race-state.js';
+import { assetId, ASSET_MAX } from '../public/js/design.js';
 import { FileStore } from './file-store.js';
 import { ensureCert } from './tls.js';
 import { DriverAuth } from './drivers-auth.js';
@@ -215,6 +216,73 @@ app.delete('/api/brand/logo', (_req, res) => {
     }
   } catch { /* nothing to remove */ }
   race.apply({ type: 'brand.update', patch: { logoUrl: '' } });
+  res.json({ ok: true });
+});
+
+/*
+ * Design studio assets: pictures and fonts for the custom broadcast design.
+ *
+ * Same rules as the logo, and stricter about what a file is: the type comes from the
+ * file's own first bytes, never from the name or the MIME type the browser guessed (a
+ * look imported from another league is a file nobody here made). Files are named by a
+ * server-made id, so nothing the client sends becomes a path. They live in
+ * public/brand/assets, which the updater never overwrites and which the /brand sandbox
+ * header above already covers.
+ */
+const ASSET_DIR = path.join(ROOT, 'public', 'brand', 'assets');
+const ASSET_BYTES = 5 * 1024 * 1024;
+
+function sniffAsset(buf) {
+  const head = buf.subarray(0, 12);
+  const ascii = head.toString('latin1');
+  if (head[0] === 0x89 && ascii.slice(1, 4) === 'PNG') return { ext: 'png', kind: 'image' };
+  if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return { ext: 'jpg', kind: 'image' };
+  if (ascii.startsWith('GIF8')) return { ext: 'gif', kind: 'image' };
+  if (ascii.startsWith('RIFF') && ascii.slice(8, 12) === 'WEBP') return { ext: 'webp', kind: 'image' };
+  if (ascii.startsWith('wOF2')) return { ext: 'woff2', kind: 'font' };
+  if (ascii.startsWith('wOFF')) return { ext: 'woff', kind: 'font' };
+  if (ascii.startsWith('OTTO')) return { ext: 'otf', kind: 'font' };
+  if ((head[0] === 0 && head[1] === 1 && head[2] === 0 && head[3] === 0) || ascii.startsWith('true')) return { ext: 'ttf', kind: 'font' };
+  const text = buf.subarray(0, 2048).toString('utf8').trimStart().toLowerCase();
+  if (text.startsWith('<svg') || (text.startsWith('<?xml') && text.includes('<svg'))) return { ext: 'svg', kind: 'image' };
+  return null;
+}
+
+app.post('/api/design/asset', (req, res) => {
+  const m = /^data:[^;,]*;base64,([A-Za-z0-9+/=]+)$/.exec(String((req.body && req.body.dataUrl) || ''));
+  if (!m) return res.status(400).json({ ok: false, error: 'Not a file' });
+  const buf = Buffer.from(m[1], 'base64');
+  if (buf.length > ASSET_BYTES) return res.status(413).json({ ok: false, error: 'Files must be under 5MB' });
+  const type = sniffAsset(buf);
+  if (!type) return res.status(400).json({ ok: false, error: 'Use PNG, JPEG, GIF, WebP or SVG for pictures, and WOFF2, WOFF, TTF or OTF for fonts' });
+
+  const list = race.state.overlay.assets || [];
+  if (list.length >= ASSET_MAX) return res.status(400).json({ ok: false, error: `At most ${ASSET_MAX} files: remove one first` });
+  const name = String((req.body && req.body.name) || 'asset').slice(0, 60);
+  const id = assetId(name, new Set(list.map((a) => a.id)));
+  try {
+    fs.mkdirSync(ASSET_DIR, { recursive: true });
+    fs.writeFileSync(path.join(ASSET_DIR, `${id}.${type.ext}`), buf);
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+  const asset = { id, name, kind: type.kind, url: `/brand/assets/${id}.${type.ext}?v=${Date.now()}` };
+  race.apply({ type: 'overlay.update', patch: { assets: [...list, asset] } });
+  res.json({ ok: true, asset });
+});
+
+app.delete('/api/design/asset/:id', (req, res) => {
+  const id = String(req.params.id || '');
+  const list = race.state.overlay.assets || [];
+  const hit = list.find((a) => a.id === id);
+  if (!hit) return res.status(404).json({ ok: false, error: 'No such file' });
+  // Only a file this route wrote: the id is checked against the list, and the extension
+  // comes from the stored URL, so no client text reaches the path.
+  const m = /^\/brand\/assets\/([a-z0-9-]+)\.(png|jpg|gif|webp|svg|woff2|woff|otf|ttf)(\?|$)/.exec(hit.url);
+  if (m && m[1] === id) {
+    try { fs.rmSync(path.join(ASSET_DIR, `${id}.${m[2]}`), { force: true }); } catch { /* already gone */ }
+  }
+  race.apply({ type: 'overlay.update', patch: { assets: list.filter((a) => a.id !== id) } });
   res.json({ ok: true });
 });
 

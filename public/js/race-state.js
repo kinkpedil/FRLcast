@@ -1,6 +1,7 @@
 import { labelGaps, fmtGap, inSession } from './timing.js';
 import { scoreRound as scoreRows, standingsFrom, LICENCE_DEFAULT, licenceEntries, licenceFrom } from './points.js';
 import { paceOf } from './race-model.js';
+import { DESIGN_DEFAULT, cleanDesign, cleanAssets, cleanStickers } from './design.js';
 
 
 /**
@@ -264,7 +265,15 @@ function defaultState() {
       sponsors: [],
       sponsorIndex: 0,
       // Pre-show countdown: an absolute target time; the widget shows the time left to it.
-      countdown: { target: 0, label: 'STARTS IN' }
+      countdown: { target: 0, label: 'STARTS IN' },
+      // The custom design on top of skin + template (design.js): colours, fonts, panel
+      // texture, free CSS. Off by default, so the template shows as it always has.
+      custom: { ...DESIGN_DEFAULT, colors: {}, fonts: [] },
+      // Uploaded pictures and fonts: { id, name, kind, url }. The files live in
+      // public/brand/assets, which an update never touches; only the list is in state.
+      assets: [],
+      // Pictures placed anywhere on screen: { id, src, x, y, w, rot, opacity, on, front }.
+      stickers: []
     },
     vision: {
       active: false,
@@ -638,6 +647,9 @@ export class RaceState {
         // Same reason as show and style: the overlay spread above is shallow, so a state
         // file written before a brand field existed would drop that field's default.
         this.state.overlay.brand = { ...base.overlay.brand, ...(disk.overlay?.brand || {}) };
+        this.state.overlay.custom = cleanDesign(disk.overlay?.custom);
+        this.state.overlay.assets = cleanAssets(disk.overlay?.assets);
+        this.state.overlay.stickers = cleanStickers(disk.overlay?.stickers);
         this.state.calibration = { ...base.calibration, ...(disk.calibration || {}) };
         this.state.vision.settings = { ...base.vision.settings, ...(disk.vision?.settings || {}) };
         this.state.records = { ...base.records, ...(disk.records || {}) };
@@ -2721,6 +2733,11 @@ export class RaceState {
         Object.assign(s.overlay, pick(a.patch || {}, [
           'accent', 'focusDriverId', 'ticker', 'compact', 'editSelected', 'autoTicker', 'transitionMs', 'skin', 'nonce', 'towerTitle', 'radio', 'poll', 'pollHistory', 'sponsors', 'sponsorIndex', 'countdown', 'stinger', 'gridStyle'
         ]));
+        // The design arrives whole (the hosted writer merges one level deep only), and is
+        // cleaned here so nothing that is not a colour, a font or a safe URL is ever stored.
+        if (a.patch && 'custom' in a.patch) s.overlay.custom = cleanDesign(a.patch.custom);
+        if (a.patch && 'assets' in a.patch) s.overlay.assets = cleanAssets(a.patch.assets);
+        if (a.patch && 'stickers' in a.patch) s.overlay.stickers = cleanStickers(a.patch.stickers);
         this.syncScene();
         break;
       }

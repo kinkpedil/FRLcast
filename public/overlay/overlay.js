@@ -1,6 +1,7 @@
 import { Bus, fmtTime, fmtGap, fmtClock, classification, raceElapsed, leaderLap, fastestLap, FLAG_LABEL, closestFight } from '../js/shared.js';
 import { buildPath, pointAtProgress } from '../js/tracker.js';
 import { CloudBus, cloudOptions } from '../js/cloudbus.js';
+import { designCss, googleFontsUrl, cleanStickers, resolveSrc } from '../js/design.js';
 
 /*
  * Self-update, so OBS never runs stale code again.
@@ -431,6 +432,76 @@ function applyStyle() {
   root.classList.toggle('density-compact', st.density === 'compact');
   // ?motion=calm forces it on regardless of what the operator saved
   root.classList.toggle('lite', st.lite !== false || root.classList.contains('calm'));
+}
+
+/*
+ * The custom design (design.js): one stylesheet appended after overlay.css, so equal
+ * specificity wins over the template, plus the Google Fonts it names and the stickers.
+ *
+ * Checked before the render signature on purpose: a colour or a line of CSS changes
+ * nothing the signature looks at, and the editor is only useful if every keystroke shows.
+ * The key comparison keeps that cheap: the stylesheet is rebuilt only when it changed.
+ */
+let designKey = '';
+// Stickers are free pictures for the one-source setup (all.html). A page that shows a
+// single widget would repeat every sticker in every Browser Source, so they stay off there
+// unless the URL asks for them with ?stickers=1.
+const stickerPage = /\/all(\.html)?$/.test(location.pathname) || new URLSearchParams(location.search).get('stickers') === '1';
+
+function applyDesign() {
+  const o = state.overlay;
+  const key = JSON.stringify([o.custom || null, o.assets || null, stickerPage ? (o.stickers || null) : null]);
+  if (key === designKey) return;
+  designKey = key;
+
+  const { css, google } = designCss(o.custom, o.assets);
+  let el = document.getElementById('frlDesign');
+  if (!el) {
+    el = document.createElement('style');
+    el.id = 'frlDesign';
+    document.head.appendChild(el);
+  }
+  // Kept last in <head>: the stylesheet link is added by the page loader after this
+  // module starts, so re-append whenever something landed after it.
+  if (el !== document.head.lastElementChild) document.head.appendChild(el);
+  if (el.textContent !== css) el.textContent = css;
+  document.documentElement.dataset.custom = o.custom && o.custom.on ? '1' : '';
+
+  const href = googleFontsUrl(google);
+  let link = document.getElementById('frlDesignFonts');
+  if (href) {
+    if (!link) {
+      link = document.createElement('link');
+      link.id = 'frlDesignFonts';
+      link.rel = 'stylesheet';
+      document.head.insertBefore(link, el);
+    }
+    if (link.getAttribute('href') !== href) link.setAttribute('href', href);
+  } else if (link) link.remove();
+
+  if (stickerPage) renderStickers(cleanStickers(o.stickers), o.assets);
+}
+
+function renderStickers(list, assets) {
+  // Two layers: behind every widget and in front of them. The stage is positioned, so DOM
+  // order is paint order, and neither layer needs a z-index that could fight the widgets.
+  for (const front of [false, true]) {
+    const id = front ? 'stickersFront' : 'stickersBack';
+    let layer = document.getElementById(id);
+    const mine = list.filter((x) => x.on && x.front === front);
+    if (!mine.length) { if (layer) layer.remove(); continue; }
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.id = id;
+      layer.className = 'sticker-layer';
+      if (front) stage.after(layer); else stage.before(layer);
+    }
+    layer.innerHTML = mine.map((x) => {
+      const src = resolveSrc(x.src, assets);
+      if (!src) return '';
+      return `<img class="sticker" alt="" src="${src}" style="left:${x.x}px;top:${x.y}px;width:${x.w}px;opacity:${x.opacity};transform:rotate(${x.rot}deg)">`;
+    }).join('');
+  }
 }
 
 /*
@@ -2112,6 +2183,7 @@ function renderInner() {
   // throwing halfway. The next complete state (a realtime update that carried settings, or the
   // reconcile poll) renders normally.
   if (!state.overlay || !state.overlay.show) return;
+  applyDesign();
 
   const rows = classification(state);
   latestRows = rows;

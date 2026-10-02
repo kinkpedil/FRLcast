@@ -927,3 +927,44 @@ input.dfscore { width: 84px; height: 30px; }
 .dfqrun { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
 .dfqrun small { font-size: 10px; color: var(--ink-mute); font-family: var(--mono); }
 .dfthird { margin-top: 14px; max-width: 220px; }
+
+/* ---------------- design studio ---------------- */
+.dstabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 14px; border-bottom: 1px solid var(--line); }
+.dstab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 7px 10px; color: var(--ink-mute, #8b93a1); cursor: pointer; font-size: 13px; margin-bottom: -1px; }
+.dstab:hover { color: var(--ink); }
+.dstab.on { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.dspane { display: none; }
+.dspane.on { display: block; }
+.dshr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+.dspresets { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 8px; }
+.dspreset { text-align: left; border: 1px solid var(--line); border-radius: 10px; padding: 0; background: none; cursor: pointer; overflow: hidden; color: var(--ink); }
+.dspreset:hover { border-color: var(--ink-mute, #8b93a1); }
+.dspreset.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.dspreset .sw { display: block; height: 46px; padding: 8px 10px; font-size: 15px; line-height: 1.1; overflow: hidden; white-space: nowrap; }
+.dspreset .tx { display: block; padding: 7px 10px 9px; }
+.dspreset .tx b { display: block; font-size: 13px; }
+.dspreset .tx small { display: block; font-size: 11px; color: var(--ink-mute, #8b93a1); line-height: 1.35; margin-top: 2px; }
+.dscolors { display: grid; gap: 6px; margin-top: 8px; }
+.dscolor { display: grid; grid-template-columns: 1fr 44px 90px 28px; gap: 8px; align-items: center; font-size: 13px; }
+.dscolor input[type=color] { width: 44px; height: 30px; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: none; }
+.dscolor input[type=range] { width: 90px; }
+.dscolor.unset > span { color: var(--ink-mute, #8b93a1); }
+.dscolor button { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); background: none; color: var(--ink-mute, #8b93a1); cursor: pointer; }
+.dsassets, .dsstickers { display: grid; gap: 8px; margin-top: 12px; }
+.dsasset { display: grid; grid-template-columns: 48px 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; }
+.dsasset .th { width: 48px; height: 36px; border-radius: 6px; background: #0003 center/contain no-repeat; display: grid; place-items: center; font-size: 15px; font-weight: 700; }
+.dsasset .nm { min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
+.dsasset .nm code { font-size: 11px; cursor: copy; }
+.dssticker { border: 1px solid var(--line); border-radius: 10px; padding: 8px; display: grid; gap: 8px; }
+.dssticker .top { display: flex; gap: 8px; align-items: center; }
+.dssticker .top img { width: 40px; height: 30px; object-fit: contain; background: #0003; border-radius: 4px; }
+.dssticker .top .nm { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dssticker .nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.dssticker .nums label { font-size: 11px; color: var(--ink-mute, #8b93a1); display: grid; gap: 2px; }
+.dssticker .nums input { width: 100%; min-width: 0; }
+.dssticker .opts { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 12px; }
+.dssticker .opts label { display: inline-flex; gap: 5px; align-items: center; }
+.dscss { width: 100%; font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-size: 12px; tab-size: 2; white-space: pre; }
+.dsref summary { cursor: pointer; font-size: 13px; color: var(--ink-mute, #8b93a1); margin-top: 6px; }
+.dsrefbody p { font-size: 12px; margin: 6px 0; line-height: 1.7; }
+.dsrefbody code, .dspane .hint code { font-size: 11px; }
