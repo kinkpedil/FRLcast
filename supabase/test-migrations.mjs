@@ -277,6 +277,13 @@ await db.exec('reset role;');
 check('anon cannot select contact_messages', anonRead === false);
 await db.exec(fs.readFileSync(path.join(MIG, '20261003000000_inbox.sql'), 'utf8'));
 check('inbox migration re-runs (idempotent)', true);
+const ir = await q(db, `select replies from public.contact_messages limit 1`);
+check('messages start with no replies', Array.isArray(ir[0].replies) && ir[0].replies.length === 0, JSON.stringify(ir[0].replies));
+await q(db, `update public.contact_messages set replies = replies || jsonb_build_array(jsonb_build_object('at', 1, 'text', 'Thanks'))`);
+const ir2 = await q(db, `select replies from public.contact_messages limit 1`);
+check('a reply is appended', ir2[0].replies.length === 1 && ir2[0].replies[0].text === 'Thanks', JSON.stringify(ir2[0].replies));
+await db.exec(fs.readFileSync(path.join(MIG, '20261003000200_inbox_replies.sql'), 'utf8'));
+check('inbox replies migration re-runs (idempotent)', true);
 
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');
 process.exit(fails ? 1 : 0);

@@ -70,6 +70,15 @@
   .read .meta { color: var(--mute); font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
   .read .meta a { color: var(--accent); text-decoration: none; }
   .read .body { margin: 18px 0; padding: 16px 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .thread { display: grid; gap: 10px; margin: -6px 0 18px; }
+  .reply { margin-left: 28px; padding: 12px 16px; background: rgba(0, 224, 164, .07); border: 1px solid rgba(0, 224, 164, .25); border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .reply .rh { display: block; font-size: 12px; color: var(--mute); margin-bottom: 6px; white-space: normal; }
+  .composer { display: grid; gap: 8px; margin: 0 0 18px; }
+  .composer textarea { background: #0d1015; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 150px; resize: vertical; width: 100%; }
+  .composer textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+  .composer .row2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .composer .hintx { font-size: 12px; color: var(--mute); }
+  .note { margin: 0 0 18px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 10px; font-size: 13px; color: var(--mute); }
   .acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .acts .primary { padding: 9px 14px; }
   .acts select { background: #0d1015; border: 1px solid var(--line); border-radius: 9px; padding: 6px 9px; font-size: 13px; }
@@ -152,7 +161,13 @@
       markReplied: 'Tandai dibalas', markNew: 'Tandai baru', archive: 'Arsipkan', unarchive: 'Keluarkan dari arsip',
       del: 'Hapus', delAsk: 'Hapus pesan ini selamanya?', deleted: 'Pesan dihapus', moved: 'Dipindah ke', back: 'Kembali',
       topic: 'Topik', received: 'Diterima', repliedAt: 'Dibalas', lang: 'Bahasa', moveTo: 'Pindah ke kategori',
-      greet: 'Halo', sign: 'Salam,\nkinkpedil12\nFRLcast', wrote: 'menulis'
+      greet: 'Halo', sign: 'Salam,\nkinkpedil12\nFRLcast', wrote: 'menulis',
+      yourReply: 'Balasanmu', sendReply: 'Kirim balasan', sending: 'Mengirim...', replySent: 'Balasan terkirim',
+      replyNotSaved: 'Balasan terkirim, tapi belum tercatat di inbox. Sudah menjalankan migrasi inbox_replies?',
+      replyHint: 'Dikirim dari alamat FRLcast ke pengirim. Salinannya masuk Gmail-mu, dan kalau pengirim membalas, balasannya ke Gmail-mu.',
+      replyEmpty: 'Tulis balasannya dulu.', replyFail: 'Balasan tidak terkirim. Coba lagi.',
+      domainNote: 'Membalas langsung dari sini aktif setelah domain frlcast.my.id diverifikasi di Resend dan RESEND_FROM diatur. Sementara itu, pakai tombol Gmail di bawah.',
+      you: 'Kamu'
     },
     en: {
       gateText: 'Messages from the contact page. Owner only.', keyLabel: 'Secret key', remember: 'Remember on this device',
@@ -169,7 +184,13 @@
       markReplied: 'Mark replied', markNew: 'Mark new', archive: 'Archive', unarchive: 'Unarchive',
       del: 'Delete', delAsk: 'Delete this message for good?', deleted: 'Message deleted', moved: 'Moved to', back: 'Back',
       topic: 'Topic', received: 'Received', repliedAt: 'Replied', lang: 'Language', moveTo: 'Move to category',
-      greet: 'Hi', sign: 'Best,\nkinkpedil12\nFRLcast', wrote: 'wrote'
+      greet: 'Hi', sign: 'Best,\nkinkpedil12\nFRLcast', wrote: 'wrote',
+      yourReply: 'Your reply', sendReply: 'Send reply', sending: 'Sending...', replySent: 'Reply sent',
+      replyNotSaved: 'The reply was sent but not saved in the inbox. Has the inbox_replies migration been run?',
+      replyHint: 'Sent from the FRLcast address to the sender. A copy lands in your Gmail, and their answer comes back to your Gmail.',
+      replyEmpty: 'Write the reply first.', replyFail: 'The reply did not go out. Try again.',
+      domainNote: 'Replying from here starts once frlcast.my.id is verified in Resend and RESEND_FROM is set. Until then, use the Gmail buttons below.',
+      you: 'You'
     }
   };
   var CATS = ['question', 'bug', 'idea', 'league', 'other', 'spam'];
@@ -185,6 +206,7 @@
   var view = { status: 'new', category: '', q: '' };
   var data = { messages: [], counts: { status: {}, category: {}, newByCategory: {} }, total: 0 };
   var current = null;
+  var drafts = {};          // message id -> reply being written
 
   function toast(t) {
     var el = $('#toast'); el.textContent = t; el.hidden = false;
@@ -328,7 +350,12 @@
     });
   }
 
+  var renderedId = null;
   function renderRead() {
+    // Leave the open message alone while a reply is being typed (a background refresh would
+    // rebuild the box under the cursor).
+    if (current && renderedId === current.id && document.activeElement && document.activeElement.id === 'replyText') return;
+    renderedId = current ? current.id : null;
     var box = $('#read');
     if (!current) { box.innerHTML = '<div class="empty">' + esc(T('pick')) + '</div>'; box.style.display = window.innerWidth <= 700 ? 'none' : ''; return; }
     box.style.display = '';
@@ -342,8 +369,13 @@
       + '<span>' + esc(T('lang')) + ': ' + (m.lang === 'id' ? 'Indonesia' : 'English') + '</span>'
       + '<span>' + esc(T('ref')) + ': <code>' + esc(refOf(m.id)) + '</code></span></div>'
       + '<div class="body" id="msgBody"></div>'
+      + '<div class="thread" id="thread"></div>'
+      + (data.canReply
+        ? '<div class="composer"><textarea id="replyText" aria-label="' + esc(T('yourReply')) + '"></textarea>'
+          + '<div class="row2"><button class="primary" id="replySend">' + esc(T('sendReply')) + '</button><span class="hintx">' + esc(T('replyHint')) + '</span></div></div>'
+        : '<div class="note">' + esc(T('domainNote')) + '</div>')
       + '<div class="acts">'
-      + '<a class="primary" id="rGmail" target="_blank" rel="noopener" style="text-decoration:none" title="' + esc(T('threadHint')) + '">' + esc(T('replyGmail')) + '</a>'
+      + '<a class="' + (data.canReply ? 'ghost' : 'primary') + '" id="rGmail" target="_blank" rel="noopener" style="text-decoration:none" title="' + esc(T('threadHint')) + '">' + esc(T('replyGmail')) + '</a>'
       + '<a class="ghost" id="rNew" target="_blank" rel="noopener" style="text-decoration:none">' + esc(T('newMail')) + '</a>'
       + '<a class="ghost" id="rApp" style="text-decoration:none">' + esc(T('replyApp')) + '</a>'
       + '<button class="ghost" id="rCopy">' + esc(T('copy')) + '</button>'
@@ -353,6 +385,41 @@
       + '<button class="ghost danger" id="rDel">' + esc(T('del')) + '</button>'
       + '</div>';
     $('#msgBody').textContent = m.message;
+    // The conversation: every reply sent from here, oldest first, under the message.
+    var th = $('#thread');
+    (Array.isArray(m.replies) ? m.replies : []).forEach(function (r) {
+      var el = document.createElement('div');
+      el.className = 'reply';
+      var h = document.createElement('span');
+      h.className = 'rh';
+      h.textContent = T('you') + ' · ' + full(r.at);
+      el.appendChild(h);
+      el.appendChild(document.createTextNode(r.text || ''));
+      th.appendChild(el);
+    });
+    var rbox = $('#replyText');
+    if (rbox) {
+      var g = m.lang === 'id' ? STR.id : STR.en;
+      // A draft survives a refresh of the list while it is being written.
+      rbox.value = drafts[m.id] != null ? drafts[m.id] : g.greet + (m.name ? ' ' + m.name : '') + ',\n\n\n\n' + g.sign;
+      rbox.addEventListener('input', function () { drafts[m.id] = rbox.value; });
+      $('#replySend').onclick = function () {
+        var text = rbox.value.trim();
+        if (text.length < 2) return toast(T('replyEmpty'));
+        var btn = $('#replySend');
+        btn.disabled = true; btn.textContent = T('sending');
+        api('POST', '', { id: m.id, text: text }).then(function (j) {
+          btn.disabled = false; btn.textContent = T('sendReply');
+          if (!j.ok) return toast(j.error === 'domain' ? T('domainNote') : T('replyFail'));
+          delete drafts[m.id];
+          if (j.saved === false) toast(T('replyNotSaved'));
+          else toast(T('replySent'));
+          m.replies = (m.replies || []).concat([{ at: new Date().toISOString(), text: text }]);
+          m.status = 'replied';
+          load(true);
+        }, function () { btn.disabled = false; btn.textContent = T('sendReply'); toast(T('netErr')); });
+      };
+    }
     var p = replyParts(m);
     /*
      * The conversation, not a new email: Gmail opens on a search for this message's reference

@@ -7,6 +7,11 @@
  * role key from the Vercel environment, never from the page.
  *   SUPABASE_SERVICE_ROLE_KEY  required for storing and reading messages
  *   SUPABASE_URL               optional, defaults to the project the site already uses
+ *
+ * Email goes out through Resend (RESEND_API_KEY). Until the frlcast.my.id domain is verified
+ * there, Resend only lets onboarding@resend.dev write to the account owner, so mail to a
+ * visitor (the confirmation, a reply from /inbox) waits for RESEND_FROM to name an address
+ * on our own domain; domainReady() is that test.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://mtagkpblakgcdovzqbut.supabase.co';
@@ -32,6 +37,40 @@ function guessCategory(topic, message) {
 }
 
 const configured = () => !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const OWNER = process.env.CONTACT_TO || 'kinkpedil12@gmail.com';
+
+/** True once RESEND_FROM is an address on a domain of our own (not Resend's test sender). */
+function domainReady() {
+  const from = process.env.RESEND_FROM || '';
+  const m = /@([A-Za-z0-9.-]+)>?\s*$/.exec(from);
+  return !!(process.env.RESEND_API_KEY && m && !/resend\.dev$/i.test(m[1]));
+}
+
+/** One email through Resend. Returns true when Resend accepted it. */
+async function sendMail({ to, subject, text, replyTo, bcc }) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return false;
+  const from = process.env.RESEND_FROM || 'FRLcast contact <onboarding@resend.dev>';
+  const body = { from, to: [].concat(to), subject, text };
+  if (replyTo) body.reply_to = replyTo;
+  if (bcc) body.bcc = [].concat(bcc);
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      console.error('[mail] resend', r.status, (await r.text().catch(() => '')).slice(0, 300));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[mail] resend unreachable', err && err.message);
+    return false;
+  }
+}
 
 /** A message's short reference, in the email subject and on /inbox: FRL-1A2B3C4D. */
 const refOf = (id) => 'FRL-' + String(id || '').replace(/-/g, '').slice(0, 8).toUpperCase();
@@ -65,4 +104,7 @@ async function readBody(req) {
   try { return JSON.parse(raw || '{}'); } catch (e) { return null; }
 }
 
-module.exports = { CATEGORIES, guessCategory, configured, rest, send, readBody, refOf };
+/** The subject every email about one message shares, so a reply lands in the same thread. */
+const subjectOf = (m) => `[FRLcast] ${m.topic}${m.name ? ` (${m.name})` : ''} · ${refOf(m.id)}`;
+
+module.exports = { CATEGORIES, OWNER, guessCategory, configured, rest, send, readBody, refOf, subjectOf, sendMail, domainReady };

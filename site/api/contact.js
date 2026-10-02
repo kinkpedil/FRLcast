@@ -19,7 +19,7 @@
  */
 
 const crypto = require('crypto');
-const { guessCategory, configured, rest, send, readBody, refOf } = require('./_inbox.js');
+const { OWNER, guessCategory, configured, rest, send, readBody, refOf, subjectOf, sendMail, domainReady } = require('./_inbox.js');
 
 const TOPICS = ['Question', 'Bug report', 'Feature idea', 'League or partnership', 'Other',
   'Pertanyaan', 'Laporan bug', 'Ide fitur', 'Liga atau kerja sama', 'Lainnya'];
@@ -62,14 +62,10 @@ async function store(m) {
   }
 }
 
-async function email(m) {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return false;
-  const from = process.env.RESEND_FROM || 'FRLcast contact <onboarding@resend.dev>';
-  const to = process.env.CONTACT_TO || 'kinkpedil12@gmail.com';
+/** The owner's copy: the message, with the visitor in Reply-To. */
+function email(m) {
   // The reference code puts this email and the inbox entry on one thread: /inbox opens the
   // Gmail conversation by searching for it, and Reply there answers the sender (Reply-To).
-  const subject = `[FRLcast] ${m.topic}${m.name ? ` (${m.name})` : ''} · ${refOf(m.id)}`;
   const text = [
     m.message,
     '',
@@ -81,22 +77,23 @@ async function email(m) {
     'Sent from the contact form on frlcast.my.id. Reply to answer the sender directly,',
     'or open www.frlcast.my.id/inbox to see every message sorted by category.'
   ].join('\n');
-  try {
-    const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to: [to], reply_to: m.email, subject, text })
-    });
-    if (!r.ok) {
-      const detail = await r.text().catch(() => '');
-      console.error('[contact] resend', r.status, detail.slice(0, 300));
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error('[contact] resend unreachable', err && err.message);
-    return false;
-  }
+  return sendMail({ to: OWNER, subject: subjectOf(m), text, replyTo: m.email });
+}
+
+/*
+ * The sender's receipt, once the site can mail visitors (domainReady). Same subject as every
+ * later email about this message, so a reply from /inbox usually joins it in their mailbox;
+ * Reply-To is the owner, so answering it reaches the owner's Gmail.
+ */
+function confirm(m) {
+  if (!domainReady() || process.env.CONTACT_CONFIRM === 'off') return Promise.resolve(false);
+  const id = m.lang === 'id';
+  const quoted = m.message.split('\n').map((l) => '> ' + l).join('\n');
+  const text = (id
+    ? [`Halo${m.name ? ' ' + m.name : ''},`, '', 'Terima kasih, pesanmu sudah kami terima. Kami akan membalas ke email ini, biasanya dalam beberapa hari.', '', 'Pesanmu:', quoted, '', `Kode: ${refOf(m.id)}`, '', 'FRLcast by kinkpedil12', 'https://www.frlcast.my.id']
+    : [`Hi${m.name ? ' ' + m.name : ''},`, '', 'Thanks, we have your message. We will reply to this email, usually within a few days.', '', 'Your message:', quoted, '', `Reference: ${refOf(m.id)}`, '', 'FRLcast by kinkpedil12', 'https://www.frlcast.my.id']
+  ).join('\n');
+  return sendMail({ to: m.email, subject: subjectOf(m), text, replyTo: OWNER });
 }
 
 module.exports = async function handler(req, res) {
@@ -131,7 +128,7 @@ module.exports = async function handler(req, res) {
   // The id is made here rather than by the database, so the email can carry its reference.
   const m = { id: crypto.randomUUID(), name, email: addr, topic, category: guessCategory(topic, message), message, lang };
   // Kept and emailed side by side: either one reaching the owner is a delivered message.
-  const [kept, mailed] = await Promise.all([store(m), email(m)]);
+  const [kept, mailed] = await Promise.all([store(m), email(m), confirm(m)]);
   if (!kept && !mailed) return send(res, 502, { ok: false, error: 'send' });
   return send(res, 200, { ok: true });
 };

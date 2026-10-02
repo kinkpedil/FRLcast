@@ -9,11 +9,16 @@
  *
  *   GET     ?status=new|replied|archived|all  &category=...  &q=text   list + counts
  *   PATCH   { id, status?, category? }                                 file or mark a message
+ *   POST    { id, text }                                               reply to the sender
  *   DELETE  { id }                                                     remove it for good
+ *
+ * A reply goes from the site's own address (RESEND_FROM, a verified domain) to the sender,
+ * with the owner in Reply-To and in Bcc (so Gmail keeps a copy), under the message's shared
+ * subject, and is kept on the message (replies) with the time it was sent.
  */
 
 const crypto = require('crypto');
-const { CATEGORIES, configured, rest, send, readBody } = require('./_inbox.js');
+const { CATEGORIES, OWNER, configured, rest, send, readBody, refOf, subjectOf, sendMail, domainReady } = require('./_inbox.js');
 
 const STATUSES = ['new', 'replied', 'archived'];
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -80,7 +85,7 @@ module.exports = async function handler(req, res) {
         counts.category[r.category] = (counts.category[r.category] || 0) + 1;
         if (r.status === 'new') counts.newByCategory[r.category] = (counts.newByCategory[r.category] || 0) + 1;
       }
-      return send(res, 200, { ok: true, messages: list, counts, total: all.length });
+      return send(res, 200, { ok: true, messages: list, counts, total: all.length, canReply: domainReady() });
     }
 
     const b = await readBody(req);
@@ -98,12 +103,36 @@ module.exports = async function handler(req, res) {
       return send(res, 200, { ok: true });
     }
 
+    if (req.method === 'POST') {
+      const text = String(b.text == null ? '' : b.text).replace(/\r\n/g, '\n').trim().slice(0, 8000);
+      if (text.length < 2) return send(res, 400, { ok: false, error: 'text' });
+      if (!domainReady()) return send(res, 409, { ok: false, error: 'domain' });
+      const rows = await rest(`contact_messages?id=eq.${b.id}&select=*`);
+      const m = rows && rows[0];
+      if (!m) return send(res, 404, { ok: false, error: 'id' });
+      const when = new Date(m.created_at).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+      const quoted = m.message.split('\n').map((l) => '> ' + l).join('\n');
+      const body = `${text}\n\n${when}, ${m.name || m.email} <${m.email}>:\n${quoted}\n\n${refOf(m.id)}`;
+      const sent = await sendMail({ to: m.email, subject: 'Re: ' + subjectOf(m), text: body, replyTo: OWNER, bcc: OWNER });
+      if (!sent) return send(res, 502, { ok: false, error: 'send' });
+      // Kept after it went out: a failed save must not make the owner send it twice.
+      const at = new Date().toISOString();
+      const replies = (Array.isArray(m.replies) ? m.replies : []).concat([{ at, text }]);
+      try {
+        await rest(`contact_messages?id=eq.${b.id}`, { method: 'PATCH', prefer: 'return=minimal', body: { replies, status: 'replied', replied_at: at } });
+      } catch (err) {
+        console.error('[inbox] reply sent but not saved', err.message);
+        return send(res, 200, { ok: true, saved: false });
+      }
+      return send(res, 200, { ok: true, saved: true });
+    }
+
     if (req.method === 'DELETE') {
       await rest(`contact_messages?id=eq.${b.id}`, { method: 'DELETE', prefer: 'return=minimal' });
       return send(res, 200, { ok: true });
     }
 
-    res.setHeader('Allow', 'GET, PATCH, DELETE');
+    res.setHeader('Allow', 'GET, PATCH, POST, DELETE');
     return send(res, 405, { ok: false, error: 'method' });
   } catch (err) {
     console.error('[inbox]', err.message);
