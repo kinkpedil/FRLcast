@@ -2263,7 +2263,9 @@ function applyGapSeparator(rows) {
  */
 function renderSignature(rows) {
   const o = state.overlay, e = state.event, r = state.race;
-  let sig = `${JSON.stringify(o.layout)}|${JSON.stringify(o.style)}|${o.theme}|${o.skin}|${o.gridStyle || ''}|${o.standingsMode || ''}|${JSON.stringify(state.teamStandings || [])}|${o.towerTitle || ''}|${o.nonce || 0}|${o.editSelected}|` +
+  // Every widget switch, whole: listing them one by one left a dozen out, and switching one of
+  // those on alone (the standings from a chat command, the ticker) never reached the screen.
+  let sig = `${JSON.stringify(o.show)}|${JSON.stringify(o.layout)}|${JSON.stringify(o.style)}|${o.theme}|${o.skin}|${o.gridStyle || ''}|${o.standingsMode || ''}|${JSON.stringify(state.teamStandings || [])}|${o.towerTitle || ''}|${o.nonce || 0}|${o.editSelected}|` +
             `${r.status}|${r.pitOpen === false ? 'C' : 'O'}|${r.lights || 0}|${o.show.pit}${o.show.lights}${o.show.catching}${o.show.rivalry}${o.show.podium}${o.show.reactions}|${r.totalLaps}|${o.accent}|${o.focusDriverId}|` +
             `${o.show.leaderboard}${o.show.tower}${o.show.status}${o.show.lowerThird}${o.show.gap}${o.show.results}${o.show.fastlap}${o.show.sectors}${o.show.delta}${o.show.radio}|${JSON.stringify(o.radio||{})}|${(state.radio && state.radio[0] && state.radio[0].id) || 0}|${JSON.stringify(o.poll||{})}|${JSON.stringify(state.votes||{})}|${o.show.sponsor}${o.show.countdown}${o.show.intro}${o.show.qr}|${JSON.stringify(o.sponsors||[])}|${o.sponsorIndex}|${JSON.stringify(o.countdown||{})}|` +
             `${e.name}|${e.round}|${e.track}|${e.sessionType}|${e.sessionName}|${(o.ticker || []).join('~')}|` +
