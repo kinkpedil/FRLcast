@@ -248,5 +248,27 @@ check('anon cannot read judge keys or calls', jg.length === 0, JSON.stringify(jg
 const jf = await q(db, `select has_function_privilege('anon', 'public.judge_submit(text,text,int,text,jsonb)', 'execute') as ok`);
 check('anon can call judge_submit', jf[0].ok === true);
 
+// the owner's inbox: only the server (service role) touches contact_messages
+const ig = await q(db, `select grantee, privilege_type from information_schema.role_table_grants
+  where table_name = 'contact_messages' and grantee in ('anon', 'authenticated')`);
+check('anon and authenticated have no access to contact_messages', ig.length === 0, JSON.stringify(ig));
+const irls = await q(db, `select relrowsecurity as on from pg_class where relname = 'contact_messages'`);
+check('contact_messages has row level security on', irls[0].on === true);
+await q(db, `insert into public.contact_messages (name, email, topic, category, message, lang)
+  values ('Budi', 'budi@example.com', 'Bug report', 'bug', 'Overlay freezes after lap 3', 'id')`);
+const im = await q(db, `select status, category, id is not null as has_id from public.contact_messages`);
+check('a message is stored as new', im.length === 1 && im[0].status === 'new' && im[0].category === 'bug' && im[0].has_id, JSON.stringify(im));
+let badCat = false;
+try { await q(db, `insert into public.contact_messages (email, message, category) values ('a@b.co', 'x', 'nonsense')`); }
+catch (e) { badCat = true; }
+check('an unknown category is refused', badCat);
+let anonRead = false;
+try { await db.exec(`set role anon; select * from public.contact_messages;`); anonRead = true; }
+catch (e) { anonRead = false; }
+await db.exec('reset role;');
+check('anon cannot select contact_messages', anonRead === false);
+await db.exec(fs.readFileSync(path.join(MIG, '20261003000000_inbox.sql'), 'utf8'));
+check('inbox migration re-runs (idempotent)', true);
+
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');
 process.exit(fails ? 1 : 0);

@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Inbox · FRLcast</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<style>
+  :root {
+    --bg: #0b0d11; --panel: #12151c; --panel-2: #171b23; --ink: #eef2f7; --mute: #9aa3b2; --faint: #6b7380;
+    --line: #232833; --accent: #00e0a4; --accent-ink: #04120d; --bad: #ff7a6b;
+    --c-question: #5ac8fa; --c-bug: #ff6b6b; --c-idea: #ffd166; --c-league: #b98bff; --c-other: #9aa3b2; --c-spam: #6b7380;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 400 15px/1.5 Inter, "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  [hidden] { display: none !important; }
+
+  /* ---------- sign in ---------- */
+  .gate { min-height: 100%; display: grid; place-items: center; padding: 24px 16px; }
+  .gate form { width: min(380px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 26px 24px; display: grid; gap: 14px; }
+  .gate h1 { margin: 0; font-size: 22px; }
+  .gate p { margin: 0; color: var(--mute); font-size: 14px; }
+  .gate label { display: grid; gap: 6px; font-size: 13px; color: var(--mute); }
+  .gate .remember { display: flex; gap: 8px; align-items: center; }
+  .field { background: #0d1015; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; }
+  .field:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+  .primary { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 11px 16px; font-weight: 800; }
+  .err { color: var(--bad); font-size: 13px; min-height: 1.2em; }
+
+  /* ---------- app ---------- */
+  .app { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+  header.top { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+  header.top b { font-size: 17px; }
+  header.top .sp { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .ghost { background: none; border: 1px solid var(--line); border-radius: 9px; padding: 6px 11px; font-size: 13px; color: var(--ink); }
+  .ghost:hover { border-color: var(--faint); }
+  .ghost.on { border-color: var(--accent); color: var(--accent); }
+  .main { display: grid; grid-template-columns: 220px minmax(280px, 380px) minmax(0, 1fr); min-height: 0; }
+
+  nav.side { border-right: 1px solid var(--line); padding: 14px 10px; overflow-y: auto; display: grid; align-content: start; gap: 2px; }
+  nav.side .lab { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 12px 8px 6px; }
+  nav.side .lab:first-child { margin-top: 0; }
+  nav.side button { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; background: none; border: 0; border-radius: 8px; padding: 7px 9px; color: var(--mute); font-size: 14px; }
+  nav.side button:hover { background: var(--panel); color: var(--ink); }
+  nav.side button.on { background: var(--panel-2); color: var(--ink); }
+  nav.side .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  nav.side .n { margin-left: auto; font-size: 12px; color: var(--faint); }
+  nav.side .n.new { color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 0 7px; font-weight: 700; }
+
+  section.list { border-right: 1px solid var(--line); display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+  .search { padding: 12px; border-bottom: 1px solid var(--line); }
+  .rows { overflow-y: auto; }
+  .row { display: grid; gap: 3px; padding: 11px 14px; border-bottom: 1px solid var(--line); cursor: pointer; position: relative; }
+  .row:hover { background: var(--panel); }
+  .row.on { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
+  .row .l1 { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+  .row .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row.new .who::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 7px; vertical-align: 2px; }
+  .row .when { margin-left: auto; font-size: 12px; color: var(--faint); flex: none; }
+  .row .snip { font-size: 13px; color: var(--mute); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: .03em; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; flex: none; }
+  .empty { padding: 30px 18px; color: var(--faint); text-align: center; }
+
+  section.read { overflow-y: auto; padding: 22px 26px; min-width: 0; }
+  .read h2 { margin: 0 0 4px; font-size: 20px; }
+  .read .meta { color: var(--mute); font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+  .read .meta a { color: var(--accent); text-decoration: none; }
+  .read .body { margin: 18px 0; padding: 16px 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .acts .primary { padding: 9px 14px; }
+  .acts select { background: #0d1015; border: 1px solid var(--line); border-radius: 9px; padding: 6px 9px; font-size: 13px; }
+  .danger { color: var(--bad); }
+  .back { display: none; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; font-size: 14px; }
+
+  @media (max-width: 1000px) {
+    .main { grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); }
+    nav.side { grid-column: 1 / -1; grid-row: 1; display: flex; flex-wrap: wrap; gap: 6px; border-right: 0; border-bottom: 1px solid var(--line); padding: 10px 12px; }
+    nav.side .lab { display: none; }
+    nav.side button { width: auto; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 13px; }
+    .main { grid-template-rows: auto 1fr; }
+  }
+  @media (max-width: 700px) {
+    .main { grid-template-columns: 1fr; }
+    section.read { position: fixed; inset: 0; background: var(--bg); z-index: 5; padding: 16px; }
+    .back { display: inline-block; margin-bottom: 12px; }
+    section.list { border-right: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <form id="gateForm" autocomplete="off">
+    <h1>FRLcast Inbox</h1>
+    <p data-t="gateText">Pesan dari halaman kontak. Hanya untuk pemilik.</p>
+    <label><span data-t="keyLabel">Secret key</span><input class="field" type="password" id="keyIn" required minlength="16" autocomplete="current-password"></label>
+    <label class="remember"><input type="checkbox" id="remember"> <span data-t="remember">Ingat di perangkat ini</span></label>
+    <button class="primary" type="submit" data-t="open">Buka inbox</button>
+    <div class="err" id="gateErr" role="alert"></div>
+  </form>
+</div>
+
+<div class="app" id="app" hidden>
+  <header class="top">
+    <b>Inbox</b>
+    <span id="totalTxt" style="color:var(--mute);font-size:13px"></span>
+    <div class="sp">
+      <button class="ghost" id="langEn">EN</button>
+      <button class="ghost" id="langId">ID</button>
+      <button class="ghost" id="refresh" data-t="refresh">Muat ulang</button>
+      <button class="ghost" id="lock" data-t="lock">Kunci</button>
+    </div>
+  </header>
+  <div class="main">
+    <nav class="side" id="side"></nav>
+    <section class="list">
+      <div class="search"><input class="field" id="q" type="search" placeholder="Cari nama, email, atau isi pesan" data-tp="search"></div>
+      <div class="rows" id="rows"></div>
+    </section>
+    <section class="read" id="read"></section>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/*
+ * The owner's inbox. Every call carries the secret key in a header; api/inbox.js checks it.
+ * Nothing a visitor wrote is ever put into the page as HTML: names, addresses and messages go
+ * through esc() or textContent only.
+ */
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var STR = {
+    id: {
+      gateText: 'Pesan dari halaman kontak. Hanya untuk pemilik.', keyLabel: 'Secret key', remember: 'Ingat di perangkat ini',
+      open: 'Buka inbox', refresh: 'Muat ulang', lock: 'Kunci', search: 'Cari nama, email, atau isi pesan',
+      wrongKey: 'Key salah.', locked: 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.',
+      notConfigured: 'Inbox belum disiapkan: INBOX_KEY (minimal 16 karakter) dan SUPABASE_SERVICE_ROLE_KEY harus ada di Vercel.',
+      netErr: 'Tidak bisa terhubung. Coba lagi.', dbErr: 'Database belum siap. Sudah menjalankan migrasi inbox?',
+      status: 'Status', categories: 'Kategori', s_new: 'Baru', s_replied: 'Dibalas', s_archived: 'Arsip', s_all: 'Semua',
+      c_all: 'Semua kategori', c_question: 'Pertanyaan', c_bug: 'Laporan bug', c_idea: 'Ide fitur', c_league: 'Liga dan kerja sama', c_other: 'Lainnya', c_spam: 'Spam',
+      empty: 'Tidak ada pesan di sini.', pick: 'Pilih pesan untuk membacanya.', total: 'pesan',
+      replyGmail: 'Balas di Gmail', replyApp: 'Balas di aplikasi email', copy: 'Salin email', copied: 'Email disalin',
+      markReplied: 'Tandai dibalas', markNew: 'Tandai baru', archive: 'Arsipkan', unarchive: 'Keluarkan dari arsip',
+      del: 'Hapus', delAsk: 'Hapus pesan ini selamanya?', deleted: 'Pesan dihapus', moved: 'Dipindah ke', back: 'Kembali',
+      topic: 'Topik', received: 'Diterima', repliedAt: 'Dibalas', lang: 'Bahasa', moveTo: 'Pindah ke kategori',
+      greet: 'Halo', sign: 'Salam,\nkinkpedil12\nFRLcast', wrote: 'menulis'
+    },
+    en: {
+      gateText: 'Messages from the contact page. Owner only.', keyLabel: 'Secret key', remember: 'Remember on this device',
+      open: 'Open inbox', refresh: 'Refresh', lock: 'Lock', search: 'Search name, email or message',
+      wrongKey: 'Wrong key.', locked: 'Too many tries. Try again in 15 minutes.',
+      notConfigured: 'The inbox is not set up yet: INBOX_KEY (16 characters or more) and SUPABASE_SERVICE_ROLE_KEY must be set in Vercel.',
+      netErr: 'Could not connect. Try again.', dbErr: 'The database is not ready. Has the inbox migration been run?',
+      status: 'Status', categories: 'Categories', s_new: 'New', s_replied: 'Replied', s_archived: 'Archived', s_all: 'All',
+      c_all: 'All categories', c_question: 'Questions', c_bug: 'Bug reports', c_idea: 'Feature ideas', c_league: 'Leagues and partnerships', c_other: 'Other', c_spam: 'Spam',
+      empty: 'No messages here.', pick: 'Pick a message to read it.', total: 'messages',
+      replyGmail: 'Reply in Gmail', replyApp: 'Reply in email app', copy: 'Copy email', copied: 'Email copied',
+      markReplied: 'Mark replied', markNew: 'Mark new', archive: 'Archive', unarchive: 'Unarchive',
+      del: 'Delete', delAsk: 'Delete this message for good?', deleted: 'Message deleted', moved: 'Moved to', back: 'Back',
+      topic: 'Topic', received: 'Received', repliedAt: 'Replied', lang: 'Language', moveTo: 'Move to category',
+      greet: 'Hi', sign: 'Best,\nkinkpedil12\nFRLcast', wrote: 'wrote'
+    }
+  };
+  var CATS = ['question', 'bug', 'idea', 'league', 'other', 'spam'];
+  var lang = 'id';
+  try { if (localStorage.getItem('frl.lang') === 'en') lang = 'en'; } catch (e) {}
+  var T = function (k) { return STR[lang][k] || STR.en[k] || k; };
+
+  var key = '';
+  try { key = sessionStorage.getItem('frl.inbox') || localStorage.getItem('frl.inbox') || ''; } catch (e) {}
+  var view = { status: 'new', category: '', q: '' };
+  var data = { messages: [], counts: { status: {}, category: {}, newByCategory: {} }, total: 0 };
+  var current = null;
+
+  function toast(t) {
+    var el = $('#toast'); el.textContent = t; el.hidden = false;
+    clearTimeout(toast.t); toast.t = setTimeout(function () { el.hidden = true; }, 1800);
+  }
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = T(el.getAttribute('data-t')); });
+    document.querySelectorAll('[data-tp]').forEach(function (el) { el.placeholder = T(el.getAttribute('data-tp')); });
+    $('#langEn').classList.toggle('on', lang === 'en');
+    $('#langId').classList.toggle('on', lang === 'id');
+    if (!$('#app').hidden) { renderSide(); renderRows(); renderRead(); }
+  }
+  function setLang(l) { lang = l; try { localStorage.setItem('frl.lang', l); } catch (e) {} applyLang(); }
+
+  function api(method, query, body) {
+    return fetch('/api/inbox' + (query || ''), {
+      method: method,
+      headers: { 'X-Inbox-Key': key, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { j.httpStatus = r.status; return j; }); });
+  }
+  function errText(j) {
+    if (j.error === 'key') return T('wrongKey');
+    if (j.error === 'locked') return T('locked');
+    if (j.error === 'not_configured') return T('notConfigured');
+    if (j.error === 'database') return T('dbErr');
+    return T('netErr');
+  }
+
+  function load(keepCurrent) {
+    var qs = '?status=' + encodeURIComponent(view.status) + (view.category ? '&category=' + view.category : '') + (view.q ? '&q=' + encodeURIComponent(view.q) : '');
+    return api('GET', qs).then(function (j) {
+      if (!j.ok) {
+        if (j.error === 'key' || j.error === 'locked' || j.error === 'not_configured') return showGate(errText(j));
+        return toast(errText(j));
+      }
+      data = j;
+      // A message that left this view (archived, replied) stays open until another is picked.
+      if (!keepCurrent) current = null;
+      else if (current) current = data.messages.filter(function (m) { return m.id === current.id; })[0] || current;
+      renderSide(); renderRows(); renderRead();
+    }, function () { toast(T('netErr')); });
+  }
+
+  function showGate(msg) {
+    $('#app').hidden = true; $('#gate').hidden = false;
+    $('#gateErr').textContent = msg || '';
+    $('#keyIn').focus();
+  }
+  function showApp() { $('#gate').hidden = true; $('#app').hidden = false; applyLang(); }
+
+  $('#gateForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    key = $('#keyIn').value.trim();
+    $('#gateErr').textContent = '';
+    api('GET', '?status=new').then(function (j) {
+      if (!j.ok) return showGate(errText(j));
+      try {
+        sessionStorage.setItem('frl.inbox', key);
+        if ($('#remember').checked) localStorage.setItem('frl.inbox', key); else localStorage.removeItem('frl.inbox');
+      } catch (er) {}
+      $('#keyIn').value = '';
+      showApp(); data = j; renderSide(); renderRows(); renderRead();
+    }, function () { showGate(T('netErr')); });
+  });
+  $('#lock').onclick = function () {
+    key = ''; try { sessionStorage.removeItem('frl.inbox'); localStorage.removeItem('frl.inbox'); } catch (e) {}
+    current = null; showGate('');
+  };
+  $('#refresh').onclick = function () { load(true); };
+  $('#langEn').onclick = function () { setLang('en'); };
+  $('#langId').onclick = function () { setLang('id'); };
+  var qt = 0;
+  $('#q').addEventListener('input', function (e) { clearTimeout(qt); qt = setTimeout(function () { view.q = e.target.value.trim(); load(false); }, 300); });
+
+  var ago = function (iso) {
+    var s = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (s < 60) return lang === 'id' ? 'baru saja' : 'just now';
+    if (s < 3600) return Math.floor(s / 60) + (lang === 'id' ? ' mnt' : 'm');
+    if (s < 86400) return Math.floor(s / 3600) + (lang === 'id' ? ' jam' : 'h');
+    return new Date(iso).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-GB', { day: 'numeric', month: 'short' });
+  };
+  var full = function (iso) { return new Date(iso).toLocaleString(lang === 'id' ? 'id-ID' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }); };
+  var chip = function (c) { return '<span class="chip" style="color:var(--c-' + c + ')">' + esc(T('c_' + c)) + '</span>'; };
+
+  function renderSide() {
+    var c = data.counts || { status: {}, category: {}, newByCategory: {} };
+    var html = '<div class="lab">' + esc(T('status')) + '</div>';
+    ['new', 'replied', 'archived', 'all'].forEach(function (s) {
+      var n = s === 'all' ? data.total : (c.status[s] || 0);
+      html += '<button data-s="' + s + '" class="' + (view.status === s ? 'on' : '') + '">' + esc(T('s_' + s))
+        + '<span class="n' + (s === 'new' && n ? ' new' : '') + '">' + n + '</span></button>';
+    });
+    html += '<div class="lab">' + esc(T('categories')) + '</div>';
+    html += '<button data-c="" class="' + (!view.category ? 'on' : '') + '">' + esc(T('c_all')) + '</button>';
+    CATS.forEach(function (k) {
+      var nn = c.newByCategory[k] || 0;
+      html += '<button data-c="' + k + '" class="' + (view.category === k ? 'on' : '') + '"><span class="dot" style="background:var(--c-' + k + ')"></span>'
+        + esc(T('c_' + k)) + '<span class="n' + (nn ? ' new' : '') + '">' + (nn || (c.category[k] || 0)) + '</span></button>';
+    });
+    var side = $('#side');
+    side.innerHTML = html;
+    side.querySelectorAll('[data-s]').forEach(function (b) { b.onclick = function () { view.status = b.getAttribute('data-s'); current = null; load(false); }; });
+    side.querySelectorAll('[data-c]').forEach(function (b) { b.onclick = function () { view.category = b.getAttribute('data-c'); current = null; load(false); }; });
+    $('#totalTxt').textContent = data.total + ' ' + T('total');
+  }
+
+  function renderRows() {
+    var box = $('#rows');
+    if (!data.messages.length) { box.innerHTML = '<div class="empty">' + esc(T('empty')) + '</div>'; return; }
+    box.innerHTML = data.messages.map(function (m) {
+      return '<div class="row' + (m.status === 'new' ? ' new' : '') + (current && current.id === m.id ? ' on' : '') + '" data-id="' + esc(m.id) + '">'
+        + '<div class="l1"><span class="who">' + esc(m.name || m.email) + '</span><span class="when">' + esc(ago(m.created_at)) + '</span></div>'
+        + '<div class="l1">' + chip(m.category) + '<span class="snip" style="-webkit-line-clamp:1">' + esc(m.topic) + '</span></div>'
+        + '<div class="snip">' + esc(m.message) + '</div></div>';
+    }).join('');
+    box.querySelectorAll('.row').forEach(function (r) {
+      r.onclick = function () {
+        current = data.messages.filter(function (m) { return m.id === r.getAttribute('data-id'); })[0];
+        renderRows(); renderRead();
+      };
+    });
+  }
+
+  function replyParts(m) {
+    var subject = 'Re: [FRLcast] ' + m.topic;
+    var greet = (m.lang === 'id' ? STR.id : STR.en);
+    var quoted = m.message.split('\n').map(function (l) { return '> ' + l; }).join('\n');
+    var body = greet.greet + (m.name ? ' ' + m.name : '') + ',\n\n\n\n' + greet.sign + '\n\n'
+      + full(m.created_at) + ', ' + (m.name || m.email) + ' ' + greet.wrote + ':\n' + quoted;
+    return { subject: subject, body: body };
+  }
+  function patch(m, p, note) {
+    return api('PATCH', '', Object.assign({ id: m.id }, p)).then(function (j) {
+      if (!j.ok) return toast(errText(j));
+      Object.assign(m, p);
+      if (p.status) m.replied_at = p.status === 'replied' ? new Date().toISOString() : null;
+      if (note) toast(note);
+      load(true);
+    });
+  }
+
+  function renderRead() {
+    var box = $('#read');
+    if (!current) { box.innerHTML = '<div class="empty">' + esc(T('pick')) + '</div>'; box.style.display = window.innerWidth <= 700 ? 'none' : ''; return; }
+    box.style.display = '';
+    var m = current;
+    box.innerHTML = '<button class="ghost back" id="backBtn">&larr; ' + esc(T('back')) + '</button>'
+      + '<h2>' + esc(m.name || m.email) + '</h2>'
+      + '<div class="meta"><a href="mailto:' + esc(m.email) + '">' + esc(m.email) + '</a>' + chip(m.category)
+      + '<span>' + esc(T('topic')) + ': ' + esc(m.topic) + '</span>'
+      + '<span>' + esc(T('received')) + ': ' + esc(full(m.created_at)) + '</span>'
+      + (m.replied_at ? '<span>' + esc(T('repliedAt')) + ': ' + esc(full(m.replied_at)) + '</span>' : '')
+      + '<span>' + esc(T('lang')) + ': ' + (m.lang === 'id' ? 'Indonesia' : 'English') + '</span></div>'
+      + '<div class="body" id="msgBody"></div>'
+      + '<div class="acts">'
+      + '<a class="primary" id="rGmail" target="_blank" rel="noopener" style="text-decoration:none">' + esc(T('replyGmail')) + '</a>'
+      + '<a class="ghost" id="rApp" style="text-decoration:none">' + esc(T('replyApp')) + '</a>'
+      + '<button class="ghost" id="rCopy">' + esc(T('copy')) + '</button>'
+      + '<button class="ghost" id="rMark">' + esc(T(m.status === 'replied' ? 'markNew' : 'markReplied')) + '</button>'
+      + '<button class="ghost" id="rArch">' + esc(T(m.status === 'archived' ? 'unarchive' : 'archive')) + '</button>'
+      + '<select id="rCat" aria-label="' + esc(T('moveTo')) + '">' + CATS.map(function (k) { return '<option value="' + k + '"' + (k === m.category ? ' selected' : '') + '>' + esc(T('c_' + k)) + '</option>'; }).join('') + '</select>'
+      + '<button class="ghost danger" id="rDel">' + esc(T('del')) + '</button>'
+      + '</div>';
+    $('#msgBody').textContent = m.message;
+    var p = replyParts(m);
+    $('#rGmail').href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(m.email) + '&su=' + encodeURIComponent(p.subject) + '&body=' + encodeURIComponent(p.body);
+    $('#rApp').href = 'mailto:' + encodeURIComponent(m.email) + '?subject=' + encodeURIComponent(p.subject) + '&body=' + encodeURIComponent(p.body);
+    // Opening a reply files the message as replied; "Mark new" undoes it.
+    var replied = function () { if (m.status === 'new') patch(m, { status: 'replied' }); };
+    $('#rGmail').addEventListener('click', replied);
+    $('#rApp').addEventListener('click', replied);
+    $('#rCopy').onclick = function () { if (navigator.clipboard) navigator.clipboard.writeText(m.email).then(function () { toast(T('copied')); }); };
+    $('#rMark').onclick = function () { patch(m, { status: m.status === 'replied' ? 'new' : 'replied' }); };
+    $('#rArch').onclick = function () { patch(m, { status: m.status === 'archived' ? 'new' : 'archived' }); };
+    $('#rCat').onchange = function (e) { patch(m, { category: e.target.value }, T('moved') + ' ' + T('c_' + e.target.value)); };
+    $('#rDel').onclick = function () {
+      if (!confirm(T('delAsk'))) return;
+      api('DELETE', '', { id: m.id }).then(function (j) { if (!j.ok) return toast(errText(j)); current = null; toast(T('deleted')); load(false); });
+    };
+    $('#backBtn').onclick = function () { current = null; renderRows(); renderRead(); };
+  }
+
+  // Fresh messages show up when the tab comes back into view, and every two minutes.
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && key && !$('#app').hidden) load(true); });
+  setInterval(function () { if (key && !$('#app').hidden && !document.hidden) load(true); }, 120000);
+
+  applyLang();
+  if (key) {
+    api('GET', '?status=new').then(function (j) {
+      if (!j.ok) return showGate(errText(j));
+      showApp(); data = j; renderSide(); renderRows(); renderRead();
+    }, function () { showGate(T('netErr')); });
+  } else showGate('');
+})();
+</script>
+</body>
+</html>
