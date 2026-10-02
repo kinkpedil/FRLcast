@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<title>OBS settings for streaming an FR Legends race · FRLcast</title>
+<meta name="description" content="How to set up OBS to stream an FR Legends race smoothly: capturing the game, resolution and frame rate, bitrate, encoder choice, audio levels and a checklist for race night.">
+<link rel="canonical" href="https://www.frlcast.my.id/obs-streaming-setup">
+<meta name="theme-color" content="#0b0d11">
+<meta property="og:title" content="OBS settings for streaming an FR Legends race · FRLcast">
+<meta property="og:description" content="How to set up OBS to stream an FR Legends race smoothly: capturing the game, resolution and frame rate, bitrate, encoder choice, audio levels and a checklist for race night.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://www.frlcast.my.id/obs-streaming-setup">
+<meta property="og:site_name" content="FRLcast">
+<link rel="stylesheet" href="/content.css">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9417443244182931" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/">FRLcast</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/guides">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+    </nav>
+    <span class="langbtns"><button data-lang="en">EN</button><button data-lang="id">ID</button></span>
+  </header>
+
+  <main>
+    <ins class="adsbygoogle adslot" style="display:block;margin:22px 0" data-ad-client="ca-pub-9417443244182931" data-ad-slot="1310277818" data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <div data-lang-block="en">
+      <h1>OBS settings for a smooth race stream</h1>
+      <p class="lead">A stable stream matters more than a fancy one. These settings and habits keep an FR Legends broadcast smooth from the start to the chequered flag.</p>
+
+      <h2>Getting the game into OBS</h2>
+      <p>FR Legends is a mobile game, so there are two common ways to capture it. Many organisers run the game in an Android emulator on the streaming PC and add a <strong>Window Capture</strong> or <strong>Game Capture</strong> of the emulator window. Others play on a phone and mirror the screen to the PC with a screen-mirroring tool, then capture that window. Whichever you use, set the game to a landscape resolution with the same 16:9 shape as your stream, so the picture fills the frame without black bars.</p>
+      <p>You usually want the race shown from a spectator's point of view rather than from your own car. If you are both racing and streaming, consider asking another league member to join the room as a spectator on a separate device that does nothing but feed the stream.</p>
+
+      <h2>Resolution and frame rate</h2>
+      <p>Set the canvas (base) resolution to <strong>1920 × 1080</strong>, which matches broadcast overlays. The output resolution can stay at 1080p if your upload speed and PC allow it, or drop to <strong>1280 × 720</strong> for a smoother stream on a modest connection. Viewers notice stutter far more than they notice a slightly softer image. For frame rate, 30 fps is reliable; 60 fps looks better for racing but needs roughly twice the bitrate.</p>
+
+      <h2>Bitrate and connection</h2>
+      <p>Test your upload speed and use no more than about three quarters of it for the stream. As a guide, 720p at 30 fps streams well at around 3,000 to 4,000 kbps, and 1080p at 60 fps needs around 6,000 kbps. Use a wired connection for the streaming PC if you possibly can; Wi-Fi drops are the most common cause of a stream freezing in the middle of a race.</p>
+
+      <h2>Encoder</h2>
+      <p>If your PC has a recent graphics card, use its hardware encoder (NVENC on NVIDIA, AMF on AMD, Quick Sync on Intel). It takes the work off the processor, which is also running the emulator and the browser sources. Software (x264) encoding can look slightly better at the same bitrate but can cause dropped frames on a busy machine.</p>
+
+      <h2>Overlays and browser sources</h2>
+      <p>Keep the number of browser sources low. Each one is a small web browser running inside OBS. A single source that contains every graphic, switched by scenes, uses far fewer resources than one source per graphic. Set browser sources to the canvas size so graphics are drawn sharp and in the right place.</p>
+
+      <h2>Audio</h2>
+      <p>Balance three things: the game, the commentary and any music. Commentary should be clearly louder than the game, which should sit in the background. In the OBS mixer, aim for voices peaking in the yellow range and never touching red. Add a noise suppression filter to each microphone, and a limiter on the final mix so a sudden shout does not distort.</p>
+
+      <h2>Race night checklist</h2>
+      <ol>
+        <li>Thirty minutes before: start OBS, check the game capture, the overlay and the commentary audio.</li>
+        <li>Run a private test stream or a short local recording and watch it back.</li>
+        <li>Check the stream title, description and thumbnail, including the round and the track.</li>
+        <li>Close everything on the streaming PC you do not need: downloads, updates, other games.</li>
+        <li>Go live a few minutes early with a pre-show scene, so viewers arrive before the start.</li>
+        <li>After the race, keep the stream on for the results and standings, then end with a closing scene.</li>
+      </ol>
+
+      <a class="cta" href="/guides">All guides</a>
+    </div>
+
+    <div data-lang-block="id">
+      <h1>Pengaturan OBS untuk stream balapan yang mulus</h1>
+      <p class="lead">Stream yang stabil lebih penting daripada stream yang mewah. Pengaturan dan kebiasaan ini menjaga siaran FR Legends tetap mulus dari start sampai bendera finis.</p>
+
+      <h2>Memasukkan game ke OBS</h2>
+      <p>FR Legends adalah game mobile, jadi ada dua cara umum untuk menangkapnya. Banyak penyelenggara menjalankan game di emulator Android pada PC streaming lalu menambahkan <strong>Window Capture</strong> atau <strong>Game Capture</strong> dari jendela emulator. Yang lain bermain di HP dan mencerminkan layar ke PC dengan aplikasi screen mirroring, lalu menangkap jendela tersebut. Cara apa pun yang dipakai, atur game ke resolusi lanskap dengan rasio 16:9 yang sama dengan stream, supaya gambar memenuhi layar tanpa bilah hitam.</p>
+      <p>Biasanya kamu ingin menampilkan balapan dari sudut pandang penonton, bukan dari mobilmu sendiri. Kalau kamu sekaligus balapan dan streaming, pertimbangkan meminta anggota liga lain masuk ke room sebagai penonton di perangkat terpisah yang khusus menyuplai stream.</p>
+
+      <h2>Resolusi dan frame rate</h2>
+      <p>Atur resolusi kanvas (base) ke <strong>1920 × 1080</strong>, sesuai dengan overlay siaran. Resolusi output bisa tetap 1080p kalau kecepatan upload dan PC-mu mampu, atau turunkan ke <strong>1280 × 720</strong> untuk stream yang lebih mulus di koneksi sederhana. Penonton jauh lebih menyadari gambar yang tersendat daripada gambar yang sedikit kurang tajam. Untuk frame rate, 30 fps itu andal; 60 fps lebih bagus untuk balapan tapi butuh bitrate kira-kira dua kali lipat.</p>
+
+      <h2>Bitrate dan koneksi</h2>
+      <p>Ukur kecepatan upload-mu dan pakai tidak lebih dari sekitar tiga perempatnya untuk stream. Sebagai patokan, 720p 30 fps berjalan baik di sekitar 3.000 sampai 4.000 kbps, dan 1080p 60 fps butuh sekitar 6.000 kbps. Pakai koneksi kabel untuk PC streaming kalau memungkinkan; Wi-Fi yang putus adalah penyebab paling umum stream membeku di tengah balapan.</p>
+
+      <h2>Encoder</h2>
+      <p>Kalau PC-mu punya kartu grafis yang cukup baru, pakai encoder hardware-nya (NVENC di NVIDIA, AMF di AMD, Quick Sync di Intel). Encoder ini mengambil alih beban dari prosesor, yang juga menjalankan emulator dan browser source. Encoding software (x264) bisa sedikit lebih bagus di bitrate yang sama, tapi bisa membuat frame terbuang di mesin yang sibuk.</p>
+
+      <h2>Overlay dan browser source</h2>
+      <p>Batasi jumlah browser source. Tiap source adalah browser kecil yang berjalan di dalam OBS. Satu source yang berisi semua grafis, diganti lewat scene, memakai sumber daya jauh lebih sedikit daripada satu source per grafis. Atur ukuran browser source sama dengan kanvas supaya grafis tergambar tajam dan di posisi yang tepat.</p>
+
+      <h2>Audio</h2>
+      <p>Seimbangkan tiga hal: game, komentar, dan musik. Komentar harus jelas lebih keras daripada game, yang sebaiknya menjadi latar. Di mixer OBS, usahakan suara mencapai puncak di area kuning dan tidak pernah menyentuh merah. Tambahkan filter noise suppression di tiap mikrofon, dan limiter di hasil akhir supaya teriakan mendadak tidak pecah.</p>
+
+      <h2>Daftar periksa malam balapan</h2>
+      <ol>
+        <li>Tiga puluh menit sebelumnya: nyalakan OBS, periksa tangkapan game, overlay, dan audio komentar.</li>
+        <li>Lakukan stream uji privat atau rekaman lokal singkat lalu tonton ulang.</li>
+        <li>Periksa judul, deskripsi, dan thumbnail stream, termasuk ronde dan treknya.</li>
+        <li>Tutup semua yang tidak perlu di PC streaming: unduhan, update, game lain.</li>
+        <li>Mulai siaran beberapa menit lebih awal dengan scene pre-show, supaya penonton datang sebelum start.</li>
+        <li>Setelah balapan, biarkan stream tetap menyala untuk hasil dan klasemen, lalu akhiri dengan scene penutup.</li>
+      </ol>
+
+      <a class="cta" href="/guides">Semua panduan</a>
+    </div>
+    <ins class="adsbygoogle adslot" style="display:block;margin:22px 0" data-ad-client="ca-pub-9417443244182931" data-ad-slot="1310277818" data-ad-format="auto" data-full-width-responsive="true"></ins>
+  </main>
+
+  <footer class="site">
+    <span>FRLcast by kinkpedil12</span>
+    <a href="/guides">Guides</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/changelog">Changelog</a>
+    <a class="sp" href="/">frlcast.my.id</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var lang = 'en';
+  try { if (localStorage.getItem('frl.lang') === 'id') lang = 'id'; } catch(e){}
+  function apply(){
+    document.querySelectorAll('[data-lang-block]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang-block') === lang); });
+    document.querySelectorAll('[data-lang]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang') === lang); });
+    document.documentElement.lang = lang;
+  }
+  document.querySelectorAll('[data-lang]').forEach(function(b){
+    b.onclick = function(){ lang = b.getAttribute('data-lang'); try { localStorage.setItem('frl.lang', lang); } catch(e){} apply(); };
+  });
+  apply();
+})();
+</script>
+<script>
+(function(){document.querySelectorAll("ins.adsbygoogle.adslot").forEach(function(el){var s=el.getAttribute("data-ad-slot")||"";if(/^[0-9]+$/.test(s)){try{(adsbygoogle=window.adsbygoogle||[]).push({});}catch(e){}}});})();
+</script>
+</body>
+</html>
