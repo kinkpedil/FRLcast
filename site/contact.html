@@ -37,13 +37,35 @@
       <h1>Contact</h1>
       <p class="lead">Questions, bug reports and ideas are welcome.</p>
 
+      <h2>Send us an email</h2>
+      <p>Write to <a class="mail-addr" href="/contact">kinkpedil12 [at] gmail.com</a>. We read every message and usually reply within a few days.</p>
+      <form class="mailform" data-ml="en">
+        <label>Your name<input name="name" maxlength="80" autocomplete="name"></label>
+        <label>Topic
+          <select name="topic">
+            <option>Question</option>
+            <option>Bug report</option>
+            <option>Feature idea</option>
+            <option>League or partnership</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <label>Message<textarea name="msg" rows="7" maxlength="4000" required placeholder="For a bug: what you did, what you expected, what happened, and the version in the console sidebar."></textarea></label>
+        <div class="mailbtns">
+          <button type="submit" class="cta">Open in my email app</button>
+          <a class="btn2 mail-gmail" href="https://mail.google.com/" target="_blank" rel="noopener">Write in Gmail</a>
+          <button type="button" class="btn2 mail-copy">Copy address</button>
+        </div>
+        <p class="mailnote">Nothing is sent from this page: your own email app or Gmail opens with the message filled in, and you press send there.</p>
+      </form>
+
       <h2>Who runs FRLcast</h2>
       <p>FRLcast is made and run by <strong>kinkpedil12</strong>, for the FR Legends league community.</p>
 
-      <h2>How to reach us</h2>
+      <h2>Other ways to reach us</h2>
       <ul>
         <li><strong>Bug reports and feature requests:</strong> open an issue on the project's <a href="https://github.com/kinkpedil/FRLcast/issues" rel="nofollow">GitHub page</a>. Include what you were doing, what you expected and what happened, and the version shown in the console sidebar.</li>
-        <li><strong>Questions about using FRLcast:</strong> read the <a href="/guides">guides</a> and the <a href="/faq">FAQ</a> first; most answers are there. Otherwise, open an issue on GitHub and we will reply there.</li>
+        <li><strong>Questions about using FRLcast:</strong> read the <a href="/guides">guides</a> and the <a href="/faq">FAQ</a> first; most answers are there. Otherwise, send us an email with the form above.</li>
         <li><strong>Data and privacy requests:</strong> see the <a href="/privacy">privacy policy</a>. For an event's own records (drivers, results), contact the organiser of that event, who controls that data.</li>
       </ul>
 
@@ -54,13 +76,35 @@
       <h1>Kontak</h1>
       <p class="lead">Pertanyaan, laporan bug, dan ide sangat diterima.</p>
 
+      <h2>Kirim email ke kami</h2>
+      <p>Tulis ke <a class="mail-addr" href="/contact">kinkpedil12 [at] gmail.com</a>. Kami membaca setiap pesan dan biasanya membalas dalam beberapa hari.</p>
+      <form class="mailform" data-ml="id">
+        <label>Nama kamu<input name="name" maxlength="80" autocomplete="name"></label>
+        <label>Topik
+          <select name="topic">
+            <option>Pertanyaan</option>
+            <option>Laporan bug</option>
+            <option>Ide fitur</option>
+            <option>Liga atau kerja sama</option>
+            <option>Lainnya</option>
+          </select>
+        </label>
+        <label>Pesan<textarea name="msg" rows="7" maxlength="4000" required placeholder="Untuk bug: apa yang kamu lakukan, apa yang kamu harapkan, apa yang terjadi, dan versi di sidebar konsol."></textarea></label>
+        <div class="mailbtns">
+          <button type="submit" class="cta">Buka di aplikasi email</button>
+          <a class="btn2 mail-gmail" href="https://mail.google.com/" target="_blank" rel="noopener">Tulis di Gmail</a>
+          <button type="button" class="btn2 mail-copy">Salin alamat</button>
+        </div>
+        <p class="mailnote">Halaman ini tidak mengirim apa pun: aplikasi email atau Gmail-mu terbuka dengan pesan yang sudah terisi, lalu kamu tekan kirim di sana.</p>
+      </form>
+
       <h2>Siapa yang menjalankan FRLcast</h2>
       <p>FRLcast dibuat dan dijalankan oleh <strong>kinkpedil12</strong>, untuk komunitas liga FR Legends.</p>
 
-      <h2>Cara menghubungi kami</h2>
+      <h2>Cara lain menghubungi kami</h2>
       <ul>
         <li><strong>Laporan bug dan permintaan fitur:</strong> buat issue di <a href="https://github.com/kinkpedil/FRLcast/issues" rel="nofollow">halaman GitHub</a> proyek. Sertakan apa yang sedang kamu lakukan, apa yang kamu harapkan, apa yang terjadi, dan versi yang tampil di sidebar konsol.</li>
-        <li><strong>Pertanyaan tentang cara memakai FRLcast:</strong> baca dulu <a href="/guides">panduan</a> dan <a href="/faq">FAQ</a>; sebagian besar jawabannya ada di sana. Kalau tidak ada, buat issue di GitHub dan kami akan membalas di sana.</li>
+        <li><strong>Pertanyaan tentang cara memakai FRLcast:</strong> baca dulu <a href="/guides">panduan</a> dan <a href="/faq">FAQ</a>; sebagian besar jawabannya ada di sana. Kalau tidak ada, kirim email lewat formulir di atas.</li>
         <li><strong>Permintaan terkait data dan privasi:</strong> lihat <a href="/privacy">kebijakan privasi</a>. Untuk rekaman sebuah event (pembalap, hasil), hubungi penyelenggara event tersebut, yang mengendalikan data itu.</li>
       </ul>
 
@@ -96,5 +140,42 @@
 })();
 </script>
 <script src="/menu.js?v=20261002165408" defer></script>
+<script>
+/* The contact form. Nothing is sent from here: it opens the visitor's own email app (or
+   Gmail) with the message filled in. The address is put together in the page rather than
+   written out in the HTML, which keeps it away from the simplest address-harvesting bots. */
+(function () {
+  var addr = ['kinkpedil12', 'gmail.com'].join('@');
+  document.querySelectorAll('.mail-addr').forEach(function (a) { a.textContent = addr; a.href = 'mailto:' + addr; });
+  function parts(f) {
+    var name = f.name.value.trim(), topic = f.topic.value, msg = f.msg.value.trim();
+    var subject = '[FRLcast] ' + topic + (name ? ' (' + name + ')' : '');
+    var body = msg + (name ? '\n\n' + name : '');
+    return { subject: subject, body: body, msg: msg };
+  }
+  document.querySelectorAll('.mailform').forEach(function (f) {
+    var id = f.getAttribute('data-ml') === 'id';
+    var need = id ? 'Tulis pesannya dulu.' : 'Write your message first.';
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var p = parts(f);
+      if (!p.msg) { f.msg.focus(); return; }
+      location.href = 'mailto:' + addr + '?subject=' + encodeURIComponent(p.subject) + '&body=' + encodeURIComponent(p.body);
+    });
+    f.querySelector('.mail-gmail').addEventListener('click', function (e) {
+      var p = parts(f);
+      if (!p.msg) { e.preventDefault(); alert(need); f.msg.focus(); return; }
+      this.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(addr)
+        + '&su=' + encodeURIComponent(p.subject) + '&body=' + encodeURIComponent(p.body);
+    });
+    f.querySelector('.mail-copy').addEventListener('click', function () {
+      var b = this, done = id ? 'Alamat disalin' : 'Address copied';
+      var ok = function () { var t = b.textContent; b.textContent = done; setTimeout(function () { b.textContent = t; }, 1600); };
+      if (navigator.clipboard) navigator.clipboard.writeText(addr).then(ok, function () { prompt('', addr); });
+      else prompt('', addr);
+    });
+  });
+})();
+</script>
 </body>
 </html>

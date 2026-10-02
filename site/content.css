@@ -36,6 +36,16 @@ footer.site a{color:var(--mute)}
 footer.site .sp{margin-left:auto}
 [data-lang-block]{display:none}
 [data-lang-block].on{display:block}
+.mailform{display:grid;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:14px 0 8px}
+.mailform label{display:grid;gap:6px;font-size:14px;color:var(--mute)}
+.mailform input,.mailform select,.mailform textarea{font:inherit;font-size:16px;color:var(--ink);background:#0d1015;border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.mailform textarea{resize:vertical;min-height:140px}
+.mailform input:focus,.mailform select:focus,.mailform textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.mailbtns{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.mailbtns .cta{margin-top:0;border:0;cursor:pointer;font:inherit;font-weight:800}
+.btn2{display:inline-block;background:none;border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:10px 16px;font:inherit;font-size:15px;cursor:pointer}
+.btn2:hover{border-color:var(--accent);text-decoration:none}
+.mailnote{margin:0;font-size:13px;color:var(--mute)}
 .guides{list-style:none;padding:0;margin:8px 0 26px;display:grid;gap:10px}
 .guides li{border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:var(--mute)}
 .guides li a{font-size:17px}
