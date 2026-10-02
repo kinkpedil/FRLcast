@@ -2137,15 +2137,28 @@ $('#btnExpReel').onclick = () => {
  * commentary. What the operator needs at 20:00 on a Saturday is a row of buttons where
  * the one they press is the one the viewer sees.
  */
-const WIDGET_LABELS = {
-  status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower',
-  lowerThird: 'Lower third', gap: 'Gap bar', results: 'Results',
-  trackmap: 'Track map', battle: 'Tandem battle', bracket: 'Bracket',
-  grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings',
-  pit: 'Pit lane', lights: 'Start lights', catching: 'Catching', rivalry: 'Rivalry', podium: 'Podium', reactions: 'Crowd reactions',
-  racecontrol: 'Race control',
-  driftsolo: 'Drift run', driftq: 'Drift qualifying'
-};
+// Every widget a scene can show, in the groups the On air card lists them in. Ten of these
+// used to be missing, so they showed as raw ids in the scene list and could not be switched
+// from this page at all.
+const WIDGET_GROUPS = [
+  ['Timing', {
+    status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower', gap: 'Gap bar',
+    lowerThird: 'Lower third', fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta',
+    trackmap: 'Track map', pit: 'Pit lane', catching: 'Catching', rivalry: 'Rivalry',
+    h2h: 'Head to head', racecontrol: 'Race control'
+  }],
+  ['Start and finish', {
+    lights: 'Start lights', grid: 'Starting grid', results: 'Results', standings: 'Standings', podium: 'Podium'
+  }],
+  ['Show and audience', {
+    ticker: 'Ticker', radio: 'Team radio', poll: 'Audience poll', reactions: 'Crowd reactions',
+    sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code'
+  }],
+  ['Drift', {
+    battle: 'Tandem battle', bracket: 'Bracket', driftsolo: 'Drift run', driftq: 'Drift qualifying'
+  }]
+];
+const WIDGET_LABELS = Object.assign({}, ...WIDGET_GROUPS.map(([, g]) => g));
 
 function renderScenes() {
   if (!state) return;
@@ -2166,7 +2179,7 @@ function renderScenes() {
     box.innerHTML = scenes.map((sc, i) => {
       const on = sc.id === o.activeScene;
       const widgets = Object.entries(sc.show || {}).filter(([, v]) => v)
-        .map(([k]) => WIDGET_LABELS[k] || k).join(' · ') || 'nothing shown';
+        .filter(([k]) => WIDGET_LABELS[k]).map(([k]) => t(WIDGET_LABELS[k])).join(' · ') || t('nothing shown');
       return `<div class="scenerow ${on ? 'live' : ''}" data-scene="${sc.id}">
         <div class="scenemain">
           <b>${esc(sc.name)}</b>
@@ -2208,11 +2221,12 @@ function renderScenes() {
 
   const wbox = $('#sceneWidgets');
   if (wbox && live) {
-    wbox.innerHTML = Object.keys(WIDGET_LABELS).map((k) => `
+    wbox.innerHTML = WIDGET_GROUPS.map(([group, labels]) => `
+      <div class="wgroup">${esc(t(group))}</div>` + Object.keys(labels).map((k) => `
       <label class="toggle">
-        <span>${WIDGET_LABELS[k]}</span>
+        <span>${esc(t(labels[k]))}</span>
         <input type="checkbox" data-scenewidget="${k}" ${live.show[k] ? 'checked' : ''}><i class="sw"></i>
-      </label>`).join('');
+      </label>`).join('')).join('');
     $$('#sceneWidgets [data-scenewidget]').forEach((el) => {
       el.onchange = () => bus.action('overlay.update', {
         patch: { show: { [el.dataset.scenewidget]: el.checked } }

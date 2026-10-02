@@ -1335,6 +1335,22 @@
     'Lap': 'Lap',
     'Clear the whole custom design (colours, fonts, panels, widget layout, CSS)? Files and stickers stay.': 'Hapus seluruh desain kustom (warna, font, panel, susunan widget, CSS)? File dan stiker tetap ada.',
 
+    'Countdown': 'Hitung mundur',
+    'Auto-director': 'Auto-director',
+    'Sponsors': 'Sponsor',
+    'Transitions and bumpers': 'Transisi dan bumper',
+    'Start and finish': 'Start dan finis',
+    'Show and audience': 'Acara dan penonton',
+    'Delta': 'Delta',
+    'Sector times': 'Waktu sektor',
+    'QR code': 'Kode QR',
+    'Sponsor': 'Sponsor',
+    'nothing shown': 'tidak ada yang tampil',
+    'Catching': 'Mengejar',
+    'Rivalry': 'Rivalitas',
+    'Drift run': 'Run drift',
+    'Drift qualifying': 'Kualifikasi drift',
+
     'pending': 'menunggu',
     'approved': 'diterima',
     'rejected': 'ditolak'

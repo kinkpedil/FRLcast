@@ -414,13 +414,11 @@
             <h3>Scenes <span class="right"><button class="btn" id="btnSceneRebuild">Rebuild defaults</button> <button class="btn" id="btnSceneAdd">Duplicate current</button></span></h3>
             <div class="body"><div id="sceneList"></div></div>
           </div>
-        </div>
-        <div>
+
           <div class="card">
-            <h3>On air <span class="right" id="sceneLiveName">--</span></h3>
+            <h3>Transitions and bumpers</h3>
             <div class="body">
-              <div id="sceneWidgets"></div>
-              <label class="field" style="margin-top:14px">
+              <label class="field">
                 <span>Transition length</span>
                 <input type="range" id="sceneTrans" min="120" max="1200" step="20">
               </label>
@@ -442,6 +440,14 @@
                 </select>
               </label>
               <p class="hint" style="margin-top:6px">The Grid scene shows a staggered starting grid with driver photos. Add a photo to each driver on the Drivers page.</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <h3>On air <span class="right" id="sceneLiveName">--</span></h3>
+            <div class="body">
+              <div id="sceneWidgets"></div>
               <p class="hint" style="margin-top:10px">
                 OBS needs only <code>/overlay/all.html</code>. Scene changes happen inside it,
                 so there is nothing to switch on the OBS side and no second browser source to load.
@@ -651,8 +657,8 @@
                 <div class="pickchips" id="pickChips"></div>
               </div>
 
-              <div class="row" style="margin-top:12px">
-                <label class="field" style="flex:1"><span>Draw tool</span>
+              <div class="grid2" style="margin-top:12px">
+                <label class="field"><span>Draw tool</span>
                   <select id="roiTool">
                     <option value="minimap">Minimap zone: find the cars</option>
                     <option value="finish">Finish line: click 2 points</option>
@@ -668,14 +674,16 @@
                     <option value="detect">Model zone (ONNX)</option>
                   </select>
                 </label>
-                <label class="field" style="flex:1"><span>Mode</span>
+                <label class="field"><span>Mode</span>
                   <select id="editMode">
                     <option value="roi">Draw regions</option>
                     <option value="path">Draw racing line (inside minimap)</option>
                     <option value="pick">Pick car colour from the image</option>
                   </select>
                 </label>
-                <button class="btn" id="btnClearPath" style="margin-top:20px">Clear line</button>
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn" id="btnClearPath">Clear line</button>
                 <button class="btn" id="btnRelearn">Relearn circuit</button>
               </div>
               <div class="card" style="margin-top:12px;background:var(--bg-3)">
@@ -687,11 +695,6 @@
                 </div>
               </div>
             </div>
-          </div>
-
-          <div class="card">
-            <h3>Detection log</h3>
-            <div class="body"><div class="log" id="visionLog"></div></div>
           </div>
         </div>
 
@@ -725,6 +728,15 @@
             </div>
           </div>
 
+          <div class="card">
+            <h3>Detection log</h3>
+            <div class="body"><div class="log" id="visionLog"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- the tuning cards: engine settings beside performance and the model -->
+      <div class="trio">
           <div class="card">
             <h3>Engine settings</h3>
             <div class="body">
@@ -814,7 +826,6 @@
               <label class="toggle" style="margin-top:10px"><span>Overlay model boxes on preview</span><input type="checkbox" id="setShowBoxes" checked><i class="sw"></i></label>
             </div>
           </div>
-        </div>
       </div>
     </section>
 
@@ -851,65 +862,6 @@
               <label class="toggle"><span>Countdown</span><input type="checkbox" data-show="countdown"><i class="sw"></i></label>
               <label class="toggle"><span>Driver intro (focus driver)</span><input type="checkbox" data-show="intro"><i class="sw"></i></label>
               <label class="toggle"><span>QR code (scan to follow &amp; vote)</span><input type="checkbox" data-show="qr"><i class="sw"></i></label>
-              <div class="grid2" style="margin-top:10px">
-                <label class="field"><span>Radio driver</span><select id="radioDriver"></select></label>
-                <label class="field"><span>Radio quote</span><input type="text" id="radioText" maxlength="120" placeholder="Box this lap, box box"></label>
-              </div>
-              <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
-              <label class="toggle"><span>Auto-director <b style="color:var(--ink-mute)">fastest-lap banner, battles, Results scene</b></span><input type="checkbox" id="autoDirector"><i class="sw"></i></label>
-              <p class="hint" style="margin-top:6px">When on, the console flashes the fastest-lap banner for a few seconds each time the record falls, and switches to the <b>Results</b> scene (falling back to the results widget) when the chequered flag drops. <span>In a race it also puts the head-to-head on air when two cars stay within a second of each other for a few seconds, and takes it down once the fight is over (never one you turned on yourself).</span> It only does things you can also do by hand.</p>
-              <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
-              <div class="clocklabel">Audience poll</div>
-              <label class="field" style="margin-top:6px"><span>Question</span><input type="text" id="pollQuestion" maxlength="60" placeholder="Who wins?"></label>
-              <div class="row" style="gap:6px;margin-top:8px">
-                <button class="btn ghost sm" id="btnPollPreAll" title="Fill options with every driver">All drivers</button>
-                <button class="btn ghost sm" id="btnPollPreTop" title="Fill options with the current top 3">Top 3</button>
-                <button class="btn ghost sm" id="btnPollPreYN" title="A simple yes / no poll">Yes / No</button>
-              </div>
-              <textarea id="pollOptions" rows="3" style="width:100%;margin-top:6px" placeholder="One option per line: Label | #color (color optional). Leave empty to use every driver."></textarea>
-              <div class="row" style="gap:8px;margin-top:8px">
-                <button class="btn primary sm" id="btnPollOpen">Open poll</button>
-                <button class="btn sm" id="btnPollClose">Close</button>
-                <span class="hint" id="pollStatus" style="margin-left:auto"></span>
-              </div>
-              <p class="hint" id="pollResult" style="margin-top:6px;color:var(--accent)"></p>
-              <p class="hint" style="margin-top:6px">Use a preset or type your own options (leave the box empty for every driver). Viewers vote on the public live page; the tally shows on the <b>Audience poll</b> overlay widget, and the winner is saved to the race recap when you close it. Needs the votes table (see Help / migration).</p>
-              <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
-              <div class="clocklabel">Sponsors</div>
-              <textarea id="sponsorList" rows="3" style="width:100%;margin-top:6px" placeholder="One per line: Label | https://logo.png (URL optional)"></textarea>
-              <p class="hint" style="margin-top:6px">The rotator cycles these every few seconds on the <b>Sponsor</b> widget.</p>
-              <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
-              <div class="clocklabel">Countdown</div>
-              <div class="row" style="gap:8px;margin-top:6px;align-items:center">
-                <input type="text" id="cdLabelIn" maxlength="20" placeholder="STARTS IN" style="flex:1">
-                <input type="number" id="cdMin" min="0" max="120" step="1" placeholder="min" style="width:70px">
-                <button class="btn primary sm" id="btnCdStart">Set</button>
-                <button class="btn sm" id="btnCdClear">Clear</button>
-              </div>
-              <p class="hint" style="margin-top:6px">Sets a target this many minutes from now; the <b>Countdown</b> widget ticks down to it. <b>Driver intro</b> shows whichever driver is set as Focus above.</p>
-              <div class="grid2" style="margin-top:10px">
-                <label class="field"><span>Head to head picks</span>
-                  <select id="hhMode"><option value="auto">Closest fight, automatically</option><option value="manual">These two drivers</option></select>
-                </label>
-                <div class="grid2">
-                  <label class="field"><span>Driver A</span><select id="hhA"></select></label>
-                  <label class="field"><span>Driver B</span><select id="hhB"></select></label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="card">
-            <h3>Motion check</h3>
-            <div class="body">
-              <button class="btn primary" id="btnDemoAnim">Play animation rehearsal</button>
-              <p class="hint" style="margin-top:10px">
-                Replays every overlay animation on all connected overlays: entrance, position
-                swap, lap pulse, best-lap sweep, flag wipe: without touching race data.
-                Use it to confirm motion is reaching OBS. Most overlay motion is
-                <b>event-driven</b>: with the race idle and no laps coming in, there is nothing
-                to animate.
-              </p>
             </div>
           </div>
 
@@ -1019,14 +971,6 @@
           </div>
 
           <div class="card">
-            <h3>Focus driver</h3>
-            <div class="body">
-              <select id="focusSelect"></select>
-              <p class="hint" style="margin-top:10px">Drives the lower third, the gap bar, and which driver un-assigned trigger zones fire laps for.</p>
-            </div>
-          </div>
-
-          <div class="card">
             <h3>Ticker</h3>
             <div class="body">
               <textarea id="tickerText" rows="4" placeholder="One message per line"></textarea>
@@ -1038,17 +982,113 @@
               </div>
             </div>
           </div>
+
+          <div class="card">
+            <h3>Countdown</h3>
+            <div class="body">
+              <div class="row" style="gap:8px;align-items:center">
+              <input type="text" id="cdLabelIn" maxlength="20" placeholder="STARTS IN" style="flex:1">
+              <input type="number" id="cdMin" min="0" max="120" step="1" placeholder="min" style="width:70px">
+              <button class="btn primary sm" id="btnCdStart">Set</button>
+              <button class="btn sm" id="btnCdClear">Clear</button>
+              </div>
+              <p class="hint" style="margin-top:6px">Sets a target this many minutes from now; the <b>Countdown</b> widget ticks down to it. <b>Driver intro</b> shows whichever driver is set as Focus above.</p>
+            </div>
+          </div>
         </div>
 
-        <div class="card">
-          <h3>Live preview <span class="right">1920×1080</span></h3>
-          <div class="body">
-            <label class="toggle" style="margin-bottom:12px">
-              <span>Show live preview <b style="color:var(--ink-mute)">runs a second copy of the overlay</b></span>
-              <input type="checkbox" id="showOverlayPreview"><i class="sw"></i>
-            </label>
-            <iframe class="previewframe" id="overlayPreview" data-src="/overlay/all.html" style="display:none"></iframe>
-            <p class="hint" style="margin-top:10px">The real output is the Browser Source in OBS. This preview is only a convenience, and it costs a whole extra overlay instance to run.</p>
+        <div>
+          <div class="card">
+            <h3>Live preview <span class="right">1920×1080</span></h3>
+            <div class="body">
+              <label class="toggle" style="margin-bottom:12px">
+                <span>Show live preview <b style="color:var(--ink-mute)">runs a second copy of the overlay</b></span>
+                <input type="checkbox" id="showOverlayPreview"><i class="sw"></i>
+              </label>
+              <iframe class="previewframe" id="overlayPreview" data-src="/overlay/all.html" style="display:none"></iframe>
+              <p class="hint" style="margin-top:10px">The real output is the Browser Source in OBS. This preview is only a convenience, and it costs a whole extra overlay instance to run.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Focus driver</h3>
+            <div class="body">
+              <select id="focusSelect"></select>
+              <p class="hint" style="margin-top:10px">Drives the lower third, the gap bar, and which driver un-assigned trigger zones fire laps for.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Team radio</h3>
+            <div class="body">
+              <div class="grid2">
+                <label class="field"><span>Radio driver</span><select id="radioDriver"></select></label>
+                <label class="field"><span>Radio quote</span><input type="text" id="radioText" maxlength="120" placeholder="Box this lap, box box"></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Head to head</h3>
+            <div class="body">
+              <label class="field"><span>Head to head picks</span>
+                <select id="hhMode"><option value="auto">Closest fight, automatically</option><option value="manual">These two drivers</option></select>
+              </label>
+              <div class="grid2" style="margin-top:10px">
+                <label class="field"><span>Driver A</span><select id="hhA"></select></label>
+                <label class="field"><span>Driver B</span><select id="hhB"></select></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Auto-director</h3>
+            <div class="body">
+              <label class="toggle"><span>Auto-director <b style="color:var(--ink-mute)">fastest-lap banner, battles, Results scene</b></span><input type="checkbox" id="autoDirector"><i class="sw"></i></label>
+              <p class="hint" style="margin-top:6px">When on, the console flashes the fastest-lap banner for a few seconds each time the record falls, and switches to the <b>Results</b> scene (falling back to the results widget) when the chequered flag drops. <span>In a race it also puts the head-to-head on air when two cars stay within a second of each other for a few seconds, and takes it down once the fight is over (never one you turned on yourself).</span> It only does things you can also do by hand.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Audience poll</h3>
+            <div class="body">
+              <label class="field"><span>Question</span><input type="text" id="pollQuestion" maxlength="60" placeholder="Who wins?"></label>
+              <div class="row" style="gap:6px;margin-top:8px">
+              <button class="btn ghost sm" id="btnPollPreAll" title="Fill options with every driver">All drivers</button>
+              <button class="btn ghost sm" id="btnPollPreTop" title="Fill options with the current top 3">Top 3</button>
+              <button class="btn ghost sm" id="btnPollPreYN" title="A simple yes / no poll">Yes / No</button>
+              </div>
+              <textarea id="pollOptions" rows="3" style="width:100%;margin-top:6px" placeholder="One option per line: Label | #color (color optional). Leave empty to use every driver."></textarea>
+              <div class="row" style="gap:8px;margin-top:8px">
+              <button class="btn primary sm" id="btnPollOpen">Open poll</button>
+              <button class="btn sm" id="btnPollClose">Close</button>
+              <span class="hint" id="pollStatus" style="margin-left:auto"></span>
+              </div>
+              <p class="hint" id="pollResult" style="margin-top:6px;color:var(--accent)"></p>
+              <p class="hint" style="margin-top:6px">Use a preset or type your own options (leave the box empty for every driver). Viewers vote on the public live page; the tally shows on the <b>Audience poll</b> overlay widget, and the winner is saved to the race recap when you close it. Needs the votes table (see Help / migration).</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Sponsors</h3>
+            <div class="body">
+              <textarea id="sponsorList" rows="3" style="width:100%;" placeholder="One per line: Label | https://logo.png (URL optional)"></textarea>
+              <p class="hint" style="margin-top:6px">The rotator cycles these every few seconds on the <b>Sponsor</b> widget.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Motion check</h3>
+            <div class="body">
+              <button class="btn primary" id="btnDemoAnim">Play animation rehearsal</button>
+              <p class="hint" style="margin-top:10px">
+                Replays every overlay animation on all connected overlays: entrance, position
+                swap, lap pulse, best-lap sweep, flag wipe: without touching race data.
+                Use it to confirm motion is reaching OBS. Most overlay motion is
+                <b>event-driven</b>: with the race idle and no laps coming in, there is nothing
+                to animate.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -1062,7 +1102,7 @@
       <p class="lede" style="margin-top:-8px">Editing scene <b class="scenetag" id="layoutScene">--</b>: only the widgets that scene shows appear here. Other scenes keep their own arrangement.</p>
 
       <div class="split">
-        <div>
+        <div class="stickycol">
           <div class="card">
             <h3>Canvas <span class="right">1920 × 1080</span></h3>
             <div class="body">
@@ -1080,9 +1120,7 @@
               </p>
             </div>
           </div>
-        </div>
 
-        <div>
           <div class="card">
             <h3>Widget <span class="right" id="selName">none</span></h3>
             <div class="body">
@@ -1114,7 +1152,9 @@
               <p class="hint" style="margin-top:8px">Changes reach OBS live already. Use this to force every overlay to redraw the current layout: handy if a Browser Source looks out of date.</p>
             </div>
           </div>
+        </div>
 
+        <div>
           <div class="card">
             <h3>Broadcast skin</h3>
             <div class="body">
