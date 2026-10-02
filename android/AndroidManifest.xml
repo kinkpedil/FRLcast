@@ -48,5 +48,10 @@
         android:name=".OverlayService"
         android:exported="false"
         android:foregroundServiceType="dataSync"/>
+
+    <!-- The session reminders: AlarmManager wakes this before race control's countdown ends. -->
+    <receiver
+        android:name=".Reminders"
+        android:exported="false"/>
   </application>
 </manifest>

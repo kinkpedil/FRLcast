@@ -338,6 +338,8 @@ public class OverlayService extends Service {
     // over the flag rather than being painted over by it.
     announcePenalties(o.optJSONArray("penalties"));
     announceRadio(o.optJSONObject("radio"));
+    JSONObject ev = o.optJSONObject("event");
+    Reminders.schedule(this, o.optJSONObject("countdown"), ev == null ? "" : ev.optString("name", ""));
 
     // The spotter's calls about this driver. Nothing is said on the first poll (lastFlag is
     // still null): that one only records where things stand, so opening the window mid-race
@@ -356,6 +358,12 @@ public class OverlayService extends Service {
         if (lights >= 6 && lastLights < 6) { spot.urgent("Lights out, go go go"); saidStart = true; }
         if (blue && !lastBlue) spot.info("Blue flag, let them by");
         if (!opMsg.isEmpty() && !opMsg.equals(lastMsg)) spot.info("Race control. " + opMsg);
+      }
+      // Race control's note in the shade as well, for a driver who looked away from the window.
+      if (seeded && !opMsg.isEmpty() && !opMsg.equals(lastMsg) && Api.prefs(this).getBoolean(Api.K_NOTIFY, true)) {
+        Reminders.post(this, "Race control", opMsg, 7100);
+      }
+      if (seeded && spot != null) {
         if (left == 1 && lastLeft != 1) spot.info("Last lap");
         if (serve == 0 && lastServe != 0) spot.urgent("Serve the drive through now");
       }
@@ -536,6 +544,7 @@ public class OverlayService extends Service {
     String headline = p.optString("headline", "PENALTY");
     String reason = p.optString("reason", "");
     boolean open = "investigating".equals(p.optString("status"));
+    boolean dropped = "dropped".equals(p.optString("status"));
 
     /*
      * The window takes it first, then the shade.
@@ -545,7 +554,7 @@ public class OverlayService extends Service {
      * what reaches them now.
      */
     if (view != null) {
-      view.showPenalty(open ? "UNDER INVESTIGATION" : headline, reason);
+      view.showPenalty(open ? "UNDER INVESTIGATION" : dropped ? "NO FURTHER ACTION" : headline, reason);
       // Restarted, not stacked: a second penalty arriving at six seconds gets its own
       // full turn rather than inheriting the two the first one had left.
       ui.removeCallbacks(clearPenalty);
@@ -564,6 +573,8 @@ public class OverlayService extends Service {
     boolean investigating = "investigating".equals(p.optString("status"));
     String title = investigating ? "UNDER INVESTIGATION" : headline;
     if (investigating && !headline.isEmpty()) title = title + " · " + headline;
+    // A closed investigation: the headline is the penalty that was proposed, not given.
+    if ("dropped".equals(p.optString("status"))) title = "NO FURTHER ACTION";
 
     NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
     if (nm == null) return;

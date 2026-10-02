@@ -311,6 +311,14 @@ public class MainActivity extends Activity {
     voiceBox.setOnCheckedChangeListener((v, on) -> Api.prefs(this).edit().putBoolean(Api.K_VOICE, on).apply());
     settings.addView(voiceBox);
 
+    CheckBox notifyBox = check("Reminders before the session and race control's messages as notifications", Api.prefs(this).getBoolean(Api.K_NOTIFY, true));
+    notifyBox.setOnCheckedChangeListener((v, on) -> {
+      Api.prefs(this).edit().putBoolean(Api.K_NOTIFY, on).apply();
+      // switching it off also removes reminders already waiting
+      if (!on) Reminders.schedule(this, null, "");
+    });
+    settings.addView(notifyBox);
+
     signOut = ghostBtn("Sign out", DANGER);
     signOut.setOnClickListener(v -> doSignOut());
     addTop(root, signOut, 14);
@@ -657,6 +665,8 @@ public class MainActivity extends Activity {
         }
         next = o.optString("status", "");
         teamSeen = o.optString("team", "");
+        JSONObject ev = o.optJSONObject("event");
+        Reminders.schedule(this, o.optJSONObject("countdown"), ev == null ? "" : ev.optString("name", ""));
         radioSeen = o.optJSONObject("radio");
         inSeen = o.optBoolean("checkedIn", false);
       } catch (Exception ignored) {

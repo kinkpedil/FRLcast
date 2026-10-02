@@ -423,6 +423,9 @@ app.get('/api/driver/me', (req, res) => {
     status: reg ? reg.status : 'pending',
     flag: s.race.status,
     event: { name: s.event.name, round: s.event.round, session: s.event.sessionName },
+    // Race control's pre-show countdown, so the app can remind the driver before it ends.
+    countdown: s.overlay.countdown && s.overlay.countdown.target > Date.now()
+      ? { target: s.overlay.countdown.target, label: s.overlay.countdown.label || '' } : null,
     me: d ? pitBoard(s, d) : null,
     /*
      * This driver's own penalties, most recent first, with the wording race control sees.

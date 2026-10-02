@@ -54,6 +54,7 @@ check('league migration re-runs (idempotent)', true);
 await db.exec(fs.readFileSync(path.join(MIG, '20260927000000_flags.sql'), 'utf8'));
 await db.exec(fs.readFileSync(path.join(MIG, '20260927100000_batch2.sql'), 'utf8'));
 await db.exec(fs.readFileSync(path.join(MIG, '20261001000000_licence.sql'), 'utf8'));
+await db.exec(fs.readFileSync(path.join(MIG, '20261003000100_countdown.sql'), 'utf8'));
 
 // ---------------------------------------------------------------- 2. without playerid
 const noPlayer = files.filter((f) => !f.includes('playerid'));
@@ -165,6 +166,13 @@ await q(db, `update public.events set settings = jsonb_set(settings, '{licence}'
   [ev, (await q(db, `select id from public.drivers where num = '55'`))[0].id]);
 st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
 check('licence points reach the phone', st.me.licence && st.me.licence.points === 7 && st.me.licence.threshold === 12, JSON.stringify(st.me.licence));
+check('no countdown while none is set', st.countdown === null, JSON.stringify(st.countdown));
+await q(db, `update public.events set settings = jsonb_set(coalesce(settings, '{}'::jsonb), '{overlay}', jsonb_build_object('countdown', jsonb_build_object('target', (extract(epoch from now()) * 1000 + 3600000)::bigint, 'label', 'STARTS IN'))) where id = $1`, [ev]);
+st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
+check('a running countdown reaches the phone', st.countdown && st.countdown.target > Date.now() && st.countdown.label === 'STARTS IN', JSON.stringify(st.countdown));
+await q(db, `update public.events set settings = jsonb_set(settings, '{overlay}', jsonb_build_object('countdown', jsonb_build_object('target', 1000, 'label', 'OLD'))) where id = $1`, [ev]);
+st = await j(db, `select public.driver_state($1::uuid) as r`, [tok2]);
+check('a finished countdown is not sent', st.countdown === null, JSON.stringify(st.countdown));
 await q(db, `update public.events set settings = jsonb_set(settings, '{driftView}',
   jsonb_build_object($2::text, jsonb_build_object('upNext', jsonb_build_object('opponent', 'AKI', 'round', 'TOP 16')))) where id = $1`,
   [ev, (await q(db, `select id from public.drivers where num = '55'`))[0].id]);

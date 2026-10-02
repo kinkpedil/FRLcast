@@ -109,6 +109,7 @@ final class Spotter {
   static String penaltyCall(String type, int seconds, String status, String reason) {
     String what;
     if ("investigating".equals(status)) what = "Under investigation";
+    else if ("dropped".equals(status)) what = "No further action";
     else switch (type) {
       case "time":         what = (seconds > 0 ? seconds + " second " : "") + "time penalty"; break;
       case "drivethrough": what = "Drive through penalty"; break;
