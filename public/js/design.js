@@ -60,10 +60,10 @@ export const TW_COLS = [['pos', 'Position'], ['bar', 'Colour mark'], ['logo', 'T
 export const ST_SEGS = [['brand', 'Flag and logo'], ['event', 'Event'], ['lap', 'Lap'], ['clock', 'Race time'], ['fl', 'Fastest lap']];
 // Widgets whose title is fixed text, so it can be renamed (the others write their own).
 export const TITLED = [['leaderboard', 'Leaderboard'], ['tower', 'Timing'], ['trackmap', 'Track'], ['bracket', 'BRACKET'],
-  ['h2h', 'HEAD TO HEAD'], ['standings', 'Championship']];
+  ['h2h', 'HEAD TO HEAD'], ['standings', 'Championship'], ['incidents', 'UNDER INVESTIGATION']];
 // Any widget can lose its header or its panel.
 export const PANEL_WIDGETS = ['leaderboard', 'tower', 'status', 'lowerthird', 'gap', 'results', 'trackmap', 'battle',
-  'bracket', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown'];
+  'bracket', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'incidents'];
 
 const ROWS_DEFAULT = {
   on: false, style: 'list', rowH: 44, rowGap: 0, maxRows: 0, head: true, title: '',

@@ -261,7 +261,9 @@ export class CloudLink {
     const liveIds = new Set(s.drivers.map((d) => d.id));
     const race = {
       ...s.race,
-      penalties: (s.race.penalties || []).filter((p) => liveIds.has(p.driverId)).map((p) => ({ ...p, id: U(p.id), driverId: U(p.driverId) })),
+      penalties: (s.race.penalties || []).filter((p) => liveIds.has(p.driverId)).map((p) => ({
+        ...p, id: U(p.id), driverId: U(p.driverId), other: p.other && liveIds.has(p.other) ? U(p.other) : null
+      })),
       grid: Array.isArray(s.race.grid) ? s.race.grid.filter((g) => typeof g !== 'string' || liveIds.has(g)).map((g) => (typeof g === 'string' ? U(g) : g)) : s.race.grid
     };
     const feed = (s.feed || []).map((f) => ({ ...f, driverId: f.driverId ? U(f.driverId) : null }));

@@ -486,6 +486,9 @@ mark { background: rgba(0,224,164,.28); color: var(--ink); border-radius: 3px; p
 .sessrow > .row { justify-content: flex-end; flex-wrap: nowrap; }
 .sessrow small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sessrow:last-child { border-bottom: 0; }
+/* The incident details under the penalty reason: other car, corner, Investigate. */
+.penmeta { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; margin-bottom: 12px; }
+.preason .pvs { font-weight: 600; color: var(--ink); margin-right: 4px; }
 .sessrow b { display: block; font-size: 13px; }
 .sessrow small { display: block; margin-top: 2px; font-size: 11px; color: var(--ink-mute); }
 

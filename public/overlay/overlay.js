@@ -1,6 +1,7 @@
 import { Bus, fmtTime, fmtGap, fmtClock, classification, raceElapsed, leaderLap, fastestLap, FLAG_LABEL, closestFight } from '../js/shared.js';
 import { buildPath, pointAtProgress } from '../js/tracker.js';
 import { CloudBus, cloudOptions } from '../js/cloudbus.js';
+import { inSession } from '../js/timing.js';
 import { designCss, googleFontsUrl, cleanStickers, resolveSrc, rowLimit, widgetTitle, TITLED } from '../js/design.js';
 
 /*
@@ -42,7 +43,7 @@ if (params.get('motion') === 'full') document.documentElement.classList.add('mot
 const editing = params.get('edit') === '1';
 if (editing) document.documentElement.classList.add('edit');
 
-const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr', 'pit', 'lights', 'catching', 'rivalry', 'podium', 'reactions', 'racecontrol', 'driftsolo', 'driftq'];
+const WIDGET_IDS = ['status', 'leaderboard', 'tower', 'lowerthird', 'gap', 'results', 'trackmap', 'battle', 'bracket', 'grid', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown', 'intro', 'qr', 'pit', 'lights', 'catching', 'rivalry', 'podium', 'reactions', 'racecontrol', 'incidents', 'driftsolo', 'driftq'];
 const LABELS = {
   status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower',
   lowerthird: 'Lower third', gap: 'Gap bar', results: 'Results',
@@ -52,7 +53,7 @@ const LABELS = {
   sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code',
   pit: 'Pit lane', lights: 'Start lights', catching: 'Catching',
   rivalry: 'Rivalry', podium: 'Podium celebration', reactions: 'Crowd reactions',
-  racecontrol: 'Race control',
+  racecontrol: 'Race control', incidents: 'Incidents',
   driftsolo: 'Drift run', driftq: 'Drift qualifying'
 };
 const STAGE_W = 1920;
@@ -238,10 +239,17 @@ function build() {
         <div class="card rc-card">
           <div class="rc-tag"><i></i>RACE CONTROL</div>
           <div class="rc-main">
-            <div class="rc-who"><span class="rc-num" id="rcNum"></span><span class="rc-name" id="rcName"></span></div>
+            <div class="rc-who"><span class="rc-num" id="rcNum"></span><span class="rc-name" id="rcName"></span><span class="rc-vs" id="rcVs"></span></div>
             <div class="rc-what" id="rcWhat"></div>
             <div class="rc-why" id="rcWhy"></div>
           </div>
+        </div>
+      </div>`,
+    incidents: `
+      <div class="widget" id="incidents">
+        <div class="card inc-card">
+          <div class="card-head"><span class="tick"></span><span class="title">UNDER INVESTIGATION</span><span class="sub" id="incSub"></span></div>
+          <div class="inc-rows" id="incRows"></div>
         </div>
       </div>`,
     sectors: `
@@ -1614,6 +1622,70 @@ function renderRaceControl() {
   setText(document.getElementById('rcWhat'), what, null);
   setText(document.getElementById('rcWhy'), why, null);
   document.getElementById('rcWhy').hidden = !why;
+  // The other car and the corner, from the penalty record behind this line.
+  const p = penaltyFor(cur.f);
+  const o = p && p.other ? (state.drivers || []).find((x) => x.id === p.other) : null;
+  const vs = [o ? `vs ${o.num ? '#' + o.num + ' ' : ''}${rowName(o)}` : '', p && p.where ? p.where : ''].filter(Boolean).join(' · ');
+  setText(document.getElementById('rcVs'), vs, null);
+  document.getElementById('rcVs').hidden = !vs;
+}
+
+/*
+ * The penalty a feed line is about. The local engine tags the line with its id; a hosted
+ * event's feed rows cannot carry one, so there it is the driver's newest record from
+ * before the line.
+ */
+function penaltyFor(f) {
+  const pens = (state.race && state.race.penalties) || [];
+  if (f.penId) return pens.find((p) => p.id === f.penId) || null;
+  if (!f.driverId) return null;
+  return pens.filter((p) => p.driverId === f.driverId && (p.at || 0) <= (f.t || Date.now()) + 5000)
+    .sort((a, b) => (b.at || 0) - (a.at || 0))[0] || null;
+}
+
+/*
+ * Incidents under investigation: every open case of this session, held on screen until the
+ * stewards decide it, then the decision for a few seconds. The banner above announces a
+ * decision once; this is the list a viewer can read while the case is still open.
+ */
+const INC_HOLD_MS = 12000;
+let incTimer = 0;
+function renderIncidents() {
+  const box = document.getElementById('incidents');
+  const rowsEl = document.getElementById('incRows');
+  if (!box || !rowsEl) return;
+  clearTimeout(incTimer);
+  const on = state.overlay.show.incidents !== false;
+  const now = Date.now();
+  const byId = new Map((state.drivers || []).map((d) => [d.id, d]));
+  let list = on ? ((state.race && state.race.penalties) || []).filter((p) => inSession(p, state.race) && (
+    p.status === 'investigating' || (p.decidedAt && now - p.decidedAt < INC_HOLD_MS && p.status !== 'investigating')
+  )) : [];
+  if (!list.length && on && (forced || editing)) {
+    const [a, b] = state.drivers || [];
+    list = a ? [{ id: 'sample', driverId: a.id, other: b ? b.id : null, where: 'T3', lap: 4, reason: 'Causing a collision', status: 'investigating' }] : [];
+  }
+  show('incidents', list.length > 0);
+  if (!list.length) return;
+  const soonest = list.filter((p) => p.decidedAt).map((p) => INC_HOLD_MS - (now - p.decidedAt)).sort((x, y) => x - y)[0];
+  if (soonest > 0) incTimer = setTimeout(renderIncidents, soonest + 60);
+
+  const open = list.filter((p) => p.status === 'investigating').length;
+  setText(document.getElementById('incSub'), open ? `${open} OPEN` : 'DECIDED', null);
+  const car = (d) => (d ? `<span class="inc-car" style="--c:${esc(d.color || '#888')}"><b>${d.num ? '#' + esc(String(d.num)) : ''}</b>${esc(rowName(d))}</span>` : '');
+  const outcome = (p) => p.status === 'dropped' ? '<span class="inc-out ok">NO FURTHER ACTION</span>'
+    : p.status === 'applied' ? `<span class="inc-out pen">${esc(penaltyLabel(p))}</span>` : '';
+  rowsEl.innerHTML = list.slice(0, 5).map((p) => {
+    const d = byId.get(p.driverId);
+    const o = p.other ? byId.get(p.other) : null;
+    const meta = [p.where, p.lap ? `LAP ${p.lap}` : '', p.reason].filter(Boolean).map((x) => esc(String(x))).join(' · ');
+    return `<div class="inc-row ${p.status}"><div class="inc-cars">${car(d)}${o ? '<span class="inc-vs">VS</span>' + car(o) : ''}${outcome(p)}</div><div class="inc-meta">${meta}</div></div>`;
+  }).join('');
+}
+
+function penaltyLabel(p) {
+  if (p.type === 'time') return `+${p.seconds || 0}S PENALTY`;
+  return ({ warning: 'WARNING', drivethrough: 'DRIVE THROUGH', blackflag: 'BLACK FLAG', dq: 'DISQUALIFIED', note: 'NOTED' })[p.type] || 'PENALTY';
 }
 
 /** The fastest-lap banner: whoever holds the best lap, in their team colour. */
@@ -2238,6 +2310,7 @@ function renderInner() {
   show('fastlap', vis.fastlap);
   if (shown.fastlap) renderFastLap();
   renderRaceControl();
+  renderIncidents();
   renderDriftSolo();
   show('driftq', vis.driftq && (state.drift?.qualifying || []).some((e) => e.best != null));
   if (shown.driftq) renderDriftQ();

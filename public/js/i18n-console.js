@@ -1351,6 +1351,15 @@
     'Drift run': 'Run drift',
     'Drift qualifying': 'Kualifikasi drift',
 
+    'Where, e.g. T3': 'Lokasi, misalnya T3',
+    'Open an investigation now and decide it later with Apply or No action': 'Buka investigasi sekarang, putuskan nanti dengan Apply atau No action',
+    'Incidents under investigation': 'Insiden dalam investigasi',
+    'Incidents': 'Insiden',
+    'Pick a different car for the other driver': 'Pilih mobil lain untuk pembalap yang terlibat',
+    '-- no other car --': '-- tanpa mobil lain --',
+    'Other car involved': 'Mobil lain yang terlibat',
+    'Where it happened': 'Lokasi kejadian',
+
     'pending': 'menunggu',
     'approved': 'diterima',
     'rejected': 'ditolak'

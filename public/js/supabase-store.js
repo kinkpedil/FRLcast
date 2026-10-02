@@ -74,6 +74,9 @@ function settingsOf(state) {
     // Which session each penalty was issued in: the penalties table has no column for it.
     penaltySessions: Object.fromEntries((state.race.penalties || [])
       .filter((p) => p.session).map((p) => [p.id, p.session])),
+    // The other car and the corner of an incident: no columns for them either.
+    penaltyExtra: Object.fromEntries((state.race.penalties || [])
+      .filter((p) => p.other || p.where).map((p) => [p.id, { other: p.other || null, where: p.where || '' }])),
     commentary: state.commentary,
     grid: state.race.grid,
     rules: state.race.rules,

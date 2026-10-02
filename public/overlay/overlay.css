@@ -2937,6 +2937,30 @@ html[data-skin="supergt"] .tw-row .t.best { color: var(--sgt-yellow); }
 #racecontrol[data-tone="inv"] .rc-what { color: #ffd60a; }
 .rc-card .rc-why { font-family: var(--sans); font-weight: 500; font-size: 14px; color: rgba(255,255,255,.75); }
 
+.rc-card .rc-vs { font-family: var(--sans); font-weight: 700; font-size: 14px; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: .03em; }
+
+/* ---------- incidents under investigation ---------- */
+
+#incidents { left: var(--safe); bottom: 96px; width: 560px; }
+#incidents:not(.on) > .wrap { transform: translateX(-40px) scale(.98); }
+.inc-card .card-head .tick { background: #e0b100; box-shadow: 0 0 10px 0 rgba(224, 177, 0, .5); }
+.inc-card .card-head .sub { color: #ffd60a; }
+.inc-rows { display: grid; }
+.inc-row { padding: 10px 16px 11px; border-bottom: 1px solid var(--line); display: grid; gap: 4px; }
+.inc-row:last-child { border-bottom: 0; }
+.inc-cars { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.inc-car { display: inline-flex; align-items: baseline; gap: 6px; padding-left: 8px; border-left: 4px solid var(--c, #888);
+  font-family: var(--sans); font-weight: 800; font-size: 16px; text-transform: uppercase; letter-spacing: .02em; }
+.inc-car b { font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--ink-dim); }
+.inc-vs { font: 800 11px var(--sans); letter-spacing: .14em; color: var(--ink-mute); }
+.inc-meta { font-size: 13px; color: var(--ink-dim); }
+.inc-out { margin-left: auto; padding: 2px 9px; border-radius: 4px; font: 800 12px var(--sans); letter-spacing: .06em; }
+.inc-out.pen { background: #d6332a; color: #fff; }
+.inc-out.ok { background: #3a3f48; color: #fff; }
+.inc-row.investigating .inc-meta::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ffd60a;
+  margin-right: 7px; vertical-align: 1px; animation: incPulse 1.4s ease-in-out infinite; }
+@keyframes incPulse { 50% { opacity: .25; } }
+
 html[data-skin="f1"] .rc-card { border-radius: 3px; }
 html[data-skin="f1"] .rc-card .rc-tag, html[data-skin="f1"] .rc-card .rc-what { font-style: italic; }
 

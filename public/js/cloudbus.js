@@ -344,7 +344,9 @@ export class CloudBus {
         penalties: pens.map((p) => ({
           id: p.id, driverId: p.driver_id, type: p.type, seconds: p.seconds,
           reason: p.reason, lap: p.lap, status: p.status, served: p.served,
-          auto: p.auto, at: ms(p.created_at), session: psess[p.id] || null
+          auto: p.auto, at: ms(p.created_at), session: psess[p.id] || null,
+          other: ((settings.penaltyExtra || {})[p.id] || {}).other || null,
+          where: ((settings.penaltyExtra || {})[p.id] || {}).where || ''
         })),
         // Settings the console keeps as one blob rather than as columns nothing queries.
         grid: settings.grid || [],

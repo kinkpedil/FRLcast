@@ -1811,6 +1811,13 @@ function renderRaceControl() {
     const cur = sel.value;
     sel.innerHTML = state.drivers.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join('');
     if (cur) sel.value = cur;
+    // The other car in an incident: the same list, with nobody as the default.
+    const oth = $('#penOther');
+    if (oth) {
+      const was = oth.value;
+      oth.innerHTML = `<option value="">${esc(t('-- no other car --'))}</option>` + state.drivers.map((d) => `<option value="${d.id}">${esc(d.name)}</option>`).join('');
+      oth.value = was;
+    }
   }
 
   const rules = state.race.rules || {};
@@ -1882,7 +1889,7 @@ function renderRaceControl() {
     <div class="penrow ${p.status}">
       <span class="pdrv">${esc(name(p.driverId))}</span>
       <span class="pkind">${PEN_KIND[p.type] || p.type}${p.type === 'time' && p.seconds ? ` +${p.seconds}s` : ''}</span>
-      <span class="preason">${esc(p.reason)}${p.auto ? ' <i>auto</i>' : ''}${licOn && p.status !== 'dropped' && penaltyPoints(p, lic) ? `<span class="pts">+${ptsLabel(penaltyPoints(p, lic))}</span>` : ''}</span>
+      <span class="preason">${p.other ? `<b class="pvs">vs ${esc(name(p.other))}</b> ` : ''}${p.where ? `<b class="pvs">${esc(p.where)}</b> ` : ''}${esc(p.reason)}${p.auto ? ' <i>auto</i>' : ''}${licOn && p.status !== 'dropped' && penaltyPoints(p, lic) ? `<span class="pts">+${ptsLabel(penaltyPoints(p, lic))}</span>` : ''}</span>
       <span class="row" style="gap:4px">
         ${p.status === 'investigating'
           ? `<button class="btn" data-apply="${p.id}">Apply</button><button class="btn ghost" data-drop="${p.id}">No action</button>`
@@ -1908,23 +1915,34 @@ function renderRaceControl() {
   });
 }
 
-$('#penAdd').onclick = () => {
+// Issue decides at once; Investigate opens the case on air (the Incidents widget lists it)
+// with the proposed penalty, to be decided later with Apply or No action.
+function issuePenalty(investigate) {
   const driverId = $('#penDriver').value;
   if (!driverId) return toast('Pick a driver');
   const reason = $('#penReason').value.trim();
   if (!reason) return toast('A penalty needs a reason: it goes out on the broadcast');
+  const other = $('#penOther').value;
+  if (other && other === driverId) return toast(t('Pick a different car for the other driver'));
   const pts = $('#penPts').value.trim();
   bus.action('penalty.add', {
     driverId,
     kind: $('#penKind').value,
     seconds: Number($('#penSecs').value) || 0,
     reason,
+    other: other || null,
+    where: $('#penWhere').value.trim(),
+    ...(investigate ? { status: 'investigating' } : {}),
     // Empty means the league's table decides; a number is the steward's own call.
     points: pts === '' ? null : Number(pts)
   });
   $('#penReason').value = '';
   $('#penPts').value = '';
-};
+  $('#penWhere').value = '';
+  $('#penOther').value = '';
+}
+$('#penAdd').onclick = () => issuePenalty(false);
+$('#penInv').onclick = () => issuePenalty(true);
 $('#btnBrandToggle').onclick = () => {
   const b = state?.overlay.brand || {};
   bus.action('brand.update', { patch: { showLogo: b.showLogo === false } });
@@ -2156,7 +2174,7 @@ const WIDGET_GROUPS = [
     status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower', gap: 'Gap bar',
     lowerThird: 'Lower third', fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta',
     trackmap: 'Track map', pit: 'Pit lane', catching: 'Catching', rivalry: 'Rivalry',
-    h2h: 'Head to head', racecontrol: 'Race control'
+    h2h: 'Head to head', racecontrol: 'Race control', incidents: 'Incidents'
   }],
   ['Start and finish', {
     lights: 'Start lights', grid: 'Starting grid', results: 'Results', standings: 'Standings', podium: 'Podium'
@@ -3666,7 +3684,7 @@ setInterval(() => {
 
 const LAYOUT_LABELS = {
   status: 'Status bar', leaderboard: 'Leaderboard', tower: 'Timing tower',
-  lowerthird: 'Lower third', gap: 'Gap bar', results: 'Results',
+  lowerthird: 'Lower third', gap: 'Gap bar', results: 'Results', incidents: 'Incidents',
   trackmap: 'Track map', battle: 'Tandem battle', bracket: 'Bracket',
   grid: 'Starting grid', h2h: 'Head to head', standings: 'Standings', ticker: 'Ticker', fastlap: 'Fastest lap', sectors: 'Sector times', delta: 'Delta / time attack', radio: 'Team radio', poll: 'Audience poll', sponsor: 'Sponsor', countdown: 'Countdown', intro: 'Driver intro', qr: 'QR code',
   pit: 'Pit lane', lights: 'Start lights', catching: 'Catching', rivalry: 'Rivalry', podium: 'Podium', reactions: 'Crowd reactions',

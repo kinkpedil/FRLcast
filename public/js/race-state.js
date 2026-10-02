@@ -173,6 +173,8 @@ function defaultState() {
         // On unless a scene turns it off, so an event that already has its scenes saved
         // gets the steward banner too: a decision is always worth putting on air.
         racecontrol: true,
+        // Open investigations, listed until they are decided. Shows only while there is one.
+        incidents: true,
         // The qualifying run card shows only while a run is judged, so it can be on anywhere.
         driftsolo: true,
         driftq: false
@@ -1047,6 +1049,7 @@ export class RaceState {
           id: p.id, driverId: p.driverId, name: d.name || '', num: d.num || '',
           type: p.type, seconds: p.seconds || 0, reason: p.reason || '', lap: p.lap || 0,
           status: p.status, served: !!p.served, at: p.at, points: p.points ?? null,
+          other: p.other ? ((byId.get(p.other) || {}).name || '') : '', where: p.where || '',
           text: p.status === 'investigating' ? 'UNDER INVESTIGATION' : this.penaltyHeadline(p)
         };
       }),
@@ -1990,9 +1993,11 @@ export class RaceState {
     return `${this.penaltyHeadline(p)}: ${p.reason}`;
   }
 
-  pushFeed(kind, text, driverId = null) {
+  pushFeed(kind, text, driverId = null, extra = null) {
     const t = Date.now();
-    this.state.feed = [{ t, kind, text, driverId }, ...(this.state.feed || [])].slice(0, 60);
+    // `extra` carries ids a widget needs to find the full record (a penalty's penId), so the
+    // text itself can stay the short line the ticker and Discord read.
+    this.state.feed = [{ t, kind, text, driverId, ...(extra || {}) }, ...(this.state.feed || [])].slice(0, 60);
     /*
      * The same event, kept uncapped while recording. Hooking it here rather than at each
      * call site means every kind of event that already announces itself becomes a marker
@@ -2000,7 +2005,7 @@ export class RaceState {
      */
     const rec = this.state.recording;
     if (rec && rec.startedAt && t >= rec.startedAt) {
-      rec.markers.push({ t, kind, text, driverId, manual: false });
+      rec.markers.push({ t, kind, text, driverId, ...(extra || {}), manual: false });
       if (rec.markers.length > 4000) rec.markers.splice(0, rec.markers.length - 4000);
     }
   }
@@ -3171,14 +3176,18 @@ export class RaceState {
           session: s.race.sessionId || null,
           // Licence points: the steward's own figure, or null to use the league's table.
           points: a.points != null && a.points !== '' && Number.isFinite(Number(a.points))
-            ? Math.max(0, Math.round(Number(a.points))) : null
+            ? Math.max(0, Math.round(Number(a.points))) : null,
+          // The other car in the incident, and where it happened (a corner, "T3"), for the
+          // broadcast: "#12 vs #7 · T3". Both optional.
+          other: a.other && a.other !== a.driverId && this.driver(a.other) ? a.other : null,
+          where: String(a.where || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 24)
         };
         s.race.penalties.unshift(p);
         s.race.penalties = s.race.penalties.slice(0, 200);
         if (p.type === 'dq' && status === 'applied') d.dnf = true;
         this.pushFeed('penalty', status === 'investigating'
           ? `${d.name} · UNDER INVESTIGATION: ${p.reason}`
-          : `${d.name} · ${this.penaltyText(p)}`, d.id);
+          : `${d.name} · ${this.penaltyText(p)}`, d.id, { penId: p.id });
         break;
       }
 
@@ -3189,7 +3198,7 @@ export class RaceState {
         if (!p || !d || p.status === 'dropped') break;
         this.pushFeed('penalty', p.status === 'investigating'
           ? `${d.name} · UNDER INVESTIGATION: ${p.reason}`
-          : `${d.name} · ${p.served ? 'PENALTY SERVED' : this.penaltyText(p)}`, d.id);
+          : `${d.name} · ${p.served ? 'PENALTY SERVED' : this.penaltyText(p)}`, d.id, { penId: p.id });
         break;
       }
 
@@ -3197,16 +3206,18 @@ export class RaceState {
         const p = (s.race.penalties || []).find((x) => x.id === a.id);
         if (!p || p.status !== 'investigating') break;
         const d = this.driver(p.driverId);
+        // When it was decided: the Incidents widget keeps a decision on screen for a moment.
+        p.decidedAt = now;
         if (a.drop) {
           p.status = 'dropped';
-          if (d) this.pushFeed('penalty', `${d.name} · NO FURTHER ACTION`, d.id);
+          if (d) this.pushFeed('penalty', `${d.name} · NO FURTHER ACTION`, d.id, { penId: p.id });
           break;
         }
         p.status = 'applied';
         if (a.kind) p.type = a.kind;
         if (a.seconds != null) p.seconds = Number(a.seconds) || 0;
         if (p.type === 'dq' && d) d.dnf = true;
-        if (d) this.pushFeed('penalty', `${d.name} · ${this.penaltyText(p)}`, d.id);
+        if (d) this.pushFeed('penalty', `${d.name} · ${this.penaltyText(p)}`, d.id, { penId: p.id });
         break;
       }
 

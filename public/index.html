@@ -179,7 +179,12 @@
                        title="Licence points for this penalty. Leave empty to use the league's table." hidden>
                 <button class="btn primary" id="penAdd">Issue</button>
               </div>
-              <input type="text" id="penReason" placeholder="Reason, shown on the broadcast" style="margin-bottom:12px">
+              <input type="text" id="penReason" placeholder="Reason, shown on the broadcast" style="margin-bottom:8px">
+              <div class="penmeta">
+                <select id="penOther" aria-label="Other car involved"></select>
+                <input type="text" id="penWhere" maxlength="24" placeholder="Where, e.g. T3" aria-label="Where it happened">
+                <button class="btn" id="penInv" title="Open an investigation now and decide it later with Apply or No action">Investigate</button>
+              </div>
               <div id="penList"></div>
               <details class="more">
                 <summary>Automatic findings and flags</summary>
@@ -847,6 +852,7 @@
               <label class="toggle"><span>Championship standings</span><input type="checkbox" data-show="standings"><i class="sw"></i></label>
               <label class="toggle"><span>Fastest lap banner</span><input type="checkbox" data-show="fastlap"><i class="sw"></i></label>
               <label class="toggle"><span>Race control (steward decisions)</span><input type="checkbox" data-show="racecontrol"><i class="sw"></i></label>
+              <label class="toggle"><span>Incidents under investigation</span><input type="checkbox" data-show="incidents"><i class="sw"></i></label>
               <label class="toggle"><span>Drift run (score reveal)</span><input type="checkbox" data-show="driftsolo"><i class="sw"></i></label>
               <label class="toggle"><span>Drift qualifying board</span><input type="checkbox" data-show="driftq"><i class="sw"></i></label>
               <label class="toggle"><span>Sector times (focus driver)</span><input type="checkbox" data-show="sectors"><i class="sw"></i></label>
