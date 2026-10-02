@@ -6095,26 +6095,34 @@ if ($('#btnDemoAnim')) $('#btnDemoAnim').addEventListener('click', () => { const
   const COOLDOWN = 60000;
   const last = {};
   const raised = {};
+  // Returns why nothing happened (shown next to the line in the chat list), or '' when it went on air.
   function flash(widget, ms) {
     const sc = state.overlay.show || {};
-    if (sc[widget]) return;                  // already on: the operator's, leave it alone
+    if (sc[widget]) return t('already on air');                // the operator's: leave it alone
+    const lay = (state.overlay.layout || {})[widget];
+    if (lay && lay.hidden) return t('hidden in this scene\'s layout');
     raised[widget] = true;
     bus.action('overlay.update', { patch: { show: { [widget]: true } } });
     setTimeout(() => {
       if (raised[widget] && state && state.overlay.show[widget]) bus.action('overlay.update', { patch: { show: { [widget]: false } } });
       raised[widget] = false;
     }, ms);
+    return '';
   }
   function command(m) {
     const c = String(m.text || '').trim().toLowerCase().split(/\s+/)[0];
-    const run = (name, widget, ms) => {
-      if (Date.now() - (last[name] || 0) < COOLDOWN) return null;
+    // Every recognised command gets a note in the chat list, including why it did nothing.
+    const run = (name, widget, ms, enabled) => {
+      if (!enabled) return `${t(name)}: ${t('command switched off')}`;
+      const wait = COOLDOWN - (Date.now() - (last[name] || 0));
+      if (wait > 0) return `${t(name)}: ${t('wait')} ${Math.ceil(wait / 1000)} s`;
+      const why = flash(widget, ms);
+      if (why) return `${t(name)}: ${why}`;
       last[name] = Date.now();
-      flash(widget, ms);
       return `${t('on air')}: ${t(name)}`;
     };
-    if (['!klasemen', '!standings', '!table'].includes(c) && $('#chatCmdStd').checked) return run('Standings', 'standings', 15000);
-    if (['!fl', '!fastest', '!fastestlap'].includes(c) && $('#chatCmdFl').checked) return run('Fastest lap', 'fastlap', 10000);
+    if (['!klasemen', '!standings', '!table'].includes(c)) return run('Standings', 'standings', 15000, $('#chatCmdStd').checked);
+    if (['!fl', '!fastest', '!fastestlap'].includes(c)) return run('Fastest lap', 'fastlap', 10000, $('#chatCmdFl').checked);
     return null;
   }
 

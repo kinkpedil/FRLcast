@@ -1424,6 +1424,11 @@
     'on air': 'tayang',
     'from chat': 'dari chat',
 
+    'already on air': 'sudah tayang',
+    'hidden in this scene\'s layout': 'disembunyikan di tata letak scene ini',
+    'command switched off': 'perintah dimatikan',
+    'wait': 'tunggu',
+
     'pending': 'menunggu',
     'approved': 'diterima',
     'rejected': 'ditolak'
