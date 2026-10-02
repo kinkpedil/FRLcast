@@ -494,36 +494,30 @@ const SECTIONS = [
     ]
   },
 
-  // ---------------------------------------------------------------- manual mode
+  // ---------------------------------------------------------------- laps by hand
   {
     id: 'manual',
-    title: T('Manual mode (no camera)', 'Mode manual (tanpa kamera)'),
+    title: T('Laps by hand (no camera)', 'Lap manual (tanpa kamera)'),
     blocks: [
       { type: 'p', text: T(
-        'For a low-spec machine that cannot run the tracker, the Manual control card on Race control lets you own the order and the laps by hand. Turn on Manual mode and the computed ranking is set aside: the field follows the order you arrange.',
-        'Untuk mesin spek rendah yang tak kuat menjalankan tracker, kartu Manual control di Race control membuatmu mengatur urutan dan lap secara manual. Nyalakan Mode manual dan peringkat otomatis dikesampingkan: grid mengikuti urutan yang kamu susun.') },
+        'Without capture or the timing API, record each car crossing the line yourself. The order, gaps and fastest lap follow from the laps, exactly as they do with automatic timing.',
+        'Tanpa capture atau API timing, catat sendiri setiap mobil yang melewati garis. Urutan, selisih, dan lap tercepat mengikuti dari lap itu, sama seperti timing otomatis.') },
       {
         type: 'table',
         head: T(['Control', 'What it does'], ['Kontrol', 'Fungsinya']),
         rows: [
-          [T('Drag / ▲▼', 'Geser / ▲▼'),
-           T('Change a driver’s position. It updates the overlays immediately.',
-             'Mengubah posisi pembalap. Langsung memperbarui overlay.')],
           [T('+Lap', '+Lap'),
-           T('Add a lap using the current time.', 'Menambah lap memakai waktu sekarang.')],
-          [T('Type a lap time', 'Ketik lap time'),
-           T('Enter 35.2, 35.200 or 1:35.200 then +Lap to record that exact time.',
-             'Masukkan 35.2, 35.200 atau 1:35.200 lalu +Lap untuk mencatat waktu itu.')],
-          [T('Stopwatch (⏱)', 'Stopwatch (⏱)'),
-           T('Start, then stop to record the elapsed time as the lap.',
-             'Start, lalu stop untuk mencatat waktu berjalan sebagai lap.')],
-          [T('−', '−'),
-           T('Remove the driver’s last lap.', 'Menghapus lap terakhir pembalap.')]
+           T('In Live classification: the car crossed the line now.', 'Di Live classification: mobil melewati garis sekarang.')],
+          [T('−Lap', '−Lap'),
+           T('Removes that car\u2019s last lap, for a press on the wrong row.', 'Menghapus lap terakhir mobil itu, kalau salah menekan baris.')],
+          [T('Q to I', 'Q sampai I'),
+           T('Keyboard: a lap for drivers 1 to 8, so you can watch the stream instead of the mouse.',
+             'Keyboard: lap untuk pembalap 1 sampai 8, jadi matamu tetap di siaran, bukan di mouse.')]
         ]
       },
       { type: 'note', text: T(
-        'Ctrl+Z (or the Undo button) reverses the last race-control action, including a wrong manual lap or flag.',
-        'Ctrl+Z (atau tombol Undo) membatalkan aksi race-control terakhir, termasuk lap atau flag manual yang salah.') }
+        'Ctrl+Z (or the Undo button) reverses the last race-control action, including a wrong lap or flag.',
+        'Ctrl+Z (atau tombol Undo) membatalkan aksi race-control terakhir, termasuk lap atau flag yang salah.') }
     ]
   },
 

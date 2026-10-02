@@ -252,26 +252,6 @@
             </div>
           </div>
 
-          <div class="card">
-            <h3>Results</h3>
-            <div class="body">
-              <div class="btnrow">
-                <button class="btn sm" id="btnResultCsv">Export result</button>
-                <button class="btn sm" id="btnClassPdf" title="Open a formal classification sheet to print or save as PDF">Official PDF</button>
-                <button class="btn sm" id="btnCertPdf" title="Podium certificates for the winners, ready to print">Certificates</button>
-              </div>
-              <p class="hint" style="margin-top:8px">The classification as it stands now: a CSV, a printable sheet, or podium certificates.</p>
-            </div>
-          </div>
-
-          <div class="card">
-            <h3>Manual control <span class="right"><label class="toggle" style="display:inline-flex;min-height:0;padding:4px 8px"><span style="font-size:12px;color:var(--ink-mute);margin-right:8px">Manual mode</span><input type="checkbox" id="manualMode"><i class="sw"></i></label></span></h3>
-            <div class="body">
-              <p class="hint" style="margin-bottom:10px">For a setup with no camera. Drag a driver to change position, or use the arrows. Add a lap with the current time, or type a lap time first. Order and laps are set entirely by hand.</p>
-              <div id="manualList" class="manuallist"></div>
-            </div>
-          </div>
-
           <div class="card" id="stintCard">
             <h3>Endurance stints</h3>
             <div class="body">
@@ -280,10 +260,6 @@
             </div>
           </div>
 
-          <div class="card">
-            <h3>Recent events</h3>
-            <div class="body"><div class="log" id="eventLog" data-i18n-skip></div></div>
-          </div>
         </div>
 
         <div>
@@ -397,6 +373,23 @@
                 against that moment, so the edit list is written while you broadcast.
               </p>
             </div>
+          </div>
+
+          <div class="card">
+            <h3>Results</h3>
+            <div class="body">
+              <div class="btnrow">
+                <button class="btn sm" id="btnResultCsv">Export result</button>
+                <button class="btn sm" id="btnClassPdf" title="Open a formal classification sheet to print or save as PDF">Official PDF</button>
+                <button class="btn sm" id="btnCertPdf" title="Podium certificates for the winners, ready to print">Certificates</button>
+              </div>
+              <p class="hint" style="margin-top:8px">The classification as it stands now: a CSV, a printable sheet, or podium certificates.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Recent events</h3>
+            <div class="body"><div class="log" id="eventLog" data-i18n-skip></div></div>
           </div>
         </div>
       </div>

@@ -221,9 +221,20 @@ function renderStints() {
   });
 }
 
+// The Manual control card is gone from Race control. An event that still has manual mode on
+// (saved before it went) would be stuck with a hand-set order nothing on screen can undo, so
+// the console switches it off once; laps by hand still work from the +Lap buttons.
+let manualOffSent = false;
 function renderManual() {
   const box = $('#manualList');
-  if (!box || !state) return;
+  if (!box) {
+    if (state && state.race && state.race.manual && !manualOffSent) {
+      manualOffSent = true;
+      bus.action('manual.mode', { on: false });
+    }
+    return;
+  }
+  if (!state) return;
   const manual = !!state.race.manual;
   if ($('#manualMode') && document.activeElement !== $('#manualMode')) $('#manualMode').checked = manual;
 
