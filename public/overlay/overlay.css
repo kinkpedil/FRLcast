@@ -2939,6 +2939,10 @@ html[data-skin="supergt"] .tw-row .t.best { color: var(--sgt-yellow); }
 
 .rc-card .rc-vs { font-family: var(--sans); font-weight: 700; font-size: 14px; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: .03em; }
 
+/* team rows in the standings widget: the drivers under the team name */
+.std-team .std-name small { display: block; font-size: 10px; font-weight: 500; letter-spacing: .08em; color: var(--ink-mute); text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 /* ---------- incidents under investigation ---------- */
 
 #incidents { left: var(--safe); bottom: 96px; width: 560px; }

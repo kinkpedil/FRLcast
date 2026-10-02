@@ -1539,6 +1539,23 @@ function renderChampionship() {
       </tr>`).join('') + '</tbody></table>'
       : '<p class="hint">No rounds banked yet. Finish a race, then press <b>Bank current result</b>.</p>';
   }
+  // the teams' table, once any banked car has a team
+  const tb = $('#champTeams');
+  if (tb) {
+    const teams = state.teamStandings || [];
+    tb.innerHTML = teams.length ? `<div class="clocklabel" style="margin:16px 0 6px">${esc(t('Teams'))}</div><table class="drivers"><thead><tr>
+        <th style="width:34px">#</th><th></th><th>${esc(t('Team'))}</th>
+        <th style="text-align:right">${esc(t('Wins'))}</th><th style="text-align:right">${esc(t('Points'))}</th>
+      </tr></thead><tbody>` + teams.map((r) => `<tr>
+        <td class="mono">${r.rank}</td>
+        <td style="width:6px"><span class="swatch" style="background:${esc(r.color || '#666')}"></span></td>
+        <td>${esc(r.team)} <span class="hint">${esc(r.drivers.join(', '))}</span></td>
+        <td class="mono" style="text-align:right">${r.wins}</td>
+        <td class="mono" style="text-align:right;font-weight:700">${r.points}</td>
+      </tr>`).join('') + '</tbody></table>' : '';
+  }
+  const sm = $('#standingsMode');
+  if (sm && document.activeElement !== sm) sm.value = (state.overlay && state.overlay.standingsMode) || 'drivers';
 
   // rounds
   const rl = $('#roundList');
@@ -1594,6 +1611,7 @@ $('#btnRoundFromSession').onclick = () => {
   bus.action('championship.addRound', { sessionId: id });
 };
 $('#champName').onchange = (e) => bus.action('championship.config', { patch: { name: e.target.value } });
+$('#standingsMode').onchange = (e) => bus.action('overlay.update', { patch: { standingsMode: e.target.value } });
 $('#champTablePts').onchange = (e) => {
   const table = e.target.value.split(',').map((n) => Number(n.trim())).filter((n) => !Number.isNaN(n));
   bus.action('championship.config', { patch: { points: { table } } });

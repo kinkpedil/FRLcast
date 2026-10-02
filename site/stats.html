@@ -101,6 +101,11 @@
     <div class="wrap-x"><table id="tbl"></table></div>
     <div class="empty" id="tblEmpty" hidden data-t="noresults">No rounds have been scored yet.</div>
 
+    <div id="teamsWrap" hidden>
+      <h2 class="sec" data-t="teams">Team standings</h2>
+      <div class="wrap-x"><table id="teamTbl"></table></div>
+    </div>
+
     <p class="foot"><span data-t="foot">Season stats update automatically as rounds are scored.</span>
       · <a href="https://frlcast.my.id">FRLcast by kinkpedil12</a></p>
   </div>
@@ -115,7 +120,7 @@
   const code = params.get('event') || '';
 
   const STR = {
-    en: { loading: 'Loading season...', drivers: 'Driver stats',
+    en: { loading: 'Loading season...', drivers: 'Driver stats', teams: 'Team standings', TEAM: 'TEAM',
           noresults: 'No rounds have been scored yet.',
           foot: 'Season stats update automatically as rounds are scored.',
           event: 'Event hub', live: 'Live timing',
@@ -123,7 +128,7 @@
           PODIUMS: 'PODIUMS', BEST: 'BEST', AVG: 'AVG', FORM: 'FORM',
           mostWins: 'Most wins', mostPodiums: 'Most podiums', bestAvg: 'Best average finish',
           winsUnit: 'wins', podiumsUnit: 'podiums', avgUnit: 'avg finish' },
-    id: { loading: 'Memuat musim...', drivers: 'Statistik pembalap',
+    id: { loading: 'Memuat musim...', drivers: 'Statistik pembalap', teams: 'Klasemen tim', TEAM: 'TIM',
           noresults: 'Belum ada round yang dinilai.',
           foot: 'Statistik musim diperbarui otomatis saat round dinilai.',
           event: 'Hub event', live: 'Timing langsung',
@@ -267,6 +272,41 @@
     }
     h += '</tbody>';
     $('#tbl').innerHTML = h;
+    renderTeams(rows, T);
+  }
+
+  /*
+   * Teams: the drivers above grouped by their team on the live event (the results table
+   * keeps no team), points and finishes added up, the same countback when level.
+   */
+  function renderTeams(rows, T) {
+    const teamByNum = new Map();
+    for (const d of (liveState && liveState.drivers) || []) if (d.team && d.team.trim()) teamByNum.set(String(d.num), d.team.trim());
+    const by = new Map();
+    for (const r of rows) {
+      const team = teamByNum.get(String(r.num));
+      if (!team) continue;
+      let e = by.get(team.toLowerCase());
+      if (!e) { e = { team, color: r.color, points: 0, wins: 0, podiums: 0, drivers: [], fin: [] }; by.set(team.toLowerCase(), e); }
+      e.points += r.points; e.wins += r.wins; e.podiums += r.podiums;
+      e.drivers.push(r.name); e.fin.push(...r.form.filter((p) => p > 0));
+    }
+    const teams = [...by.values()].sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      for (let p = 1; p <= 30; p++) {
+        const d = b.fin.filter((x) => x === p).length - a.fin.filter((x) => x === p).length;
+        if (d) return d;
+      }
+      return a.team.localeCompare(b.team);
+    });
+    $('#teamsWrap').hidden = !teams.length;
+    if (!teams.length) { $('#teamTbl').innerHTML = ''; return; }
+    let h = `<thead><tr><th>${T.POS}</th><th>${T.TEAM}</th><th class="r">${T.PTS}</th><th class="c">${T.WINS}</th><th class="c">${T.PODIUMS}</th></tr></thead><tbody>`;
+    teams.forEach((e, i) => {
+      h += `<tr><td class="pos">${i + 1}</td><td>${cbar(e.color)}<span class="nm">${esc(e.team)}</span><span class="num">${esc(e.drivers.join(', '))}</span></td>` +
+        `<td class="r mono pts">${e.points}</td><td class="c mono">${e.wins || '-'}</td><td class="c mono">${e.podiums || '-'}</td></tr>`;
+    });
+    $('#teamTbl').innerHTML = h + '</tbody>';
   }
 
   const cloud = cloudOptions();

@@ -62,6 +62,7 @@ function settingsOf(state) {
     calibration: state.calibration,
     championship: state.championship,
     standings: state.standings,
+    teamStandings: state.teamStandings || [],
     records: state.records,
     sessions: state.sessions,
     season: state.season || { rounds: [], current: null },

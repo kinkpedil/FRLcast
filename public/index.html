@@ -484,7 +484,18 @@
 
           <div class="card">
             <h3>Standings <span class="right" id="champRounds">0 rounds</span></h3>
-            <div class="body"><div id="champTable"></div></div>
+            <div class="body">
+              <div id="champTable"></div>
+              <div id="champTeams"></div>
+              <label class="field" style="margin-top:12px"><span>Standings widget on the broadcast</span>
+                <select id="standingsMode">
+                  <option value="drivers">Drivers</option>
+                  <option value="teams">Teams</option>
+                  <option value="alternate">Drivers and teams, taking turns</option>
+                </select>
+              </label>
+              <p class="hint" style="margin-top:6px">Teams come from each driver's team on the Drivers page. A round counts for the team the car raced for that night.</p>
+            </div>
           </div>
 
           <div class="card">

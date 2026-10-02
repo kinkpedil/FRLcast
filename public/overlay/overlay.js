@@ -1465,12 +1465,27 @@ function renderH2H(rows) {
  * more. Ranks come from the server so the broadcast and the operator's screen can never
  * disagree about who is leading the title.
  */
+/*
+ * Drivers or teams. "alternate" swaps every ten seconds on the wall clock, so two overlays
+ * on two machines swap together; a timer brings the next swap even with no state push.
+ */
+const STD_SWAP_MS = 10000;
+let stdTimer = 0;
 function renderStandings() {
   const box = document.getElementById('stdRows');
   if (!box) return;
-  const rows = (state.standings || []).slice(0, 12);
   const champ = state.championship || {};
-  const sig = JSON.stringify(rows.map((r) => [r.rank, r.name, r.points, r.rounds])) + (champ.name || '');
+  const teamsAll = state.teamStandings || [];
+  const mode = state.overlay.standingsMode || 'drivers';
+  clearTimeout(stdTimer);
+  let teams = mode === 'teams' && teamsAll.length > 0;
+  if (mode === 'alternate' && teamsAll.length) {
+    teams = Math.floor(Date.now() / STD_SWAP_MS) % 2 === 1;
+    stdTimer = setTimeout(renderStandings, STD_SWAP_MS - (Date.now() % STD_SWAP_MS) + 30);
+  }
+  if (teams) return renderTeamStandings(box, teamsAll.slice(0, 12), champ);
+  const rows = (state.standings || []).slice(0, 12);
+  const sig = 'd' + JSON.stringify(rows.map((r) => [r.rank, r.name, r.points, r.rounds])) + (champ.name || '');
   if (box.dataset.sig === sig) return;
   box.dataset.sig = sig;
 
@@ -1488,6 +1503,24 @@ function renderStandings() {
       <span class="std-pos">${r.rank}</span>
       <span class="std-bar" style="background:${r.color || '#666'}"></span>
       <span class="std-name">${esc(r.name)}</span>
+      <span class="std-gap">${r.rank === 1 ? '' : `-${lead - r.points}`}</span>
+      <span class="std-pts">${r.points}</span>
+    </div>`).join('');
+}
+
+function renderTeamStandings(box, rows, champ) {
+  const sig = 't' + JSON.stringify(rows.map((r) => [r.rank, r.team, r.points])) + (champ.name || '');
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  setText(document.getElementById('stdTitle'), `${champ.name || 'CHAMPIONSHIP'} · TEAMS`, null);
+  setText(document.getElementById('stdSub'),
+    (champ.rounds || []).length ? `TEAMS · AFTER ${(champ.rounds || []).length} ROUNDS` : 'NO ROUNDS YET', 'value');
+  const lead = (rows[0] && rows[0].points) || 0;
+  box.innerHTML = rows.map((r) => `
+    <div class="std-row std-team ${r.rank === 1 ? 'p1' : ''}">
+      <span class="std-pos">${r.rank}</span>
+      <span class="std-bar" style="background:${esc(r.color || '#666')}"></span>
+      <span class="std-name">${esc(r.team)}<small>${esc((r.drivers || []).join(' · '))}</small></span>
       <span class="std-gap">${r.rank === 1 ? '' : `-${lead - r.points}`}</span>
       <span class="std-pts">${r.points}</span>
     </div>`).join('');
@@ -2228,7 +2261,7 @@ function applyGapSeparator(rows) {
  */
 function renderSignature(rows) {
   const o = state.overlay, e = state.event, r = state.race;
-  let sig = `${JSON.stringify(o.layout)}|${JSON.stringify(o.style)}|${o.theme}|${o.skin}|${o.gridStyle || ''}|${o.towerTitle || ''}|${o.nonce || 0}|${o.editSelected}|` +
+  let sig = `${JSON.stringify(o.layout)}|${JSON.stringify(o.style)}|${o.theme}|${o.skin}|${o.gridStyle || ''}|${o.standingsMode || ''}|${JSON.stringify(state.teamStandings || [])}|${o.towerTitle || ''}|${o.nonce || 0}|${o.editSelected}|` +
             `${r.status}|${r.pitOpen === false ? 'C' : 'O'}|${r.lights || 0}|${o.show.pit}${o.show.lights}${o.show.catching}${o.show.rivalry}${o.show.podium}${o.show.reactions}|${r.totalLaps}|${o.accent}|${o.focusDriverId}|` +
             `${o.show.leaderboard}${o.show.tower}${o.show.status}${o.show.lowerThird}${o.show.gap}${o.show.results}${o.show.fastlap}${o.show.sectors}${o.show.delta}${o.show.radio}|${JSON.stringify(o.radio||{})}|${(state.radio && state.radio[0] && state.radio[0].id) || 0}|${JSON.stringify(o.poll||{})}|${JSON.stringify(state.votes||{})}|${o.show.sponsor}${o.show.countdown}${o.show.intro}${o.show.qr}|${JSON.stringify(o.sponsors||[])}|${o.sponsorIndex}|${JSON.stringify(o.countdown||{})}|` +
             `${e.name}|${e.round}|${e.track}|${e.sessionType}|${e.sessionName}|${(o.ticker || []).join('~')}|` +

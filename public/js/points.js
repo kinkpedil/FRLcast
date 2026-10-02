@@ -39,9 +39,65 @@ export function scoreRound(rows, points = {}) {
       dnf: !!r.dnf,
       fastestLap: !!r.fastestLap,
       pole: !!r.pole,
+      // The team the car raced for that night, so a mid-season transfer scores for the
+      // team it drove for at the time, not the one it is in now.
+      team: String(r.team || '').trim(),
       points: base + bonus
     };
   });
+}
+
+/**
+ * The teams' table: every point each team's cars scored, round by round.
+ *
+ * A round banked before results recorded a team uses the driver's team now (teamOf). Ties
+ * are broken by countback over the team's finishing positions, like the drivers' table.
+ * Worst rounds are not dropped: that rule is about one driver missing a night, and a team
+ * has more than one car to cover it.
+ *
+ * @param {Array}    rounds  [{ results: [scored rows] }]
+ * @param {Function} teamOf  driverId -> current team name, for rows without one
+ */
+export function teamStandingsFrom(rounds = [], teamOf = () => '') {
+  const by = new Map();
+  for (const round of rounds) {
+    for (const r of round.results || []) {
+      const team = String(r.team || teamOf(r.driverId) || '').trim();
+      if (!team) continue;
+      const k = team.toLowerCase();
+      let e = by.get(k);
+      if (!e) {
+        e = { team, color: r.color || '', points: 0, counts: {}, drivers: new Map(), rounds: 0, lastRound: null };
+        by.set(k, e);
+      }
+      e.team = team;
+      if (!e.color && r.color) e.color = r.color;
+      e.points += Number(r.points) || 0;
+      if (!r.dnf && r.position) e.counts[r.position] = (e.counts[r.position] || 0) + 1;
+      e.drivers.set(r.driverId, r.name);
+      if (e.lastRound !== round) { e.rounds++; e.lastRound = round; }
+    }
+  }
+  const out = [...by.values()].map((e) => ({
+    team: e.team,
+    color: e.color,
+    points: e.points,
+    rounds: e.rounds,
+    wins: e.counts[1] || 0,
+    podiums: (e.counts[1] || 0) + (e.counts[2] || 0) + (e.counts[3] || 0),
+    drivers: [...e.drivers.values()],
+    counts: e.counts
+  }));
+  out.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    for (let pos = 1; pos <= 30; pos++) {
+      const d = (b.counts[pos] || 0) - (a.counts[pos] || 0);
+      if (d) return d;
+    }
+    return String(a.team).localeCompare(String(b.team));
+  });
+  out.forEach((e, i) => { e.rank = i + 1; });
+  return out;
 }
 
 /**

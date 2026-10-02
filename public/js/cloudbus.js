@@ -369,6 +369,7 @@ export class CloudBus {
       calibration: settings.calibration || {},
       championship: settings.championship || {},
       standings: settings.standings || [],
+      teamStandings: settings.teamStandings || [],
       records: settings.records || {},
       sessions: settings.sessions || [],
       season: settings.season || { rounds: [], current: null },

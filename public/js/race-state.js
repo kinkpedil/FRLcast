@@ -1,5 +1,5 @@
 import { labelGaps, fmtGap, inSession } from './timing.js';
-import { scoreRound as scoreRows, standingsFrom, LICENCE_DEFAULT, licenceEntries, licenceFrom } from './points.js';
+import { scoreRound as scoreRows, standingsFrom, teamStandingsFrom, LICENCE_DEFAULT, licenceEntries, licenceFrom } from './points.js';
 import { paceOf } from './race-model.js';
 import { DESIGN_DEFAULT, cleanDesign, cleanAssets, cleanStickers } from './design.js';
 
@@ -204,6 +204,8 @@ function defaultState() {
       bumper: null,
       // Starting-grid template: 'f1' (angled slots), 'wec' (class coloured), or 'classic'.
       gridStyle: 'f1',
+      // What the championship standings widget shows: drivers | teams | alternate
+      standingsMode: 'drivers',
       transitionMs: 420,
       autoTicker: true,
       accent: '#00e0a4',
@@ -458,6 +460,7 @@ function defaultState() {
     net: { lan: '', tls: '' },
     registrations: [],           // { id, accountId, nick, num, team, at, status, driverId }
     standings: [],               // championship table, recomputed with the rest
+    teamStandings: [],           // the same per team, for drivers with a team set
     feed: [],                    // newest-first log of notable race events
     radio: [],                   // newest-first team-radio messages from the driver app
     // Incident reports drivers sent from the app, newest first:
@@ -1493,6 +1496,7 @@ export class RaceState {
      * than not showing one.
      */
     this.state.standings = this.standings();
+    this.state.teamStandings = this.teamStandings();
     this.state.licence = this.licenceView();
     this.state.driftView = this.driftView();
     // The running classification of a drift competition, for the console and the overlay.
@@ -1638,7 +1642,9 @@ export class RaceState {
    * must change, the operator rescores the round deliberately.
    */
   scoreRound(rows) {
-    return scoreRows(rows, this.state.championship.points);
+    // Each row carries the car's team as it is tonight (see teamStandingsFrom).
+    const withTeam = rows.map((r) => ({ ...r, team: r.team != null ? r.team : ((this.driver(r.driverId) || {}).team || '') }));
+    return scoreRows(withTeam, this.state.championship.points);
   }
 
   /**
@@ -1652,6 +1658,11 @@ export class RaceState {
   standings() {
     const champ = this.state.championship;
     return standingsFrom(champ.rounds, champ.points);
+  }
+
+  teamStandings() {
+    const teams = new Map((this.state.drivers || []).map((d) => [d.id, d.team || '']));
+    return teamStandingsFrom(this.state.championship.rounds, (id) => teams.get(id) || '');
   }
 
   // ---------- scenes ----------
@@ -2736,7 +2747,7 @@ export class RaceState {
         const sc = this.scene(a.scene);
         if (a.patch && a.patch.show && sc) Object.assign(sc.show, a.patch.show);
         Object.assign(s.overlay, pick(a.patch || {}, [
-          'accent', 'focusDriverId', 'ticker', 'compact', 'editSelected', 'autoTicker', 'transitionMs', 'skin', 'nonce', 'towerTitle', 'radio', 'poll', 'pollHistory', 'sponsors', 'sponsorIndex', 'countdown', 'stinger', 'gridStyle'
+          'accent', 'focusDriverId', 'ticker', 'compact', 'editSelected', 'autoTicker', 'transitionMs', 'skin', 'nonce', 'towerTitle', 'radio', 'poll', 'pollHistory', 'sponsors', 'sponsorIndex', 'countdown', 'stinger', 'gridStyle', 'standingsMode'
         ]));
         // The design arrives whole (the hosted writer merges one level deep only), and is
         // cleaned here so nothing that is not a colour, a font or a safe URL is ever stored.

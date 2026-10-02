@@ -1360,6 +1360,14 @@
     'Other car involved': 'Mobil lain yang terlibat',
     'Where it happened': 'Lokasi kejadian',
 
+    'Teams': 'Tim',
+    'Team': 'Tim',
+    'Wins': 'Menang',
+    'Points': 'Poin',
+    'Standings widget on the broadcast': 'Widget klasemen di siaran',
+    'Drivers and teams, taking turns': 'Pembalap dan tim, bergantian',
+    'Teams come from each driver\'s team on the Drivers page. A round counts for the team the car raced for that night.': 'Tim diambil dari tim tiap pembalap di halaman Pembalap. Sebuah ronde dihitung untuk tim tempat mobil itu balapan malam itu.',
+
     'pending': 'menunggu',
     'approved': 'diterima',
     'rejected': 'ditolak'
