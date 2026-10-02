@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<title>Contact FRLcast</title>
+<meta name="description" content="How to reach the FRLcast team: questions, bug reports and feature requests for the FR Legends broadcast system.">
+<link rel="canonical" href="https://www.frlcast.my.id/contact">
+<meta name="theme-color" content="#0b0d11">
+<meta property="og:title" content="Contact FRLcast">
+<meta property="og:description" content="How to reach the FRLcast team: questions, bug reports and feature requests for the FR Legends broadcast system.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://www.frlcast.my.id/contact">
+<meta property="og:site_name" content="FRLcast">
+<link rel="stylesheet" href="/content.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/">FRLcast</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/guides">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+    </nav>
+    <span class="langbtns"><button data-lang="en">EN</button><button data-lang="id">ID</button></span>
+  </header>
+
+  <main>
+    <div data-lang-block="en">
+      <h1>Contact</h1>
+      <p class="lead">Questions, bug reports and ideas are welcome.</p>
+
+      <h2>Who runs FRLcast</h2>
+      <p>FRLcast is made and run by <strong>kinkpedil12</strong>, for the FR Legends league community.</p>
+
+      <h2>How to reach us</h2>
+      <ul>
+        <li><strong>Bug reports and feature requests:</strong> open an issue on the project's <a href="https://github.com/kinkpedil/FRLcast/issues" rel="nofollow">GitHub page</a>. Include what you were doing, what you expected and what happened, and the version shown in the console sidebar.</li>
+        <li><strong>Questions about using FRLcast:</strong> read the <a href="/guides">guides</a> and the <a href="/faq">FAQ</a> first; most answers are there. Otherwise, open an issue on GitHub and we will reply there.</li>
+        <li><strong>Data and privacy requests:</strong> see the <a href="/privacy">privacy policy</a>. For an event's own records (drivers, results), contact the organiser of that event, who controls that data.</li>
+      </ul>
+
+      <a class="cta" href="/guides">Read the guides</a>
+    </div>
+
+    <div data-lang-block="id">
+      <h1>Kontak</h1>
+      <p class="lead">Pertanyaan, laporan bug, dan ide sangat diterima.</p>
+
+      <h2>Siapa yang menjalankan FRLcast</h2>
+      <p>FRLcast dibuat dan dijalankan oleh <strong>kinkpedil12</strong>, untuk komunitas liga FR Legends.</p>
+
+      <h2>Cara menghubungi kami</h2>
+      <ul>
+        <li><strong>Laporan bug dan permintaan fitur:</strong> buat issue di <a href="https://github.com/kinkpedil/FRLcast/issues" rel="nofollow">halaman GitHub</a> proyek. Sertakan apa yang sedang kamu lakukan, apa yang kamu harapkan, apa yang terjadi, dan versi yang tampil di sidebar konsol.</li>
+        <li><strong>Pertanyaan tentang cara memakai FRLcast:</strong> baca dulu <a href="/guides">panduan</a> dan <a href="/faq">FAQ</a>; sebagian besar jawabannya ada di sana. Kalau tidak ada, buat issue di GitHub dan kami akan membalas di sana.</li>
+        <li><strong>Permintaan terkait data dan privasi:</strong> lihat <a href="/privacy">kebijakan privasi</a>. Untuk rekaman sebuah event (pembalap, hasil), hubungi penyelenggara event tersebut, yang mengendalikan data itu.</li>
+      </ul>
+
+      <a class="cta" href="/guides">Baca panduan</a>
+    </div>
+  </main>
+
+  <footer class="site">
+    <span>FRLcast by kinkpedil12</span>
+    <a href="/guides">Guides</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/changelog">Changelog</a>
+    <a class="sp" href="/">frlcast.my.id</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var lang = 'en';
+  try { if (localStorage.getItem('frl.lang') === 'id') lang = 'id'; } catch(e){}
+  function apply(){
+    document.querySelectorAll('[data-lang-block]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang-block') === lang); });
+    document.querySelectorAll('[data-lang]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang') === lang); });
+    document.documentElement.lang = lang;
+  }
+  document.querySelectorAll('[data-lang]').forEach(function(b){
+    b.onclick = function(){ lang = b.getAttribute('data-lang'); try { localStorage.setItem('frl.lang', lang); } catch(e){} apply(); };
+  });
+  apply();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<title>FR Legends broadcast overlays in OBS: setup and scenes · FRLcast guide</title>
+<meta name="description" content="How to add FRLcast overlays to OBS as one browser source, switch scenes for each moment of a race night, arrange widgets in the layout editor and fix the common problems.">
+<link rel="canonical" href="https://www.frlcast.my.id/guide-obs-overlays">
+<meta name="theme-color" content="#0b0d11">
+<meta property="og:title" content="FR Legends broadcast overlays in OBS: setup and scenes · FRLcast guide">
+<meta property="og:description" content="How to add FRLcast overlays to OBS as one browser source, switch scenes for each moment of a race night, arrange widgets in the layout editor and fix the common problems.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://www.frlcast.my.id/guide-obs-overlays">
+<meta property="og:site_name" content="FRLcast">
+<link rel="stylesheet" href="/content.css">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9417443244182931" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/">FRLcast</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/guides">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+    </nav>
+    <span class="langbtns"><button data-lang="en">EN</button><button data-lang="id">ID</button></span>
+  </header>
+
+  <main>
+    <ins class="adsbygoogle adslot" style="display:block;margin:22px 0" data-ad-client="ca-pub-9417443244182931" data-ad-slot="1310277818" data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <div data-lang-block="en">
+      <h1>OBS overlays and scenes</h1>
+      <p class="lead">One browser source for the whole broadcast, scenes for every moment, and a layout you can change without touching OBS.</p>
+
+      <h2>One source, not twenty</h2>
+      <p>FRLcast draws every graphic on a single transparent page. In OBS, add a <strong>Browser</strong> source, paste the address from the OBS setup page (or from your event's card on the dashboard for a hosted event), and set the size to <strong>1920 × 1080</strong>. Put the source above your game capture. That is the whole setup: the leaderboard, timing tower, flags, race control banner, lower third, results and every other widget live inside that one page, and the console decides what is visible. Fewer sources means less work for OBS and nothing to forget between race nights.</p>
+      <p>Two settings in the source's properties matter. Leave <strong>Shutdown source when not visible</strong> and <strong>Refresh browser when scene becomes active</strong> off: the overlay keeps its own connection and reconnects by itself if the network drops, and a refresh would replay its entrance at the wrong moment.</p>
+
+      <h2>Scenes for each moment</h2>
+      <p>A race night has moments that need different graphics: a pre-show with a countdown and sponsors, the starting grid, practice, qualifying with sector times, the race, battles and polls, drift battles, results and the podium. FRLcast keeps each of these as a <strong>scene</strong>. The scene buttons at the top of Race control switch the overlay with a single click, and the change cross-fades on air. You do not need matching scenes in OBS for this; the overlay switches itself.</p>
+
+      <h2>Placing widgets with the layout editor</h2>
+      <p>The Layout page shows a 1920 × 1080 canvas with the scene's widgets on it. Drag a widget to move it, drag its corner to resize it, and use the arrow keys for small nudges. Widgets snap to the broadcast safe area, to the centre and to each other, so things line up without measuring. Each scene keeps its own arrangement. You can use a frame of your game as the background while arranging, so you can see exactly what the graphics will cover.</p>
+
+      <h2>Skins, themes and your branding</h2>
+      <p>The look of the graphics comes in skins modelled on real series and themes for colour, and you set your league's accent colour and logo once. The logo can alternate with the flag in the status bar during a session. Saved looks let you keep a combination you like and bring it back with one click.</p>
+
+      <h2>The spoken commentary</h2>
+      <p>FRLcast can call the race out loud: flags, penalties, the lead, overtakes and, if you want more, who is fighting for a podium. Add the commentary address as a second browser source, tick <strong>Control audio via OBS</strong> so its sound appears in the mixer, and set its level under your game audio. Add it only once, or two copies will speak at the same time.</p>
+
+      <h2>When something looks wrong</h2>
+      <ul>
+        <li><strong>The overlay is blank.</strong> For a hosted event the address needs <code>?event=YOURCODE</code>. Copy it from the console rather than typing it.</li>
+        <li><strong>It does not change.</strong> Right-click the source, open Properties and press <em>Refresh cache of current page</em>. For a local event, check the FRLcast app is still running.</li>
+        <li><strong>Nothing moves.</strong> Most animation happens when something happens: a position change, a lap, a flag. With the session idle there is nothing to animate. The Overlays page has an animation rehearsal to prove motion reaches OBS.</li>
+        <li><strong>The commentator is silent.</strong> Almost always the audio setting above. Test the same address in a normal browser first.</li>
+      </ul>
+
+      <a class="cta" href="/guides">All guides</a>
+    </div>
+
+    <div data-lang-block="id">
+      <h1>Overlay OBS dan scene</h1>
+      <p class="lead">Satu browser source untuk seluruh siaran, scene untuk tiap momen, dan tata letak yang bisa diubah tanpa menyentuh OBS.</p>
+
+      <h2>Satu source, bukan dua puluh</h2>
+      <p>FRLcast menggambar semua grafis di satu halaman transparan. Di OBS, tambahkan source <strong>Browser</strong>, tempel alamat dari halaman Setup OBS (atau dari kartu event di dashboard untuk event hosted), dan atur ukurannya <strong>1920 × 1080</strong>. Letakkan source di atas game capture. Hanya itu setup-nya: leaderboard, timing tower, bendera, banner race control, lower third, hasil, dan semua widget lain ada di satu halaman itu, dan konsol yang menentukan apa yang tampil. Lebih sedikit source berarti beban OBS lebih ringan dan tidak ada yang terlupa antar malam balapan.</p>
+      <p>Dua pengaturan di properti source penting. Biarkan <strong>Shutdown source when not visible</strong> dan <strong>Refresh browser when scene becomes active</strong> tetap mati: overlay menjaga koneksinya sendiri dan menyambung ulang otomatis kalau jaringan terputus, dan refresh akan memutar ulang animasi masuk di saat yang salah.</p>
+
+      <h2>Scene untuk tiap momen</h2>
+      <p>Malam balapan punya momen yang butuh grafis berbeda: pre-show dengan hitung mundur dan sponsor, grid start, latihan, kualifikasi dengan waktu sektor, balapan, duel dan voting, battle drift, hasil, dan podium. FRLcast menyimpan masing-masing sebagai <strong>scene</strong>. Tombol scene di atas Race control mengganti overlay dengan sekali klik, dan perubahannya memudar halus di siaran. Kamu tidak perlu membuat scene yang sama di OBS; overlay berganti sendiri.</p>
+
+      <h2>Menata widget dengan editor tata letak</h2>
+      <p>Halaman Tata letak menampilkan kanvas 1920 × 1080 dengan widget scene tersebut. Seret widget untuk memindahkan, seret sudutnya untuk mengubah ukuran, dan pakai tombol panah untuk geser sedikit. Widget menempel ke area aman siaran, ke tengah, dan ke widget lain, jadi semuanya sejajar tanpa perlu mengukur. Tiap scene menyimpan susunannya sendiri. Kamu bisa memakai cuplikan game sebagai latar saat menata, sehingga terlihat persis bagian mana yang tertutup grafis.</p>
+
+      <h2>Skin, tema, dan branding</h2>
+      <p>Tampilan grafis tersedia dalam skin yang meniru seri sungguhan dan tema untuk warna, dan warna aksen serta logo liga diatur sekali. Logo bisa bergantian dengan bendera di status bar selama sesi. Tampilan tersimpan memungkinkanmu menyimpan kombinasi favorit dan memakainya lagi dengan sekali klik.</p>
+
+      <h2>Komentar suara</h2>
+      <p>FRLcast bisa membacakan jalannya balapan: bendera, penalti, pimpinan, salip-menyalip, dan kalau mau lebih, siapa yang memperebutkan podium. Tambahkan alamat komentar sebagai browser source kedua, centang <strong>Control audio via OBS</strong> supaya suaranya muncul di mixer, dan atur volumenya di bawah suara game. Tambahkan hanya sekali, atau dua salinan akan bicara bersamaan.</p>
+
+      <h2>Kalau ada yang terlihat salah</h2>
+      <ul>
+        <li><strong>Overlay kosong.</strong> Untuk event hosted alamatnya harus membawa <code>?event=KODEMU</code>. Salin dari konsol, jangan diketik.</li>
+        <li><strong>Tidak berubah.</strong> Klik kanan source, buka Properties, lalu tekan <em>Refresh cache of current page</em>. Untuk event lokal, pastikan aplikasi FRLcast masih berjalan.</li>
+        <li><strong>Tidak ada yang bergerak.</strong> Sebagian besar animasi terjadi saat ada kejadian: perubahan posisi, lap, bendera. Saat sesi siaga tidak ada yang perlu dianimasikan. Halaman Overlay punya gladi animasi untuk membuktikan gerakannya sampai ke OBS.</li>
+        <li><strong>Komentator diam.</strong> Hampir selalu karena pengaturan audio di atas. Coba alamat yang sama di browser biasa dulu.</li>
+      </ul>
+
+      <a class="cta" href="/guides">Semua panduan</a>
+    </div>
+    <ins class="adsbygoogle adslot" style="display:block;margin:22px 0" data-ad-client="ca-pub-9417443244182931" data-ad-slot="1310277818" data-ad-format="auto" data-full-width-responsive="true"></ins>
+  </main>
+
+  <footer class="site">
+    <span>FRLcast by kinkpedil12</span>
+    <a href="/guides">Guides</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/changelog">Changelog</a>
+    <a class="sp" href="/">frlcast.my.id</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var lang = 'en';
+  try { if (localStorage.getItem('frl.lang') === 'id') lang = 'id'; } catch(e){}
+  function apply(){
+    document.querySelectorAll('[data-lang-block]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang-block') === lang); });
+    document.querySelectorAll('[data-lang]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang') === lang); });
+    document.documentElement.lang = lang;
+  }
+  document.querySelectorAll('[data-lang]').forEach(function(b){
+    b.onclick = function(){ lang = b.getAttribute('data-lang'); try { localStorage.setItem('frl.lang', lang); } catch(e){} apply(); };
+  });
+  apply();
+})();
+</script>
+<script>
+(function(){document.querySelectorAll("ins.adsbygoogle.adslot").forEach(function(el){var s=el.getAttribute("data-ad-slot")||"";if(/^[0-9]+$/.test(s)){try{(adsbygoogle=window.adsbygoogle||[]).push({});}catch(e){}}});})();
+</script>
+</body>
+</html>

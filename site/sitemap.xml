@@ -35,4 +35,11 @@
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
+  <url><loc>https://www.frlcast.my.id/guides</loc><lastmod>2026-10-02</lastmod></url>
+  <url><loc>https://www.frlcast.my.id/guide-league-season</loc><lastmod>2026-10-02</lastmod></url>
+  <url><loc>https://www.frlcast.my.id/guide-stewarding</loc><lastmod>2026-10-02</lastmod></url>
+  <url><loc>https://www.frlcast.my.id/guide-drift</loc><lastmod>2026-10-02</lastmod></url>
+  <url><loc>https://www.frlcast.my.id/guide-obs-overlays</loc><lastmod>2026-10-02</lastmod></url>
+  <url><loc>https://www.frlcast.my.id/faq</loc><lastmod>2026-10-02</lastmod></url>
+  <url><loc>https://www.frlcast.my.id/contact</loc><lastmod>2026-10-02</lastmod></url>
 </urlset>

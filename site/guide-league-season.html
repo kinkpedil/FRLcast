@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<title>Running an FR Legends league season with FRLcast · FRLcast guide</title>
+<meta name="description" content="How to run a full FR Legends league season in FRLcast: one event code, a round per race night, practice, qualifying and race sessions, and championship points scored automatically.">
+<link rel="canonical" href="https://www.frlcast.my.id/guide-league-season">
+<meta name="theme-color" content="#0b0d11">
+<meta property="og:title" content="Running an FR Legends league season with FRLcast · FRLcast guide">
+<meta property="og:description" content="How to run a full FR Legends league season in FRLcast: one event code, a round per race night, practice, qualifying and race sessions, and championship points scored automatically.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://www.frlcast.my.id/guide-league-season">
+<meta property="og:site_name" content="FRLcast">
+<link rel="stylesheet" href="/content.css">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9417443244182931" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/">FRLcast</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/guides">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+    </nav>
+    <span class="langbtns"><button data-lang="en">EN</button><button data-lang="id">ID</button></span>
+  </header>
+
+  <main>
+    <ins class="adsbygoogle adslot" style="display:block;margin:22px 0" data-ad-client="ca-pub-9417443244182931" data-ad-slot="1310277818" data-ad-format="auto" data-full-width-responsive="true"></ins>
+    <div data-lang-block="en">
+      <h1>Running a league season</h1>
+      <p class="lead">One event code for the whole season, a round for every race night, and a championship table that keeps itself up to date.</p>
+
+      <h2>One code, many rounds</h2>
+      <p>A league normally keeps the same event code from the first round to the last. Drivers install the app once, type the code once, and the overlays in OBS keep the same address all season. In FRLcast the season is made of <strong>rounds</strong>. Each round is a race night with its own name and track, and it keeps everything that happened in it: every session, every lap and every steward decision.</p>
+      <p>The round you are running is shown on the left of the session panel in Race control, for example <em>ROUND 3 of 5</em>. Click it to see every round of the season with its sessions and its winner, to go back to an earlier round, or to start a new one. A new round asks for a name and a track and what kind of round it is: a grip round (practice, qualifying, race) or a drift round (practice, then the drift competition).</p>
+
+      <h2>Sessions from practice to race</h2>
+      <p>Inside a round, the session panel shows the steps of the night as <strong>Practice, Qualifying, Race</strong>. The step you are on is highlighted and the ones already finished carry a mark. A session goes through the same three moves every time:</p>
+      <ol>
+        <li><strong>Start.</strong> The start button names the session, for example <em>Start qualifying</em>. The clock runs and laps are counted.</li>
+        <li><strong>Finish session.</strong> The chequered flag goes out and the whole session is saved: every lap time of every driver, their best lap and the lap it was set on, their last and previous lap, lap count, gap and any penalties.</li>
+        <li><strong>Next.</strong> The timing screen clears for the next session, with its own label and default length. The finished session stays in the archive.</li>
+      </ol>
+      <p>Qualifying sets the race grid when it finishes, in best-lap order, so the race lines up correctly without anyone typing positions. If a session needs to be corrected after you have moved on, click its step: you can view its results, go back to it (its timing comes back from the saved record so you can fix a lap or a penalty and finish it again), or run it again from zero. Finishing a session a second time replaces its saved result instead of keeping two versions.</p>
+
+      <h2>Points that count themselves</h2>
+      <p>The moment you finish the race, the round is scored into the championship. You set the points table once on the Championship page, for example 25, 18, 15, 12, 10, 8, 6, 4, 2, 1. Two optional bonuses come from the round itself: the <strong>fastest lap</strong> of the race and <strong>pole position</strong> from that round's qualifying. A retirement scores nothing however far up the order it is listed.</p>
+      <p>Each round has exactly one entry in the championship. If you go back to a race and finish it again after a correction, the round is rescored rather than counted twice. Ties in the table are settled by countback (most wins, then most second places, and so on), and you can drop each driver's worst results if your league allows a bad night to be discarded.</p>
+
+      <h2>Penalties belong to their session</h2>
+      <p>A five second penalty given in practice does not follow a driver into the race. Every decision belongs to the session it was made in, so the race result only carries the race's penalties. If your league uses <strong>licence points</strong>, every decided penalty also adds points to the driver's licence across the whole season, and reaching the limit costs the driver the next round. See the <a href="/guide-stewarding">stewarding guide</a> for how that works.</p>
+
+      <h2>The archive and exports</h2>
+      <p>Every finished session can be opened from the Sessions card. The record shows the classification with best, last and previous lap, and you can click a driver to see every lap they drove. One button exports the session as a CSV file with a row per driver and a column per lap, followed by the steward decisions, which is useful for league records or a results spreadsheet.</p>
+
+      <h2>What your audience sees</h2>
+      <p>With a hosted event, viewers can follow the season without signing in: the live timing page during a session, the event hub with results and standings, the season stats page with wins, podiums and form for every driver, and the race report written after each race with the winner, fastest lap, biggest mover and the championship table with this round included.</p>
+
+      <a class="cta" href="/guides">All guides</a>
+    </div>
+
+    <div data-lang-block="id">
+      <h1>Menjalankan musim liga</h1>
+      <p class="lead">Satu kode event untuk satu musim, satu ronde untuk tiap malam balapan, dan tabel championship yang memperbarui dirinya sendiri.</p>
+
+      <h2>Satu kode, banyak ronde</h2>
+      <p>Liga biasanya memakai kode event yang sama dari ronde pertama sampai terakhir. Pembalap memasang aplikasi sekali, mengetik kode sekali, dan overlay di OBS memakai alamat yang sama sepanjang musim. Di FRLcast, musim terdiri dari <strong>ronde</strong>. Tiap ronde adalah satu malam balapan dengan nama dan treknya sendiri, dan menyimpan semua yang terjadi di dalamnya: tiap sesi, tiap lap, dan tiap keputusan steward.</p>
+      <p>Ronde yang sedang berjalan tampil di kiri panel sesi pada Race control, misalnya <em>ROUND 3 dari 5</em>. Klik untuk melihat semua ronde musim ini beserta sesi dan pemenangnya, untuk kembali ke ronde sebelumnya, atau untuk memulai ronde baru. Ronde baru meminta nama, trek, dan jenis ronde: ronde grip (latihan, kualifikasi, balapan) atau ronde drift (latihan, lalu kompetisi drift).</p>
+
+      <h2>Sesi dari latihan sampai balapan</h2>
+      <p>Di dalam ronde, panel sesi menampilkan langkah malam itu sebagai <strong>Latihan, Kualifikasi, Balapan</strong>. Langkah yang sedang berjalan disorot, dan yang sudah selesai diberi tanda. Tiap sesi selalu melalui tiga langkah yang sama:</p>
+      <ol>
+        <li><strong>Mulai.</strong> Tombol mulai menyebut nama sesinya, misalnya <em>Mulai kualifikasi</em>. Jam berjalan dan lap dihitung.</li>
+        <li><strong>Selesaikan sesi.</strong> Bendera finis dikibarkan dan seluruh sesi tersimpan: semua waktu lap tiap pembalap, lap terbaik beserta lap ke berapa, lap terakhir dan sebelumnya, jumlah lap, selisih, dan penaltinya.</li>
+        <li><strong>Berikutnya.</strong> Layar timing dibersihkan untuk sesi berikutnya, lengkap dengan label dan durasi bawaannya. Sesi yang sudah selesai tetap ada di arsip.</li>
+      </ol>
+      <p>Kualifikasi mengisi grid balapan saat selesai, berdasarkan urutan lap terbaik, jadi balapan berbaris dengan benar tanpa ada yang mengetik posisi. Kalau sebuah sesi perlu dikoreksi setelah kamu pindah, klik langkahnya: kamu bisa melihat hasilnya, kembali ke sesi itu (timing dipulihkan dari rekaman sehingga kamu bisa memperbaiki lap atau penalti lalu menyelesaikannya lagi), atau mengulangnya dari nol. Menyelesaikan sesi untuk kedua kalinya akan mengganti hasil tersimpan, bukan menyimpan dua versi.</p>
+
+      <h2>Poin yang terhitung sendiri</h2>
+      <p>Begitu balapan diselesaikan, poin ronde langsung masuk championship. Tabel poin diatur sekali di halaman Championship, misalnya 25, 18, 15, 12, 10, 8, 6, 4, 2, 1. Dua bonus opsional berasal dari ronde itu sendiri: <strong>lap tercepat</strong> di balapan dan <strong>pole position</strong> dari kualifikasi ronde yang sama. Pembalap yang retired tidak mendapat poin, setinggi apa pun posisinya dalam daftar.</p>
+      <p>Tiap ronde hanya punya satu entri di championship. Kalau kamu kembali ke balapan dan menyelesaikannya lagi setelah koreksi, poin ronde itu dihitung ulang, bukan dihitung dua kali. Nilai seri ditentukan lewat countback (kemenangan terbanyak, lalu posisi kedua terbanyak, dan seterusnya), dan hasil terburuk tiap pembalap bisa dibuang kalau ligamu mengizinkan satu malam buruk dihapus.</p>
+
+      <h2>Penalti terikat pada sesinya</h2>
+      <p>Penalti lima detik di latihan tidak ikut terbawa ke balapan. Tiap keputusan terikat pada sesi tempat keputusan itu dibuat, jadi hasil balapan hanya membawa penalti balapan. Kalau ligamu memakai <strong>poin lisensi</strong>, tiap penalti yang diputuskan juga menambah poin di lisensi pembalap sepanjang musim, dan mencapai batas berarti absen di ronde berikutnya. Lihat <a href="/guide-stewarding">panduan steward</a> untuk cara kerjanya.</p>
+
+      <h2>Arsip dan ekspor</h2>
+      <p>Tiap sesi yang selesai bisa dibuka dari kartu Sessions. Rekamannya menampilkan klasemen dengan lap terbaik, terakhir, dan sebelumnya, dan kamu bisa mengklik pembalap untuk melihat semua lapnya. Satu tombol mengekspor sesi menjadi file CSV dengan satu baris per pembalap dan satu kolom per lap, diikuti keputusan steward, berguna untuk arsip liga atau spreadsheet hasil.</p>
+
+      <h2>Yang dilihat penonton</h2>
+      <p>Dengan event hosted, penonton bisa mengikuti musim tanpa login: halaman timing langsung saat sesi berjalan, hub event dengan hasil dan klasemen, halaman statistik musim dengan kemenangan, podium, dan performa tiap pembalap, serta laporan balapan yang ditulis setelah tiap balapan berisi pemenang, lap tercepat, pembalap yang naik paling banyak, dan tabel championship termasuk ronde ini.</p>
+
+      <a class="cta" href="/guides">Semua panduan</a>
+    </div>
+    <ins class="adsbygoogle adslot" style="display:block;margin:22px 0" data-ad-client="ca-pub-9417443244182931" data-ad-slot="1310277818" data-ad-format="auto" data-full-width-responsive="true"></ins>
+  </main>
+
+  <footer class="site">
+    <span>FRLcast by kinkpedil12</span>
+    <a href="/guides">Guides</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/changelog">Changelog</a>
+    <a class="sp" href="/">frlcast.my.id</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var lang = 'en';
+  try { if (localStorage.getItem('frl.lang') === 'id') lang = 'id'; } catch(e){}
+  function apply(){
+    document.querySelectorAll('[data-lang-block]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang-block') === lang); });
+    document.querySelectorAll('[data-lang]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang') === lang); });
+    document.documentElement.lang = lang;
+  }
+  document.querySelectorAll('[data-lang]').forEach(function(b){
+    b.onclick = function(){ lang = b.getAttribute('data-lang'); try { localStorage.setItem('frl.lang', lang); } catch(e){} apply(); };
+  });
+  apply();
+})();
+</script>
+<script>
+(function(){document.querySelectorAll("ins.adsbygoogle.adslot").forEach(function(el){var s=el.getAttribute("data-ad-slot")||"";if(/^[0-9]+$/.test(s)){try{(adsbygoogle=window.adsbygoogle||[]).push({});}catch(e){}}});})();
+</script>
+</body>
+</html>

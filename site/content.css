@@ -36,3 +36,6 @@ footer.site a{color:var(--mute)}
 footer.site .sp{margin-left:auto}
 [data-lang-block]{display:none}
 [data-lang-block].on{display:block}
+.guides{list-style:none;padding:0;margin:8px 0 26px;display:grid;gap:10px}
+.guides li{border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:var(--mute)}
+.guides li a{font-size:17px}
