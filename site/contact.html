@@ -38,9 +38,12 @@
       <p class="lead">Questions, bug reports and ideas are welcome.</p>
 
       <h2>Send us an email</h2>
-      <p>Write to <a class="mail-addr" href="/contact">kinkpedil12 [at] gmail.com</a>. We read every message and usually reply within a few days.</p>
-      <form class="mailform" data-ml="en">
-        <label>Your name<input name="name" maxlength="80" autocomplete="name"></label>
+      <p>Write to <a class="mail-addr" href="/contact">kinkpedil12 [at] gmail.com</a>. Or send a message right here; we read every one and usually reply within a few days.</p>
+      <form class="mailform" data-ml="en" novalidate>
+        <div class="grid2f">
+          <label>Your name<input name="name" maxlength="80" autocomplete="name"></label>
+          <label>Your email <small>(so we can reply)</small><input name="email" type="email" maxlength="254" autocomplete="email" required></label>
+        </div>
         <label>Topic
           <select name="topic">
             <option>Question</option>
@@ -51,12 +54,18 @@
           </select>
         </label>
         <label>Message<textarea name="msg" rows="7" maxlength="4000" required placeholder="For a bug: what you did, what you expected, what happened, and the version in the console sidebar."></textarea></label>
+        <label class="hp" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
         <div class="mailbtns">
-          <button type="submit" class="cta">Open in my email app</button>
-          <a class="btn2 mail-gmail" href="https://mail.google.com/" target="_blank" rel="noopener">Write in Gmail</a>
+          <button type="submit" class="cta">Send message</button>
+          <span class="mailstatus" role="status" aria-live="polite"></span>
+        </div>
+        <div class="mailalt">
+          <span>Or use your own email:</span>
+          <a class="btn2 mail-app" href="/contact">Email app</a>
+          <a class="btn2 mail-gmail" href="https://mail.google.com/" target="_blank" rel="noopener">Gmail</a>
           <button type="button" class="btn2 mail-copy">Copy address</button>
         </div>
-        <p class="mailnote">Nothing is sent from this page: your own email app or Gmail opens with the message filled in, and you press send there.</p>
+        <p class="mailnote">Your name, email and message are sent to us only to answer you, and are not stored on this website.</p>
       </form>
 
       <h2>Who runs FRLcast</h2>
@@ -77,9 +86,12 @@
       <p class="lead">Pertanyaan, laporan bug, dan ide sangat diterima.</p>
 
       <h2>Kirim email ke kami</h2>
-      <p>Tulis ke <a class="mail-addr" href="/contact">kinkpedil12 [at] gmail.com</a>. Kami membaca setiap pesan dan biasanya membalas dalam beberapa hari.</p>
-      <form class="mailform" data-ml="id">
-        <label>Nama kamu<input name="name" maxlength="80" autocomplete="name"></label>
+      <p>Tulis ke <a class="mail-addr" href="/contact">kinkpedil12 [at] gmail.com</a>. Atau kirim pesan langsung di sini; kami membaca setiap pesan dan biasanya membalas dalam beberapa hari.</p>
+      <form class="mailform" data-ml="id" novalidate>
+        <div class="grid2f">
+          <label>Nama kamu<input name="name" maxlength="80" autocomplete="name"></label>
+          <label>Email kamu <small>(supaya bisa kami balas)</small><input name="email" type="email" maxlength="254" autocomplete="email" required></label>
+        </div>
         <label>Topik
           <select name="topic">
             <option>Pertanyaan</option>
@@ -90,12 +102,18 @@
           </select>
         </label>
         <label>Pesan<textarea name="msg" rows="7" maxlength="4000" required placeholder="Untuk bug: apa yang kamu lakukan, apa yang kamu harapkan, apa yang terjadi, dan versi di sidebar konsol."></textarea></label>
+        <label class="hp" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
         <div class="mailbtns">
-          <button type="submit" class="cta">Buka di aplikasi email</button>
-          <a class="btn2 mail-gmail" href="https://mail.google.com/" target="_blank" rel="noopener">Tulis di Gmail</a>
+          <button type="submit" class="cta">Kirim pesan</button>
+          <span class="mailstatus" role="status" aria-live="polite"></span>
+        </div>
+        <div class="mailalt">
+          <span>Atau pakai email sendiri:</span>
+          <a class="btn2 mail-app" href="/contact">Aplikasi email</a>
+          <a class="btn2 mail-gmail" href="https://mail.google.com/" target="_blank" rel="noopener">Gmail</a>
           <button type="button" class="btn2 mail-copy">Salin alamat</button>
         </div>
-        <p class="mailnote">Halaman ini tidak mengirim apa pun: aplikasi email atau Gmail-mu terbuka dengan pesan yang sudah terisi, lalu kamu tekan kirim di sana.</p>
+        <p class="mailnote">Nama, email, dan pesanmu dikirim ke kami hanya untuk membalasmu, dan tidak disimpan di website ini.</p>
       </form>
 
       <h2>Siapa yang menjalankan FRLcast</h2>
@@ -141,11 +159,13 @@
 </script>
 <script src="/menu.js?v=20261002170819" defer></script>
 <script>
-/* The contact form. Nothing is sent from here: it opens the visitor's own email app (or
-   Gmail) with the message filled in. The address is put together in the page rather than
-   written out in the HTML, which keeps it away from the simplest address-harvesting bots. */
+/* The contact form. Sends through /api/contact (Resend, see site/api/contact.js). If that
+   is not set up or fails, it says so and the email-app buttons below still work. The
+   address is put together here rather than written in the HTML, to keep it from the
+   simplest address-harvesting bots. */
 (function () {
   var addr = ['kinkpedil12', 'gmail.com'].join('@');
+  var opened = Date.now();
   document.querySelectorAll('.mail-addr').forEach(function (a) { a.textContent = addr; a.href = 'mailto:' + addr; });
   function parts(f) {
     var name = f.name.value.trim(), topic = f.topic.value, msg = f.msg.value.trim();
@@ -155,21 +175,55 @@
   }
   document.querySelectorAll('.mailform').forEach(function (f) {
     var id = f.getAttribute('data-ml') === 'id';
-    var need = id ? 'Tulis pesannya dulu.' : 'Write your message first.';
+    var T = function (en, idText) { return id ? idText : en; };
+    var status = f.querySelector('.mailstatus');
+    var btn = f.querySelector('button[type=submit]');
+    var say = function (text, kind) { status.textContent = text; status.className = 'mailstatus ' + (kind || ''); };
     f.addEventListener('submit', function (e) {
       e.preventDefault();
+      var email = f.email.value.trim(), msg = f.msg.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { say(T('Enter your email so we can reply.', 'Isi email kamu supaya bisa kami balas.'), 'bad'); f.email.focus(); return; }
+      if (msg.length < 10) { say(T('Write a little more in the message.', 'Tulis pesan sedikit lebih panjang.'), 'bad'); f.msg.focus(); return; }
+      btn.disabled = true;
+      say(T('Sending...', 'Mengirim...'));
+      fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: f.name.value, email: email, topic: f.topic.value, message: msg,
+          website: f.website.value, t: opened, lang: id ? 'id' : 'en' })
+      }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { status: r.status, j: j }; }); })
+        .then(function (x) {
+          btn.disabled = false;
+          if (x.j && x.j.ok) {
+            f.msg.value = '';
+            say(T('Sent. Thank you, we will reply to your email.', 'Terkirim. Terima kasih, kami akan membalas ke email kamu.'), 'good');
+            return;
+          }
+          var err = x.j && x.j.error;
+          if (err === 'email') say(T('That email address does not look right.', 'Alamat email itu sepertinya tidak benar.'), 'bad');
+          else if (err === 'message') say(T('Write a little more in the message.', 'Tulis pesan sedikit lebih panjang.'), 'bad');
+          else if (err === 'rate') say(T('Too many messages in a short time. Try again in a few minutes.', 'Terlalu banyak pesan dalam waktu singkat. Coba lagi beberapa menit lagi.'), 'bad');
+          else say(T('Could not send right now. Please use one of the buttons below instead.', 'Pesan belum bisa dikirim sekarang. Silakan pakai salah satu tombol di bawah.'), 'bad');
+        })
+        .catch(function () {
+          btn.disabled = false;
+          say(T('Could not send right now. Please use one of the buttons below instead.', 'Pesan belum bisa dikirim sekarang. Silakan pakai salah satu tombol di bawah.'), 'bad');
+        });
+    });
+    var need = T('Write your message first.', 'Tulis pesannya dulu.');
+    f.querySelector('.mail-app').addEventListener('click', function (e) {
+      e.preventDefault();
       var p = parts(f);
-      if (!p.msg) { f.msg.focus(); return; }
-      location.href = 'mailto:' + addr + '?subject=' + encodeURIComponent(p.subject) + '&body=' + encodeURIComponent(p.body);
+      location.href = 'mailto:' + addr + (p.msg ? '?subject=' + encodeURIComponent(p.subject) + '&body=' + encodeURIComponent(p.body) : '');
     });
     f.querySelector('.mail-gmail').addEventListener('click', function (e) {
       var p = parts(f);
-      if (!p.msg) { e.preventDefault(); alert(need); f.msg.focus(); return; }
+      if (!p.msg) { e.preventDefault(); say(need, 'bad'); f.msg.focus(); return; }
       this.href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(addr)
         + '&su=' + encodeURIComponent(p.subject) + '&body=' + encodeURIComponent(p.body);
     });
     f.querySelector('.mail-copy').addEventListener('click', function () {
-      var b = this, done = id ? 'Alamat disalin' : 'Address copied';
+      var b = this, done = T('Address copied', 'Alamat disalin');
       var ok = function () { var t = b.textContent; b.textContent = done; setTimeout(function () { b.textContent = t; }, 1600); };
       if (navigator.clipboard) navigator.clipboard.writeText(addr).then(ok, function () { prompt('', addr); });
       else prompt('', addr);

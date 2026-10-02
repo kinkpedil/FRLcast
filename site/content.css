@@ -45,6 +45,17 @@ footer.site .sp{margin-left:auto}
 .mailbtns .cta{margin-top:0;border:0;cursor:pointer;font:inherit;font-weight:800}
 .btn2{display:inline-block;background:none;border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:10px 16px;font:inherit;font-size:15px;cursor:pointer}
 .btn2:hover{border-color:var(--accent);text-decoration:none}
+.grid2f{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:600px){.grid2f{grid-template-columns:1fr}}
+.mailform label small{color:var(--mute);font-size:12px}
+.mailform .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.mailform{position:relative}
+.mailbtns .cta:disabled{opacity:.6;cursor:wait}
+.mailstatus{font-size:14px;color:var(--mute)}
+.mailstatus.good{color:var(--accent)}
+.mailstatus.bad{color:#ff8a7a}
+.mailalt{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;color:var(--mute);border-top:1px solid var(--line);padding-top:14px}
+.mailalt .btn2{padding:7px 12px;font-size:14px}
 .mailnote{margin:0;font-size:13px;color:var(--mute)}
 .guides{list-style:none;padding:0;margin:8px 0 26px;display:grid;gap:10px}
 .guides li{border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:var(--mute)}
