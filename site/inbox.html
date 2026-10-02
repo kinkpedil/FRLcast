@@ -146,7 +146,9 @@
       status: 'Status', categories: 'Kategori', s_new: 'Baru', s_replied: 'Dibalas', s_archived: 'Arsip', s_all: 'Semua',
       c_all: 'Semua kategori', c_question: 'Pertanyaan', c_bug: 'Laporan bug', c_idea: 'Ide fitur', c_league: 'Liga dan kerja sama', c_other: 'Lainnya', c_spam: 'Spam',
       empty: 'Tidak ada pesan di sini.', pick: 'Pilih pesan untuk membacanya.', total: 'pesan',
-      replyGmail: 'Balas di Gmail', replyApp: 'Balas di aplikasi email', copy: 'Salin email', copied: 'Email disalin',
+      replyGmail: 'Balas di percakapan Gmail', newMail: 'Email baru', replyApp: 'Aplikasi email', copy: 'Salin email', copied: 'Email disalin',
+      threadHint: 'Membuka email pesan ini di Gmail-mu. Tekan Reply di sana: balasannya langsung ke pengirim, di percakapan yang sama.',
+      ref: 'Kode',
       markReplied: 'Tandai dibalas', markNew: 'Tandai baru', archive: 'Arsipkan', unarchive: 'Keluarkan dari arsip',
       del: 'Hapus', delAsk: 'Hapus pesan ini selamanya?', deleted: 'Pesan dihapus', moved: 'Dipindah ke', back: 'Kembali',
       topic: 'Topik', received: 'Diterima', repliedAt: 'Dibalas', lang: 'Bahasa', moveTo: 'Pindah ke kategori',
@@ -161,7 +163,9 @@
       status: 'Status', categories: 'Categories', s_new: 'New', s_replied: 'Replied', s_archived: 'Archived', s_all: 'All',
       c_all: 'All categories', c_question: 'Questions', c_bug: 'Bug reports', c_idea: 'Feature ideas', c_league: 'Leagues and partnerships', c_other: 'Other', c_spam: 'Spam',
       empty: 'No messages here.', pick: 'Pick a message to read it.', total: 'messages',
-      replyGmail: 'Reply in Gmail', replyApp: 'Reply in email app', copy: 'Copy email', copied: 'Email copied',
+      replyGmail: 'Reply in the Gmail thread', newMail: 'New email', replyApp: 'Email app', copy: 'Copy email', copied: 'Email copied',
+      threadHint: 'Opens this message\'s email in your Gmail. Press Reply there: the answer goes straight to the sender, in the same conversation.',
+      ref: 'Ref',
       markReplied: 'Mark replied', markNew: 'Mark new', archive: 'Archive', unarchive: 'Unarchive',
       del: 'Delete', delAsk: 'Delete this message for good?', deleted: 'Message deleted', moved: 'Moved to', back: 'Back',
       topic: 'Topic', received: 'Received', repliedAt: 'Replied', lang: 'Language', moveTo: 'Move to category',
@@ -169,6 +173,9 @@
     }
   };
   var CATS = ['question', 'bug', 'idea', 'league', 'other', 'spam'];
+  // The owner's Gmail account, put together here rather than written out (harvesting bots).
+  var OWNER = ['kinkpedil12', 'gmail.com'].join('@');
+  var refOf = function (id) { return 'FRL-' + String(id || '').replace(/-/g, '').slice(0, 8).toUpperCase(); };
   var lang = 'id';
   try { if (localStorage.getItem('frl.lang') === 'en') lang = 'en'; } catch (e) {}
   var T = function (k) { return STR[lang][k] || STR.en[k] || k; };
@@ -304,7 +311,7 @@
   }
 
   function replyParts(m) {
-    var subject = 'Re: [FRLcast] ' + m.topic;
+    var subject = 'Re: [FRLcast] ' + m.topic + ' · ' + refOf(m.id);
     var greet = (m.lang === 'id' ? STR.id : STR.en);
     var quoted = m.message.split('\n').map(function (l) { return '> ' + l; }).join('\n');
     var body = greet.greet + (m.name ? ' ' + m.name : '') + ',\n\n\n\n' + greet.sign + '\n\n'
@@ -332,10 +339,12 @@
       + '<span>' + esc(T('topic')) + ': ' + esc(m.topic) + '</span>'
       + '<span>' + esc(T('received')) + ': ' + esc(full(m.created_at)) + '</span>'
       + (m.replied_at ? '<span>' + esc(T('repliedAt')) + ': ' + esc(full(m.replied_at)) + '</span>' : '')
-      + '<span>' + esc(T('lang')) + ': ' + (m.lang === 'id' ? 'Indonesia' : 'English') + '</span></div>'
+      + '<span>' + esc(T('lang')) + ': ' + (m.lang === 'id' ? 'Indonesia' : 'English') + '</span>'
+      + '<span>' + esc(T('ref')) + ': <code>' + esc(refOf(m.id)) + '</code></span></div>'
       + '<div class="body" id="msgBody"></div>'
       + '<div class="acts">'
-      + '<a class="primary" id="rGmail" target="_blank" rel="noopener" style="text-decoration:none">' + esc(T('replyGmail')) + '</a>'
+      + '<a class="primary" id="rGmail" target="_blank" rel="noopener" style="text-decoration:none" title="' + esc(T('threadHint')) + '">' + esc(T('replyGmail')) + '</a>'
+      + '<a class="ghost" id="rNew" target="_blank" rel="noopener" style="text-decoration:none">' + esc(T('newMail')) + '</a>'
       + '<a class="ghost" id="rApp" style="text-decoration:none">' + esc(T('replyApp')) + '</a>'
       + '<button class="ghost" id="rCopy">' + esc(T('copy')) + '</button>'
       + '<button class="ghost" id="rMark">' + esc(T(m.status === 'replied' ? 'markNew' : 'markReplied')) + '</button>'
@@ -345,11 +354,21 @@
       + '</div>';
     $('#msgBody').textContent = m.message;
     var p = replyParts(m);
-    $('#rGmail').href = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(m.email) + '&su=' + encodeURIComponent(p.subject) + '&body=' + encodeURIComponent(p.body);
+    /*
+     * The conversation, not a new email: Gmail opens on a search for this message's reference
+     * code (in the subject of every email sent since references began) or, for older ones,
+     * for the sender's address in an FRLcast email. Reply there answers the sender, since the
+     * email's Reply-To is their address, and stays in the same thread. authuser picks the
+     * owner's account when the browser is signed in to several.
+     */
+    var q = refOf(m.id) + ' OR ("[FRLcast]" "' + m.email + '")';
+    $('#rGmail').href = 'https://mail.google.com/mail/u/?authuser=' + encodeURIComponent(OWNER) + '#search/' + encodeURIComponent(q);
+    $('#rNew').href = 'https://mail.google.com/mail/u/?authuser=' + encodeURIComponent(OWNER) + '&view=cm&fs=1&to=' + encodeURIComponent(m.email) + '&su=' + encodeURIComponent(p.subject) + '&body=' + encodeURIComponent(p.body);
     $('#rApp').href = 'mailto:' + encodeURIComponent(m.email) + '?subject=' + encodeURIComponent(p.subject) + '&body=' + encodeURIComponent(p.body);
     // Opening a reply files the message as replied; "Mark new" undoes it.
     var replied = function () { if (m.status === 'new') patch(m, { status: 'replied' }); };
     $('#rGmail').addEventListener('click', replied);
+    $('#rNew').addEventListener('click', replied);
     $('#rApp').addEventListener('click', replied);
     $('#rCopy').onclick = function () { if (navigator.clipboard) navigator.clipboard.writeText(m.email).then(function () { toast(T('copied')); }); };
     $('#rMark').onclick = function () { patch(m, { status: m.status === 'replied' ? 'new' : 'replied' }); };

@@ -18,7 +18,8 @@
  * visitor's address goes in Reply-To, so answering is just pressing Reply.
  */
 
-const { guessCategory, configured, rest, send, readBody } = require('./_inbox.js');
+const crypto = require('crypto');
+const { guessCategory, configured, rest, send, readBody, refOf } = require('./_inbox.js');
 
 const TOPICS = ['Question', 'Bug report', 'Feature idea', 'League or partnership', 'Other',
   'Pertanyaan', 'Laporan bug', 'Ide fitur', 'Liga atau kerja sama', 'Lainnya'];
@@ -66,7 +67,9 @@ async function email(m) {
   if (!key) return false;
   const from = process.env.RESEND_FROM || 'FRLcast contact <onboarding@resend.dev>';
   const to = process.env.CONTACT_TO || 'kinkpedil12@gmail.com';
-  const subject = `[FRLcast] ${m.topic}${m.name ? ` (${m.name})` : ''}`;
+  // The reference code puts this email and the inbox entry on one thread: /inbox opens the
+  // Gmail conversation by searching for it, and Reply there answers the sender (Reply-To).
+  const subject = `[FRLcast] ${m.topic}${m.name ? ` (${m.name})` : ''} · ${refOf(m.id)}`;
   const text = [
     m.message,
     '',
@@ -74,6 +77,7 @@ async function email(m) {
     `From: ${m.name || '(no name)'} <${m.email}>`,
     `Topic: ${m.topic}`,
     `Page language: ${m.lang}`,
+    `Reference: ${refOf(m.id)}`,
     'Sent from the contact form on frlcast.my.id. Reply to answer the sender directly,',
     'or open www.frlcast.my.id/inbox to see every message sorted by category.'
   ].join('\n');
@@ -124,7 +128,8 @@ module.exports = async function handler(req, res) {
 
   if (!configured() && !process.env.RESEND_API_KEY) return send(res, 503, { ok: false, error: 'not_configured' });
 
-  const m = { name, email: addr, topic, category: guessCategory(topic, message), message, lang };
+  // The id is made here rather than by the database, so the email can carry its reference.
+  const m = { id: crypto.randomUUID(), name, email: addr, topic, category: guessCategory(topic, message), message, lang };
   // Kept and emailed side by side: either one reaching the owner is a delivered message.
   const [kept, mailed] = await Promise.all([store(m), email(m)]);
   if (!kept && !mailed) return send(res, 502, { ok: false, error: 'send' });

@@ -33,6 +33,9 @@ function guessCategory(topic, message) {
 
 const configured = () => !!process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+/** A message's short reference, in the email subject and on /inbox: FRL-1A2B3C4D. */
+const refOf = (id) => 'FRL-' + String(id || '').replace(/-/g, '').slice(0, 8).toUpperCase();
+
 /** One PostgREST call with the service role. Throws with the database's own message. */
 async function rest(path, { method = 'GET', body, prefer } = {}) {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -62,4 +65,4 @@ async function readBody(req) {
   try { return JSON.parse(raw || '{}'); } catch (e) { return null; }
 }
 
-module.exports = { CATEGORIES, guessCategory, configured, rest, send, readBody };
+module.exports = { CATEGORIES, guessCategory, configured, rest, send, readBody, refOf };
