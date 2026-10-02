@@ -25,6 +25,11 @@
     'Back to the site': 'Kembali ke situs',
     'Sign in': 'Masuk',
     'Sign out': 'Keluar',
+    'Guides': 'Panduan',
+    'FAQ': 'FAQ',
+    'Contact': 'Kontak',
+    'About': 'Tentang',
+    'Privacy': 'Privasi',
 
     // ---------------------------------------------------------------- notice
     'Want the commentator and fully automatic timing?': 'Mau pakai komentator dan timing otomatis penuh?',
