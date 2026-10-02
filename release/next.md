@@ -5,5 +5,7 @@
   this file in the release commit. Leave both sections empty for a small fix.
 -->
 ## en
+- The contact page (frlcast.my.id/contact) has an email form: write your message and it opens in your email app or Gmail, ready to send.
 
 ## id
+- Halaman kontak (frlcast.my.id/contact) punya formulir email: tulis pesanmu, lalu pesan itu terbuka di aplikasi email atau Gmail, siap dikirim.
