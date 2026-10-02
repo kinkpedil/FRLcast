@@ -1087,6 +1087,30 @@
             </div>
           </div>
 
+          <div class="card" id="chatCard">
+            <h3>Live chat <span class="right" id="chatState" data-i18n-skip>off</span></h3>
+            <div class="body">
+              <p class="hint" style="margin-top:0">Read your stream's chat here: viewers vote in the open poll by typing a number or a name, and a few commands put widgets on air for a moment.</p>
+              <label class="field"><span>Twitch channel</span>
+                <div class="row" style="gap:6px"><input type="text" id="chatTwitch" placeholder="channel name" style="flex:1"><button class="btn sm" id="chatTwitchGo">Connect</button></div>
+              </label>
+              <label class="field" style="margin-top:10px"><span>YouTube live video</span>
+                <input type="text" id="chatYtVideo" placeholder="https://youtube.com/live/...">
+              </label>
+              <label class="field" style="margin-top:8px"><span>YouTube API key <b style="color:var(--ink-mute)">kept in this browser only</b></span>
+                <div class="row" style="gap:6px"><input type="password" id="chatYtKey" autocomplete="off" style="flex:1"><button class="btn sm" id="chatYtGo">Connect</button></div>
+              </label>
+              <p class="hint" style="margin-top:6px">Twitch needs no key. YouTube needs a YouTube Data API v3 key from Google Cloud; its free daily quota covers about two and a half hours of chat.</p>
+              <div style="margin-top:10px;display:grid;gap:6px">
+                <label class="toggle"><span>Chat votes count in the open poll <b style="color:var(--ink-mute)">1, 2, !vote 3 or a name</b></span><input type="checkbox" id="chatVotes" checked><i class="sw"></i></label>
+                <label class="toggle"><span>!klasemen or !standings shows the standings <b style="color:var(--ink-mute)">15 s, once a minute</b></span><input type="checkbox" id="chatCmdStd" checked><i class="sw"></i></label>
+                <label class="toggle"><span>!fl or !fastest shows the fastest lap <b style="color:var(--ink-mute)">10 s, once a minute</b></span><input type="checkbox" id="chatCmdFl" checked><i class="sw"></i></label>
+              </div>
+              <div class="chatfeed" id="chatFeed" data-i18n-skip></div>
+            </div>
+          </div>
+
+
           <div class="card">
             <h3>Sponsors</h3>
             <div class="body">

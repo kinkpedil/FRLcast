@@ -2,6 +2,7 @@ import { Bus, fmtTime, fmtGap, fmtClock, classification, raceElapsed, leaderLap,
 import { buildPath, pointAtProgress } from '../js/tracker.js';
 import { CloudBus, cloudOptions } from '../js/cloudbus.js';
 import { inSession } from '../js/timing.js';
+import { pollTally } from '../js/chat.js';
 import { designCss, googleFontsUrl, cleanStickers, resolveSrc, rowLimit, widgetTitle, TITLED } from '../js/design.js';
 
 /*
@@ -2083,7 +2084,8 @@ function renderPoll() {
   const totEl = document.getElementById('pollTotal');
   if (!q || !bars) return;
   q.textContent = p.question || 'WHO WINS?';
-  const tally = state.votes || { counts: {}, total: 0 };
+  // the website's votes and the stream chat's, together
+  const tally = pollTally(state);
   const counts = tally.counts || {};
   const total = tally.total || 0;
   if (totEl) totEl.textContent = total;

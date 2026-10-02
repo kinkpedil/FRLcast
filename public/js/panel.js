@@ -2,6 +2,7 @@ import { Bus, fmtTime, fmtClock, classification, raceElapsed, leaderLap, fastest
 import { CloudPanelBus } from './cloudpanel.js';
 import { cloudOptions } from './cloudbus.js';
 import { THEMES } from './themes.js';
+import { ChatHub, chatVote, pollTally } from './chat.js';
 import {
   DESIGN_DEFAULT, PRESETS as DESIGN_PRESETS, COLOR_KEYS, SYSTEM_FONTS, GOOGLE_FONTS, CSS_MAX,
   cleanDesign, cleanStickers, safeUrl, assetId, googleFontsUrl,
@@ -3558,8 +3559,9 @@ function renderOverlayPage() {
     $('#pollQuestion').value = poll.question || '';
   }
   if ($('#pollStatus')) {
-    const total = (state.votes && state.votes.total) || 0;
-    $('#pollStatus').textContent = poll.open ? `${t('OPEN')} · ${total} ${t('votes')}` : t('closed');
+    const tl = pollTally(state);
+    $('#pollStatus').textContent = poll.open
+      ? `${t('OPEN')} · ${tl.total} ${t('votes')}${tl.chat ? ` (${tl.chat} ${t('from chat')})` : ''}` : t('closed');
   }
   if ($('#pollResult')) {
     const last = ((state.overlay && state.overlay.pollHistory) || [])[0];
@@ -3648,7 +3650,7 @@ if ($('#btnPollOpen')) $('#btnPollOpen').onclick = () => {
 };
 if ($('#btnPollClose')) $('#btnPollClose').onclick = () => {
   const p = (state.overlay && state.overlay.poll) || {};
-  const tally = state.votes || { counts: {}, total: 0 };
+  const tally = pollTally(state);
   const counts = tally.counts || {};
   const total = tally.total || 0;
   // Snapshot the result before the live tally is gone; winner is null when nobody voted.
@@ -6002,3 +6004,135 @@ $('#obHide').onclick = () => { const v = obLoad(); v.hidden = true; obSave(v); r
 $('#btnObShow').onclick = () => { const v = obLoad(); v.hidden = false; obSave(v); renderOnboard(); obGo('race'); };
 // Playing the rehearsal is the test step.
 if ($('#btnDemoAnim')) $('#btnDemoAnim').addEventListener('click', () => { const v = obLoad(); v.ticks = v.ticks || {}; v.ticks.test = true; obSave(v); });
+
+
+/* ============================================================ live chat
+ * The stream's chat (chat.js) read in this tab. Chat votes are counted here, one per chat
+ * account (a later vote replaces an earlier one), and sent as poll.chat at most every two
+ * seconds; the overlay adds them to the website's votes. Commands put a widget on air for a
+ * moment, once a minute, and only take down what they put up themselves.
+ */
+(() => {
+  if (!$('#chatCard')) return;
+  const hub = new ChatHub();
+  const KEY = 'frl.chat';
+  const cfg = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; } })();
+  const saveCfg = () => { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) { /* private window */ } };
+  $('#chatTwitch').value = cfg.twitch || '';
+  $('#chatYtVideo').value = cfg.ytVideo || '';
+  $('#chatYtKey').value = cfg.ytKey || '';
+  for (const [id, k] of [['#chatVotes', 'votes'], ['#chatCmdStd', 'cmdStd'], ['#chatCmdFl', 'cmdFl']]) {
+    if (cfg[k] === false) $(id).checked = false;
+    $(id).onchange = (e) => { cfg[k] = e.target.checked; saveCfg(); };
+  }
+
+  const STATE_TXT = { off: 'off', connecting: 'connecting', live: 'live', reconnecting: 'reconnecting', error: 'error' };
+  const YT_ERR = {
+    video: 'That is not a YouTube video link.', key: 'That does not look like an API key.',
+    nochat: 'This video has no live chat right now. Is the stream live?', quotaExceeded: 'The API key has used up its daily quota.',
+    keyInvalid: 'YouTube refused the API key.', forbidden: 'YouTube refused the API key for this video.',
+    liveChatEnded: 'The live chat has ended.', liveChatNotFound: 'The live chat was not found.'
+  };
+  hub.on('status', (st) => {
+    const parts = [];
+    if (st.twitch.state !== 'off') parts.push(`Twitch ${t(STATE_TXT[st.twitch.state])}`);
+    if (st.youtube.state !== 'off') parts.push(`YouTube ${t(STATE_TXT[st.youtube.state])}`);
+    $('#chatState').textContent = parts.join(' · ') || t('off');
+    $('#chatTwitchGo').textContent = t(st.twitch.state === 'off' || st.twitch.state === 'error' ? 'Connect' : 'Disconnect');
+    $('#chatYtGo').textContent = t(st.youtube.state === 'off' || st.youtube.state === 'error' ? 'Connect' : 'Disconnect');
+    if (st.youtube.state === 'error') toast(t(YT_ERR[st.youtube.error] || 'YouTube chat could not be read.'));
+  });
+
+  $('#chatTwitchGo').onclick = () => {
+    if (!['off', 'error'].includes(hub.twitch.state)) return hub.disconnectTwitch();
+    const ch = $('#chatTwitch').value.trim();
+    if (!hub.connectTwitch(ch)) return toast(t('That is not a Twitch channel name.'));
+    cfg.twitch = ch; saveCfg();
+  };
+  $('#chatYtGo').onclick = () => {
+    if (!['off', 'error'].includes(hub.yt.state)) return hub.disconnectYouTube();
+    cfg.ytVideo = $('#chatYtVideo').value.trim();
+    cfg.ytKey = $('#chatYtKey').value.trim();
+    saveCfg();
+    hub.connectYouTube(cfg.ytVideo, cfg.ytKey);
+  };
+
+  // ---- the feed shown in the card
+  const feed = [];
+  const paintFeed = () => {
+    $('#chatFeed').innerHTML = feed.length ? feed.map((m) => `<div class="chatline${m.note ? ' note' : ''}">
+      <span class="chatpf ${m.platform}">${m.platform === 'youtube' ? 'YT' : 'TW'}</span><b>${esc(m.user)}</b> <span>${esc(m.text)}</span>${m.note ? ` <i>${esc(m.note)}</i>` : ''}</div>`).join('')
+      : `<p class="hint">${esc(t('Chat messages appear here once connected.'))}</p>`;
+  };
+  paintFeed();
+
+  // ---- votes
+  let pollSig = '';
+  let voters = new Map();      // platform:userId -> option id
+  let sendTimer = 0;
+  const sendVotes = () => {
+    sendTimer = 0;
+    if (!state || !state.overlay.poll || !state.overlay.poll.open) return;
+    const counts = {};
+    for (const v of voters.values()) counts[v] = (counts[v] || 0) + 1;
+    bus.action('overlay.update', { patch: { poll: { ...state.overlay.poll, chat: { counts, total: voters.size } } } });
+  };
+  function vote(m) {
+    const p = state && state.overlay.poll;
+    if (!p || !p.open || $('#chatVotes').checked === false) return null;
+    // a new poll starts a new count
+    const sig = (p.question || '') + '|' + (p.options || []).map((o) => o.id).join(',');
+    if (sig !== pollSig) { pollSig = sig; voters = new Map(); }
+    const choice = chatVote(m.text, p.options || []);
+    if (!choice) return null;
+    voters.set(`${m.platform}:${m.userId || m.user}`, choice);
+    if (!sendTimer) sendTimer = setTimeout(sendVotes, 2000);
+    const opt = (p.options || []).find((o) => o.id === choice);
+    return opt ? `${t('vote')}: ${opt.label}` : t('vote');
+  }
+
+  // ---- commands
+  const COOLDOWN = 60000;
+  const last = {};
+  const raised = {};
+  function flash(widget, ms) {
+    const sc = state.overlay.show || {};
+    if (sc[widget]) return;                  // already on: the operator's, leave it alone
+    raised[widget] = true;
+    bus.action('overlay.update', { patch: { show: { [widget]: true } } });
+    setTimeout(() => {
+      if (raised[widget] && state && state.overlay.show[widget]) bus.action('overlay.update', { patch: { show: { [widget]: false } } });
+      raised[widget] = false;
+    }, ms);
+  }
+  function command(m) {
+    const c = String(m.text || '').trim().toLowerCase().split(/\s+/)[0];
+    const run = (name, widget, ms) => {
+      if (Date.now() - (last[name] || 0) < COOLDOWN) return null;
+      last[name] = Date.now();
+      flash(widget, ms);
+      return `${t('on air')}: ${t(name)}`;
+    };
+    if (['!klasemen', '!standings', '!table'].includes(c) && $('#chatCmdStd').checked) return run('Standings', 'standings', 15000);
+    if (['!fl', '!fastest', '!fastestlap'].includes(c) && $('#chatCmdFl').checked) return run('Fastest lap', 'fastlap', 10000);
+    return null;
+  }
+
+  hub.on('message', (m) => {
+    if (!state) return;
+    const note = vote(m) || command(m);
+    feed.unshift({ ...m, note });
+    feed.length = Math.min(feed.length, 40);
+    paintFeed();
+  });
+
+  // Test hook: with ?chattest=1 in the address, FRL_CHAT_TEST(message) feeds a fake chat line.
+  if (new URLSearchParams(location.search).get('chattest') === '1') window.FRL_CHAT_TEST = (m) => hub.emit('message', { platform: 'twitch', at: Date.now(), ...m });
+
+  // Reconnect what was connected last time, so a console reload keeps the chat.
+  if (cfg.twitchOn && cfg.twitch) hub.connectTwitch(cfg.twitch);
+  hub.on('status', (st) => {
+    cfg.twitchOn = st.twitch.state !== 'off' && st.twitch.state !== 'error';
+    saveCfg();
+  });
+})();
