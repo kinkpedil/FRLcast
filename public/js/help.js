@@ -468,6 +468,9 @@ const SECTIONS = [
           [T('Stickers', 'Stiker'),
            T('Any picture placed anywhere on screen, in front of or behind the widgets, with size, turn and opacity. Shown on all.html.',
              'Gambar apa pun di mana saja di layar, di depan atau di belakang widget, dengan ukuran, putaran, dan kepekatan. Tampil di all.html.')],
+          [T('Widgets', 'Susunan widget'),
+           T('The inside of the leaderboard and timing tower: columns in any order or hidden, row height and spacing, one list or separate tiles, position and driver-colour style, text sizes, top N rows, title. The status bar parts can be reordered or hidden, and any widget can lose its header or its panel.',
+             'Isi leaderboard dan menara timing: kolom dengan urutan bebas atau disembunyikan, tinggi dan jarak baris, satu daftar atau ubin terpisah, gaya posisi dan warna pembalap, ukuran teks, hanya N baris teratas, judul. Bagian bar status bisa diurutkan ulang atau disembunyikan, dan widget mana pun bisa tanpa judul atau tanpa panel.')],
           [T('CSS', 'CSS'),
            T('Free CSS on top of everything, for anything the other tabs do not reach. "What to target" lists the parts of each widget.',
              'CSS bebas di atas semuanya, untuk apa saja yang tidak dijangkau tab lain. "Yang bisa diatur" berisi daftar bagian tiap widget.')]

@@ -922,6 +922,8 @@ html.edit #hud { display: flex; }
 .sec i.best { background: var(--purple); box-shadow: 0 0 8px -1px var(--purple); }
 
 .tw-head .sec-h { font-size: 10px; }
+/* the header cells for columns only the design studio (or a skin) switches on */
+.tw-head .h-logo, .tw-head .h-num { display: none; }
 
 /* ---------------- track map ---------------- */
 

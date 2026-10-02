@@ -1,7 +1,7 @@
 import { Bus, fmtTime, fmtGap, fmtClock, classification, raceElapsed, leaderLap, fastestLap, FLAG_LABEL, closestFight } from '../js/shared.js';
 import { buildPath, pointAtProgress } from '../js/tracker.js';
 import { CloudBus, cloudOptions } from '../js/cloudbus.js';
-import { designCss, googleFontsUrl, cleanStickers, resolveSrc } from '../js/design.js';
+import { designCss, googleFontsUrl, cleanStickers, resolveSrc, rowLimit, widgetTitle, TITLED } from '../js/design.js';
 
 /*
  * Self-update, so OBS never runs stale code again.
@@ -107,9 +107,9 @@ function build() {
             <div class="brand-logo" id="brandLogo"><img alt="" id="brandImg" hidden><b id="brandName"></b></div>
           </div>
           <div class="seg event"><div class="k">Event</div><div class="v" id="stEvent">--</div></div>
-          <div class="seg"><div class="k" id="stLapK">Lap</div><div class="v" id="stLap">--</div></div>
-          <div class="seg"><div class="k" id="stClockK">Race time</div><div class="v" id="stClock">00:00</div></div>
-          <div class="seg"><div class="k">Fastest lap</div><div class="v" id="stFl">--:--.---</div></div>
+          <div class="seg seg-lap"><div class="k" id="stLapK">Lap</div><div class="v" id="stLap">--</div></div>
+          <div class="seg seg-clock"><div class="k" id="stClockK">Race time</div><div class="v" id="stClock">00:00</div></div>
+          <div class="seg seg-fl"><div class="k">Fastest lap</div><div class="v" id="stFl">--:--.---</div></div>
         </div>
       </div>`,
     leaderboard: `
@@ -123,7 +123,7 @@ function build() {
       <div class="widget" id="tower">
         <div class="card">
           <div class="card-head"><span class="tick"></span><span class="title">Timing</span><span class="sub" id="twSub">--</span></div>
-          <div class="tw-head"><div>P</div><div></div><div>Driver</div><div class="sec-h">Sectors</div><div style="text-align:right">Last</div><div style="text-align:right">Best</div><div style="text-align:right">Int</div></div>
+          <div class="tw-head"><div class="h-pos">P</div><div class="h-bar"></div><div class="h-logo"></div><div class="h-num">#</div><div class="h-name">Driver</div><div class="sec-h h-sec">Sectors</div><div class="h-last" style="text-align:right">Last</div><div class="h-best" style="text-align:right">Best</div><div class="h-int" style="text-align:right">Int</div></div>
           <div id="twRows"></div>
         </div>
       </div>`,
@@ -480,6 +480,26 @@ function applyDesign() {
   } else if (link) link.remove();
 
   if (stickerPage) renderStickers(cleanStickers(o.stickers), o.assets);
+  applyTitles(o.custom);
+}
+
+function applyTitles(custom) {
+  // The leaderboard and tower titles belong to the skin header (it may write a wordmark).
+  updateSkinHeader();
+  for (const [id] of TITLED) {
+    if (id === 'leaderboard' || id === 'tower') continue;
+    const el = document.querySelector(`#${id} .card-head .title`);
+    if (!el) continue;
+    if (el.dataset.orig == null) el.dataset.orig = el.textContent;
+    const want = widgetTitle(custom, id) || el.dataset.orig;
+    if (el.textContent !== want) el.textContent = want;
+  }
+}
+
+/** The rows a list widget may show: all of them unless the design studio set a top N. */
+function limitRows(rows, key) {
+  const n = rowLimit(state.overlay && state.overlay.custom, key);
+  return n ? rows.slice(0, n) : rows;
 }
 
 function renderStickers(list, assets) {
@@ -1519,8 +1539,11 @@ function updateSkinHeader() {
   const title = (skin === 'fe' || skin === 'porsche') ? feTitle()
     : (skin === 'gtwc' || skin === 'imsa' || skin === 'nascar') ? (custom || state.event.name || skinDefaultTitle(skin))
     : (custom || skinDefaultTitle(skin));
-  if (lbT) lbT.textContent = branded ? title : 'Leaderboard';
-  if (twT) twT.textContent = branded ? title : 'Timing';
+  // A title renamed in the design studio wins over both the skin's and the standard one.
+  const ownLb = widgetTitle(state.overlay.custom, 'leaderboard');
+  const ownTw = widgetTitle(state.overlay.custom, 'tower');
+  if (lbT) lbT.textContent = ownLb || (branded ? title : 'Leaderboard');
+  if (twT) twT.textContent = ownTw || (branded ? title : 'Timing');
   // Session progress (0..1) drives the MotoGP qualifying-style bar under the wordmark; with
   // no time limit it is full, so the bar simply reads as the accent line.
   const lim = (state.race.timeLimitSec || 0) * 1000;
@@ -2260,10 +2283,10 @@ function renderInner() {
     lists.lb ||= new KeyedList(document.getElementById('lbRows'), { create: createLbRow, update: updateLbRow, enterDir: -1 });
     if (wec) {
       const groups = wecGroup(rows);
-      lists.lb.render(wecSort(rows), true);
+      lists.lb.render(limitRows(wecSort(rows), 'lb'), true);
       applyClassBanners('lbRows', groups);
     } else {
-      lists.lb.render(rows, true);
+      lists.lb.render(limitRows(rows, 'lb'), true);
     }
     setText(document.getElementById('lbSub'), headerLine(rows), 'value');
     applyGapSeparator(rows);
@@ -2273,10 +2296,10 @@ function renderInner() {
     lists.tw ||= new KeyedList(document.getElementById('twRows'), { create: createTwRow, update: updateTwRow, enterDir: 1 });
     if (wec) {
       const groups = wecGroup(rows);
-      lists.tw.render(wecSort(rows), true);
+      lists.tw.render(limitRows(wecSort(rows), 'tw'), true);
       applyClassBanners('twRows', groups);
     } else {
-      lists.tw.render(rows, true);
+      lists.tw.render(limitRows(rows, 'tw'), true);
     }
     setText(document.getElementById('twSub'), headerLine(rows) || `${rows.length} CARS`, null);
   }

@@ -48,6 +48,34 @@ export const GOOGLE_FONTS = [
   'Russo One', 'Saira Condensed', 'Silkscreen', 'Teko', 'Titillium Web', 'VT323'
 ];
 
+/*
+ * Widget structure: the inside of a widget, not just its colours. Columns in any order or
+ * hidden, row height and spacing, rows as one list or as separate tiles, how the position
+ * and the driver colour are drawn, font sizes, how many rows. Each widget has its own
+ * `on`, so a skin's own layout is untouched until the operator takes that widget over.
+ */
+export const LB_COLS = [['pos', 'Position'], ['bar', 'Colour mark'], ['logo', 'Team badge'], ['num', 'Number'], ['name', 'Name'], ['gap', 'Gap']];
+export const TW_COLS = [['pos', 'Position'], ['bar', 'Colour mark'], ['logo', 'Team badge'], ['num', 'Number'], ['name', 'Name'],
+  ['sec', 'Sectors'], ['last', 'Last lap'], ['best', 'Best lap'], ['int', 'Interval']];
+export const ST_SEGS = [['brand', 'Flag and logo'], ['event', 'Event'], ['lap', 'Lap'], ['clock', 'Race time'], ['fl', 'Fastest lap']];
+// Widgets whose title is fixed text, so it can be renamed (the others write their own).
+export const TITLED = [['leaderboard', 'Leaderboard'], ['tower', 'Timing'], ['trackmap', 'Track'], ['bracket', 'BRACKET'],
+  ['h2h', 'HEAD TO HEAD'], ['standings', 'Championship']];
+// Any widget can lose its header or its panel.
+export const PANEL_WIDGETS = ['leaderboard', 'tower', 'status', 'lowerthird', 'gap', 'results', 'trackmap', 'battle',
+  'bracket', 'h2h', 'standings', 'ticker', 'fastlap', 'sectors', 'delta', 'radio', 'poll', 'sponsor', 'countdown'];
+
+const ROWS_DEFAULT = {
+  on: false, style: 'list', rowH: 44, rowGap: 0, maxRows: 0, head: true, title: '',
+  posStyle: 'plain', mark: 'bar', leader: false, zebra: false,
+  fPos: 17, fName: 16, fNum: 14, align: 'left', tags: true
+};
+export const LB_DEFAULT = { ...ROWS_DEFAULT, team: true,
+  cols: LB_COLS.map(([k]) => ({ k, on: k !== 'logo' })) };
+export const TW_DEFAULT = { ...ROWS_DEFAULT, rowH: 42, fPos: 15, fName: 15, colHead: true,
+  cols: TW_COLS.map(([k]) => ({ k, on: k !== 'logo' && k !== 'num' })) };
+export const ST_DEFAULT = { on: false, height: 62, segs: ST_SEGS.map(([k]) => ({ k, on: true })) };
+
 export const DESIGN_DEFAULT = {
   on: false,
   colors: {},
@@ -63,7 +91,9 @@ export const DESIGN_DEFAULT = {
   sheen: true,         // the light sweep across panels
   crawl: true,         // the line that runs along panel headers
   css: '',
-  preset: ''
+  preset: '',
+  // lb = leaderboard, tw = timing tower, st = status bar, cm = per widget header/title/panel
+  widgets: { lb: LB_DEFAULT, tw: TW_DEFAULT, st: ST_DEFAULT, cm: {} }
 };
 
 export const CSS_MAX = 60000;
@@ -98,6 +128,83 @@ export function assetId(name, taken) {
   return id;
 }
 
+function cleanCols(list, catalogue, dflt) {
+  const keys = catalogue.map(([k]) => k);
+  const out = [];
+  for (const c of Array.isArray(list) ? list : []) {
+    if (c && keys.includes(c.k) && !out.some((x) => x.k === c.k)) out.push({ k: c.k, on: !!c.on });
+  }
+  // A column the saved list does not know (added in a later version) joins at its default.
+  for (const c of dflt) if (!out.some((x) => x.k === c.k)) out.push({ ...c });
+  return out;
+}
+
+function cleanRows(w, dflt, catalogue) {
+  const src = w && typeof w === 'object' ? w : {};
+  const pickOf = (v, list, d) => (list.includes(v) ? v : d);
+  const out = {
+    on: !!src.on,
+    cols: cleanCols(src.cols, catalogue, dflt.cols),
+    style: pickOf(src.style, ['list', 'tiles'], 'list'),
+    rowH: Math.round(num(src.rowH, 20, 120, dflt.rowH)),
+    rowGap: Math.round(num(src.rowGap, 0, 40, 0)),
+    maxRows: Math.round(num(src.maxRows, 0, 60, 0)),
+    head: src.head !== false,
+    title: typeof src.title === 'string' ? src.title.slice(0, 40) : '',
+    posStyle: pickOf(src.posStyle, ['plain', 'box', 'circle', 'none'], 'plain'),
+    mark: pickOf(src.mark, ['bar', 'edge', 'tint', 'none'], 'bar'),
+    leader: !!src.leader,
+    zebra: !!src.zebra,
+    fPos: Math.round(num(src.fPos, 8, 60, dflt.fPos)),
+    fName: Math.round(num(src.fName, 8, 60, dflt.fName)),
+    fNum: Math.round(num(src.fNum, 8, 60, dflt.fNum)),
+    align: pickOf(src.align, ['left', 'center', 'right'], 'left'),
+    tags: src.tags !== false
+  };
+  if ('team' in dflt) out.team = src.team !== false;
+  if ('colHead' in dflt) out.colHead = src.colHead !== false;
+  return out;
+}
+
+function cleanWidgets(w) {
+  const src = w && typeof w === 'object' ? w : {};
+  const st = src.st && typeof src.st === 'object' ? src.st : {};
+  const cm = {};
+  for (const id of PANEL_WIDGETS) {
+    const c = src.cm && src.cm[id];
+    if (!c || typeof c !== 'object') continue;
+    const e = {
+      head: c.head !== false,
+      bare: !!c.bare,
+      title: typeof c.title === 'string' ? c.title.slice(0, 40) : ''
+    };
+    if (!e.head || e.bare || e.title) cm[id] = e;
+  }
+  return {
+    lb: cleanRows(src.lb, LB_DEFAULT, LB_COLS),
+    tw: cleanRows(src.tw, TW_DEFAULT, TW_COLS),
+    st: { on: !!st.on, height: Math.round(num(st.height, 30, 140, 62)), segs: cleanCols(st.segs, ST_SEGS, ST_DEFAULT.segs) },
+    cm
+  };
+}
+
+/** The rows a widget may show (0 = all), for the overlay's row lists. */
+export function rowLimit(custom, key) {
+  if (!custom || !custom.on || !custom.widgets || !custom.widgets[key] || !custom.widgets[key].on) return 0;
+  const n = Number(custom.widgets[key].maxRows);
+  return Number.isFinite(n) && n > 0 ? Math.min(60, Math.floor(n)) : 0;
+}
+
+/** A renamed widget title, or '' to keep the widget's own. */
+export function widgetTitle(custom, id) {
+  if (!custom || !custom.on || !custom.widgets) return '';
+  const w = custom.widgets;
+  const fromRows = id === 'leaderboard' ? w.lb : id === 'tower' ? w.tw : null;
+  if (fromRows && fromRows.on && typeof fromRows.title === 'string' && fromRows.title) return fromRows.title.slice(0, 40);
+  const c = w.cm && w.cm[id];
+  return c && typeof c.title === 'string' ? c.title.slice(0, 40) : '';
+}
+
 export function cleanDesign(d) {
   const src = d && typeof d === 'object' ? d : {};
   const colors = {};
@@ -121,7 +228,8 @@ export function cleanDesign(d) {
     sheen: src.sheen !== false,
     crawl: src.crawl !== false,
     css: typeof src.css === 'string' ? src.css.slice(0, CSS_MAX) : '',
-    preset: typeof src.preset === 'string' ? src.preset.slice(0, 32) : ''
+    preset: typeof src.preset === 'string' ? src.preset.slice(0, 32) : '',
+    widgets: cleanWidgets(src.widgets)
   };
 }
 
@@ -248,10 +356,113 @@ export function designCss(custom, assetList) {
     parts.push(`.card,.ticker-bar{background-image:linear-gradient(var(--panel),var(--panel)),url("${img}");`
       + `background-size:auto,${size};background-repeat:no-repeat,${rep};background-position:center,center;background-color:transparent}`);
   }
+  parts.push(...widgetCss(d.widgets));
   if (!d.sheen) parts.push('.card::after{display:none}');
   if (!d.crawl) parts.push('.card-head::after{display:none}');
   if (d.css) parts.push(`/* custom CSS */\n${d.css}`);
   return { css: parts.join('\n'), google: [...google] };
+}
+
+/*
+ * The widget structure as CSS. Rules are scoped under the widget's id, which outranks every
+ * skin rule, and only exist for a widget the operator switched to its own layout.
+ */
+const LB_W = { pos: (w) => `${Math.max(26, Math.round(w.fPos * 1.9))}px`, bar: () => '6px', logo: () => '38px',
+  num: (w) => `${Math.max(28, Math.round(w.fNum * 2.8))}px`, name: () => 'minmax(0,1fr)', gap: () => 'auto' };
+const TW_W = { pos: (w) => `${Math.max(28, Math.round(w.fPos * 2))}px`, bar: () => '8px', logo: () => '38px',
+  num: (w) => `${Math.max(28, Math.round(w.fNum * 2.8))}px`, name: () => 'minmax(0,1fr)', sec: () => '56px',
+  last: (w) => `${Math.round(w.fNum * 6.4)}px`, best: (w) => `${Math.round(w.fNum * 6.4)}px`, int: (w) => `${Math.round(w.fNum * 5)}px` };
+const TW_HEAD = { pos: 'h-pos', bar: 'h-bar', logo: 'h-logo', num: 'h-num', name: 'h-name', sec: 'h-sec', last: 'h-last', best: 'h-best', int: 'h-int' };
+
+function rowsCss(id, row, w, widths, isTower) {
+  const W = `html[data-custom="1"] #${id}`;
+  const R = `${W} .${row}`;
+  const out = [];
+  // The colour mark is a column only in "bar" style; the other styles draw it on the row.
+  const cols = w.cols.filter((c) => c.on && !(c.k === 'bar' && w.mark !== 'bar'));
+  const tmpl = cols.map((c) => widths[c.k](w)).join(' ') || '1fr';
+  out.push(`${R}{grid-template-columns:${tmpl};height:${w.rowH}px;min-height:${w.rowH}px}`);
+  if (isTower) out.push(`${W} .tw-head{grid-template-columns:${tmpl}}`);
+  w.cols.forEach((c) => {
+    const shown = cols.includes(c);
+    const sel = `${R} > .${c.k === 'sec' ? 'sec' : c.k === 'last' ? 't.last' : c.k === 'best' ? 't.best' : c.k === 'int' ? 't.int' : c.k}`;
+    if (shown) {
+      out.push(`${sel}{order:${cols.indexOf(c)};display:${c.k === 'logo' ? 'grid' : 'block'}}`);
+      if (isTower) out.push(`${W} .tw-head > .${TW_HEAD[c.k]}{order:${cols.indexOf(c)};display:block}`);
+    } else {
+      // The mark drawn on the row (edge, tint) still needs its cell; only the column goes.
+      if (!(c.k === 'bar' && w.mark !== 'bar')) out.push(`${sel}{display:none}`);
+      if (isTower) out.push(`${W} .tw-head > .${TW_HEAD[c.k]}{display:none}`);
+    }
+  });
+  if (isTower) {
+    // The sectors cell is a flex strip, the times read from the right.
+    out.push(`${R} > .sec{display:${cols.some((c) => c.k === 'sec') ? 'flex' : 'none'}}`);
+    if (!w.colHead) out.push(`${W} .tw-head{display:none}`);
+    else out.push(`${W} .tw-head{display:grid}`);
+  }
+  // A team badge the classic look never showed: give it a shape of its own.
+  out.push(`${R} > .logo{place-items:center;height:${Math.round(w.rowH * 0.6)}px;border-radius:5px;background:var(--c);color:#fff;font:700 ${Math.max(9, w.fNum - 3)}px var(--mono)}`);
+  out.push(`${R} > .logo.on-light{color:#05070a}`);
+
+  out.push(`${R} .pos{font-size:${w.fPos}px}`);
+  out.push(`${R} .name{font-size:${w.fName}px;text-align:${w.align}}`);
+  out.push(`${R} .num,${R} .gap,${R} .t{font-size:${w.fNum}px}`);
+  if (!w.tags) out.push(`${R} .tags{display:none}`);
+  if (w.team === false) out.push(`${R} .name small{display:none}`);
+  if (!w.head) out.push(`${W} .card-head{display:none}`);
+
+  // Any position style but plain replaces the skin's own box around the number.
+  if (w.posStyle !== 'plain') out.push(`${R} .pos{background:none;box-shadow:none;border:0}`);
+  if (w.posStyle === 'none') out.push(`${R} .posnum{visibility:hidden}`);
+  if (w.posStyle === 'box' || w.posStyle === 'circle') {
+    out.push(`${R} .posnum{display:inline-grid;place-items:center;min-width:1.7em;height:1.7em;padding:0 .25em;line-height:1;`
+      + `background:var(--accent);color:#05070a;border-radius:${w.posStyle === 'circle' ? '999px' : '4px'}}`);
+  }
+  if (w.mark === 'edge') out.push(`${R}{box-shadow:inset 5px 0 0 var(--c)}`, `${R} > .bar{display:none}`);
+  if (w.mark === 'none') out.push(`${R} > .bar{display:none}`);
+  if (w.mark === 'tint') {
+    // The colour bar itself becomes the row's backdrop: absolutely placed, so it leaves the
+    // grid, and under the text thanks to the row's own stacking context.
+    out.push(`${R} > .bar{display:block;position:absolute;inset:0;width:auto;height:auto;border-radius:0;opacity:.3;z-index:-1}`);
+  }
+  if (w.zebra) out.push(`${R}:nth-child(even){background-color:rgba(255,255,255,.06)}`);
+  if (w.leader) out.push(`${R}.p1{background-color:rgba(255,255,255,.1);box-shadow:inset 0 0 0 2px var(--accent)}`);
+
+  if (w.style === 'tiles') {
+    // Rows as separate panels: the card itself disappears, each row and the header carry
+    // the panel look instead.
+    out.push(`${W} .card{background:transparent;border-color:transparent;box-shadow:none;overflow:visible}`);
+    out.push(`${W} .card::after{display:none}`);
+    out.push(`${R},${W} .card-head${isTower ? `,${W} .tw-head` : ''}{background-color:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:${Math.max(2, w.rowGap)}px}`);
+    out.push(`${R}:last-child{border-bottom:1px solid var(--line)}`);
+  } else if (w.rowGap > 0) {
+    out.push(`${R}{margin-bottom:${w.rowGap}px}`);
+  }
+  return out;
+}
+
+function widgetCss(w) {
+  const out = [];
+  if (w.lb.on) out.push(...rowsCss('leaderboard', 'lb-row', w.lb, LB_W, false));
+  if (w.tw.on) out.push(...rowsCss('tower', 'tw-row', w.tw, TW_W, true));
+  if (w.st.on) {
+    const S = 'html[data-custom="1"] #status .status-bar';
+    const cls = { brand: '.brand-slot', event: '.seg.event', lap: '.seg-lap', clock: '.seg-clock', fl: '.seg-fl' };
+    const shown = w.st.segs.filter((c) => c.on);
+    out.push(`${S}{height:${w.st.height}px}`);
+    w.st.segs.forEach((c) => {
+      out.push(c.on ? `${S} > ${cls[c.k]}{order:${shown.indexOf(c)};display:flex}` : `${S} > ${cls[c.k]}{display:none}`);
+    });
+    const last = shown[shown.length - 1];
+    if (last) out.push(`${S} > .seg{border-right:1px solid var(--line)}`, `${S} > ${cls[last.k]}{border-right:0}`);
+  }
+  for (const [id, c] of Object.entries(w.cm)) {
+    const W = `html[data-custom="1"] #${id}`;
+    if (!c.head) out.push(`${W} .card-head{display:none}`);
+    if (c.bare) out.push(`${W} .card,${W} .ticker-bar{background:transparent;border-color:transparent;box-shadow:none}`, `${W} .card::after{display:none}`);
+  }
+  return out;
 }
 
 /** The Google Fonts stylesheet URL for a set of families, or '' for none. */

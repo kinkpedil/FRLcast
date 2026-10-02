@@ -968,3 +968,15 @@ input.dfscore { width: 84px; height: 30px; }
 .dsref summary { cursor: pointer; font-size: 13px; color: var(--ink-mute, #8b93a1); margin-top: 6px; }
 .dsrefbody p { font-size: 12px; margin: 6px 0; line-height: 1.7; }
 .dsrefbody code, .dspane .hint code { font-size: 11px; }
+.dswtabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.dswtabs button { border: 1px solid var(--line); background: none; color: var(--ink-mute, #8b93a1); border-radius: 999px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
+.dswtabs button.on { color: var(--ink); border-color: var(--accent); }
+.dscols { display: grid; gap: 4px; margin-top: 6px; }
+.dscol { display: grid; grid-template-columns: 20px 1fr 28px 28px; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 13px; }
+.dscol.off span { color: var(--ink-mute, #8b93a1); text-decoration: line-through; }
+.dscol button { width: 28px; height: 26px; border-radius: 6px; border: 1px solid var(--line); background: none; color: var(--ink); cursor: pointer; font-size: 10px; }
+.dscol button:disabled { opacity: .3; cursor: default; }
+.dsnums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
+.dsnums label { display: grid; gap: 3px; font-size: 12px; color: var(--ink-mute, #8b93a1); }
+.dsnums input { width: 100%; min-width: 0; }
+.dstogs { display: grid; gap: 6px; margin-top: 12px; }

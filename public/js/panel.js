@@ -4,7 +4,8 @@ import { cloudOptions } from './cloudbus.js';
 import { THEMES } from './themes.js';
 import {
   DESIGN_DEFAULT, PRESETS as DESIGN_PRESETS, COLOR_KEYS, SYSTEM_FONTS, GOOGLE_FONTS, CSS_MAX,
-  cleanDesign, cleanStickers, safeUrl, assetId, googleFontsUrl
+  cleanDesign, cleanStickers, safeUrl, assetId, googleFontsUrl,
+  LB_DEFAULT, TW_DEFAULT, ST_DEFAULT, LB_COLS, TW_COLS, ST_SEGS, TITLED, PANEL_WIDGETS
 } from './design.js';
 import { LICENCE_DEFAULT, licenceFrom, licenceEntries, penaltyPoints } from './points.js';
 import { inSession } from './timing.js';
@@ -5193,6 +5194,9 @@ setInterval(() => { if (currentPage === 'drift') { refreshDriftCloud(); renderDr
     if (now) send(); else timer = setTimeout(send, 150);
   }
   const live = () => pending || cur();
+  // The widget layout block below edits the same design through these.
+  window.dsSetDesign = setDesign;
+  window.dsLive = () => cleanDesign(live());
   const setStickers = (list) => bus.action('overlay.update', { patch: { stickers: list } });
   const setAssets = (list) => bus.action('overlay.update', { patch: { assets: list } });
 
@@ -5243,10 +5247,10 @@ setInterval(() => { if (currentPage === 'drift') { refreshDriftCloud(); renderDr
         const mine = d.css.trim() || Object.keys(d.colors).length;
         if (mine && d.preset !== p.id && !confirm(t('Replace your current custom design with this preset?'))) return;
         bus.action('overlay.theme', { theme: p.theme, accent: p.accent, radius: p.radius });
-        // Keeps the panel picture: that is the league's own file, not part of the preset.
+        // Keeps the panel picture (the league's own file) and the widget layout: a preset is a look.
         bus.action('overlay.update', { patch: {
           skin: 'classic',
-          custom: { ...DESIGN_DEFAULT, ...p.design, panelImg: d.panelImg, panelFit: d.panelFit, on: true, preset: p.id }
+          custom: { ...DESIGN_DEFAULT, ...p.design, panelImg: d.panelImg, panelFit: d.panelFit, widgets: d.widgets, on: true, preset: p.id }
         } });
         pending = null;
         toast(t('Preset applied') + ': ' + p.name);
@@ -5639,7 +5643,7 @@ setInterval(() => { if (currentPage === 'drift') { refreshDriftCloud(); renderDr
   };
 
   $('#dsReset').onclick = () => {
-    if (!confirm(t('Clear the whole custom design (colours, fonts, panels, CSS)? Files and stickers stay.'))) return;
+    if (!confirm(t('Clear the whole custom design (colours, fonts, panels, widget layout, CSS)? Files and stickers stay.'))) return;
     pending = null;
     bus.action('overlay.update', { patch: { custom: { ...DESIGN_DEFAULT } } });
   };
@@ -5687,5 +5691,176 @@ setInterval(() => { if (currentPage === 'drift') { refreshDriftCloud(); renderDr
     const ta = $('#dsCss');
     if (!focused(ta) && ta.value !== d.css) ta.value = d.css;
     cssCount(ta.value.length);
+    if (window.renderWidgetLayout) window.renderWidgetLayout();
   };
+})();
+
+/* ============================================================ design studio: widget layout
+ * The inside of a widget (design.js widgets): columns, rows, header, title, panel.
+ * One sub-form at a time, drawn from the state and redrawn whenever it changes, except
+ * while the operator is typing in it.
+ */
+(() => {
+  if (!$('#dsWBody')) return;
+  let tab = 'lb';
+  let cmWidget = 'gap';
+  // Read through the studio's own view, so an edit still waiting to be sent is built on.
+  const W = () => (window.dsLive ? window.dsLive() : cleanDesign(DESIGN_DEFAULT)).widgets;
+  const DEF = { lb: LB_DEFAULT, tw: TW_DEFAULT, st: ST_DEFAULT };
+  const CAT = { lb: LB_COLS, tw: TW_COLS, st: ST_SEGS };
+
+  // Every change sends the whole widgets object inside the whole design (see setDesign in
+  // the design studio block). Editing a widget switches that widget's own layout on.
+  function setW(key, patch, now) {
+    const all = W();
+    const next = { ...all[key], ...patch };
+    if (key !== 'cm' && !('on' in patch)) next.on = true;
+    window.dsSetDesign({ widgets: { ...all, [key]: next } }, now);
+  }
+
+  $$('#dsWTabs [data-w]').forEach((b) => {
+    b.onclick = () => {
+      tab = b.dataset.w;
+      $$('#dsWTabs [data-w]').forEach((x) => x.classList.toggle('on', x === b));
+      $('#dsWBody').dataset.key = '';
+      paint();
+    };
+  });
+
+  const opt = (v, cur, label) => `<option value="${v}"${v === cur ? ' selected' : ''}>${esc(t(label))}</option>`;
+  const tog = (k, on, label) => `<label class="toggle"><span>${esc(t(label))}</span><input type="checkbox" data-f="${k}"${on ? ' checked' : ''}><i class="sw"></i></label>`;
+  const rng = (k, v, lo, hi, label, unit) => `<label class="field"><span>${esc(t(label))} <b data-v="${k}">${v ? v + (unit || '') : t('all')}</b></span><input type="range" data-f="${k}" min="${lo}" max="${hi}" step="1" value="${v}"></label>`;
+
+  function colsList(key, cols) {
+    const names = Object.fromEntries(CAT[key]);
+    return `<div class="dscols">${cols.map((c, i) => `
+      <div class="dscol${c.on ? '' : ' off'}" data-i="${i}">
+        <input type="checkbox" data-col="${i}"${c.on ? ' checked' : ''} aria-label="${esc(t(names[c.k]))}">
+        <span>${esc(t(names[c.k]))}</span>
+        <button type="button" data-up="${i}" ${i === 0 ? 'disabled' : ''} title="${esc(t('Move up'))}">&#9650;</button>
+        <button type="button" data-down="${i}" ${i === cols.length - 1 ? 'disabled' : ''} title="${esc(t('Move down'))}">&#9660;</button>
+      </div>`).join('')}</div>`;
+  }
+
+  function rowsForm(key, w) {
+    const tower = key === 'tw';
+    return `
+      ${tog('on', w.on, 'Use my own layout for this widget')}
+      <div class="clocklabel" style="margin-top:12px">${esc(t('Columns, left to right'))}</div>
+      ${colsList(key, w.cols)}
+      <div class="grid2" style="margin-top:12px">
+        <label class="field"><span>${esc(t('Rows'))}</span><select data-f="style">${opt('list', w.style, 'One list')}${opt('tiles', w.style, 'Separate tiles')}</select></label>
+        <label class="field"><span>${esc(t('Position number'))}</span><select data-f="posStyle">${opt('plain', w.posStyle, 'Plain')}${opt('box', w.posStyle, 'In a box')}${opt('circle', w.posStyle, 'In a circle')}${opt('none', w.posStyle, 'Hidden')}</select></label>
+        <label class="field"><span>${esc(t('Driver colour'))}</span><select data-f="mark">${opt('bar', w.mark, 'Small bar')}${opt('edge', w.mark, 'Row edge')}${opt('tint', w.mark, 'Whole row tint')}${opt('none', w.mark, 'Hidden')}</select></label>
+        <label class="field"><span>${esc(t('Name alignment'))}</span><select data-f="align">${opt('left', w.align, 'Left')}${opt('center', w.align, 'Centre')}${opt('right', w.align, 'Right')}</select></label>
+      </div>
+      <div class="grid2" style="margin-top:10px">
+        ${rng('rowH', w.rowH, 20, 120, 'Row height', 'px')}
+        ${rng('rowGap', w.rowGap, 0, 40, 'Space between rows', 'px')}
+      </div>
+      <div class="grid2" style="margin-top:10px">
+        ${rng('maxRows', w.maxRows, 0, 40, 'Rows shown')}
+        <label class="field"><span>${esc(t('Title'))}</span><input type="text" data-f="title" maxlength="40" value="${esc(w.title)}" placeholder="${esc(t(tower ? 'Timing' : 'Leaderboard'))}"></label>
+      </div>
+      <div class="clocklabel" style="margin-top:12px">${esc(t('Text size'))}</div>
+      <div class="dsnums">
+        <label>${esc(t('Position'))}<input type="number" data-f="fPos" min="8" max="60" value="${w.fPos}"></label>
+        <label>${esc(t('Name'))}<input type="number" data-f="fName" min="8" max="60" value="${w.fName}"></label>
+        <label>${esc(t('Numbers'))}<input type="number" data-f="fNum" min="8" max="60" value="${w.fNum}"></label>
+      </div>
+      <div class="dstogs">
+        ${tog('head', w.head, 'Header')}
+        ${tower ? tog('colHead', w.colHead, 'Column titles') : tog('team', w.team, 'Team line under the name')}
+        ${tog('tags', w.tags, 'Badges (PIT, penalties, fastest lap)')}
+        ${tog('leader', w.leader, 'Highlight the leader')}
+        ${tog('zebra', w.zebra, 'Striped rows')}
+      </div>
+      <button class="btn sm ghost" data-reset="1" style="margin-top:10px">${esc(t('Back to the standard layout'))}</button>`;
+  }
+
+  function statusForm(w) {
+    return `
+      ${tog('on', w.on, 'Use my own layout for this widget')}
+      <div class="clocklabel" style="margin-top:12px">${esc(t('Parts, left to right'))}</div>
+      ${colsList('st', w.segs)}
+      <div style="margin-top:10px">${rng('height', w.height, 30, 140, 'Height', 'px')}</div>
+      <button class="btn sm ghost" data-reset="1" style="margin-top:10px">${esc(t('Back to the standard layout'))}</button>`;
+  }
+
+  function otherForm(cm) {
+    const c = cm[cmWidget] || { head: true, bare: false, title: '' };
+    const titled = TITLED.some(([id]) => id === cmWidget);
+    const changed = Object.keys(cm);
+    return `
+      <label class="field"><span>${esc(t('Widget'))}</span><select data-cm="1">${PANEL_WIDGETS.map((id) =>
+        `<option value="${id}"${id === cmWidget ? ' selected' : ''}>${esc(t(LAYOUT_LABELS[id] || id))}${changed.includes(id) ? ' *' : ''}</option>`).join('')}</select></label>
+      <div class="dstogs" style="margin-top:10px">
+        ${tog('head', c.head, 'Header')}
+        ${tog('panel', !c.bare, 'Panel background')}
+      </div>
+      ${titled ? `<label class="field" style="margin-top:10px"><span>${esc(t('Title'))}</span><input type="text" data-f="title" maxlength="40" value="${esc(c.title)}" placeholder="${esc(t('Keep the standard title'))}"></label>` : ''}
+      <p class="hint" style="margin-top:8px">${esc(t('Without a panel, the widget floats on the game picture: useful with stickers or your own CSS behind it.'))}</p>`;
+  }
+
+  function bind() {
+    const box = $('#dsWBody');
+    const w = W();
+    if (tab === 'cm') {
+      box.querySelector('[data-cm]').onchange = (e) => { cmWidget = e.target.value; box.dataset.key = ''; paint(); };
+      const write = (patch) => {
+        const cur = w.cm[cmWidget] || { head: true, bare: false, title: '' };
+        setW('cm', { [cmWidget]: { ...cur, ...patch } }, true);
+      };
+      box.querySelector('[data-f=head]').onchange = (e) => write({ head: e.target.checked });
+      box.querySelector('[data-f=panel]').onchange = (e) => write({ bare: !e.target.checked });
+      const ti = box.querySelector('[data-f=title]');
+      if (ti) ti.oninput = () => write({ title: ti.value });
+      return;
+    }
+    const listKey = tab === 'st' ? 'segs' : 'cols';
+    box.querySelectorAll('[data-f]').forEach((el) => {
+      const k = el.dataset.f;
+      if (el.type === 'checkbox') el.onchange = () => setW(tab, { [k]: el.checked }, true);
+      else if (el.type === 'range') {
+        el.oninput = () => {
+          const lab = box.querySelector(`[data-v="${k}"]`);
+          if (lab) lab.textContent = Number(el.value) ? el.value + (k === 'maxRows' ? '' : 'px') : t('all');
+          setW(tab, { [k]: Number(el.value) });
+        };
+      } else if (el.type === 'number') el.oninput = () => { if (el.value !== '') setW(tab, { [k]: Number(el.value) }); };
+      else if (el.tagName === 'SELECT') el.onchange = () => setW(tab, { [k]: el.value }, true);
+      else el.oninput = () => setW(tab, { [k]: el.value });
+    });
+    const move = (i, by) => {
+      const list = W()[tab][listKey].slice();
+      const j = i + by;
+      if (j < 0 || j >= list.length) return;
+      [list[i], list[j]] = [list[j], list[i]];
+      setW(tab, { [listKey]: list }, true);
+    };
+    box.querySelectorAll('[data-up]').forEach((b) => { b.onclick = () => move(Number(b.dataset.up), -1); });
+    box.querySelectorAll('[data-down]').forEach((b) => { b.onclick = () => move(Number(b.dataset.down), 1); });
+    box.querySelectorAll('[data-col]').forEach((c) => {
+      c.onchange = () => {
+        const list = W()[tab][listKey].map((x, i) => (i === Number(c.dataset.col) ? { ...x, on: c.checked } : x));
+        setW(tab, { [listKey]: list }, true);
+      };
+    });
+    const rs = box.querySelector('[data-reset]');
+    if (rs) rs.onclick = () => setW(tab, { ...DEF[tab], on: false }, true);
+  }
+
+  function paint() {
+    if (!state || !state.overlay) return;
+    const box = $('#dsWBody');
+    const w = W();
+    const key = JSON.stringify([tab, cmWidget, tab === 'cm' ? w.cm : w[tab]]);
+    // Hold still while being typed in; a finished edit (blur) lets it redraw.
+    if (box.dataset.key === key || box.contains(document.activeElement) && document.activeElement.matches('input[type=text], input[type=number], input[type=range]')) return;
+    box.dataset.key = key;
+    box.innerHTML = tab === 'cm' ? otherForm(w.cm) : tab === 'st' ? statusForm(w.st) : rowsForm(tab, w[tab]);
+    bind();
+  }
+  $('#dsWBody').addEventListener('focusout', () => { setTimeout(() => { $('#dsWBody').dataset.key = ''; paint(); }, 300); });
+  window.renderWidgetLayout = paint;
 })();
